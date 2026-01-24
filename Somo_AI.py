@@ -47,7 +47,9 @@ image_data = None
 
 if uploaded_file:
     if uploaded_file.type in ["image/png", "image/jpeg"]:
-        image_data = encode_image(uploaded_file)
+        # Rasmni o'qish uchun uni qayta yuklash kerak bo'lishi mumkin
+        image_bytes = uploaded_file.getvalue()
+        image_data = base64.b64encode(image_bytes).decode('utf-8')
         st.sidebar.image(uploaded_file, caption="Yuklangan rasm", use_container_width=True)
     elif uploaded_file.type == "application/pdf":
         file_content = get_pdf_text(uploaded_file)
