@@ -1,58 +1,60 @@
 import streamlit as st
 from groq import Groq
 
-# --- SAHIFA KONFIGURATSIYASI ---
-st.set_page_config(page_title="Somo AI (Groq)", page_icon="⚡", layout="centered")
+# 1. Sahifa sozlamalari va Dizayn
+st.set_page_config(
+    page_title="Somo AI | Aqlli Yordamchi",
+    page_icon="🤖",
+    layout="centered"
+)
 
-# --- STIL (DIZAYN) ---
-st.markdown("""
-    <style>
-    .stApp { background-color: #ffffff; }
-    .stChatMessage { border-radius: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    </style>
-    """, unsafe_allow_html=True)
+# Sidebar (Yon panel) dizayni
+with st.sidebar:
+    st.image("https://img.freepik.com/free-vector/ai-technology-brain-background_53876-90611.jpg")
+    st.title("Somo AI Sozlamalari")
+    st.info("Bu Somo AI yordamchisi. U Groq Llama-3 modeli asosida ishlaydi.")
+    if st.button("Chatni tozalash"):
+        st.session_state.messages = []
+        st.rerun()
 
-st.title("⚡ Somo AI Web-Dasturi")
-st.caption("Groq LPU texnologiyasi asosida ishlovchi eng tezkor SI")
+# Asosiy sarlavha
+st.title("🤖 Somo AI")
+st.caption("🚀 Tezkor va aqlli sun'iy intellekt yordamchisi")
 
-# --- API ULANISH ---
-# Siz bergan kalitni shu yerga joyladim
-client = Groq(api_key="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")
+# 2. Xavfsizlik: API Kalitni Streamlit Secrets'dan olish
+# DIQQAT: API kalit kod ichida yozilmagan!
+client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- CHAT TARIXI ---
+# 3. Chat tarixini boshqarish
 if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "assistant", "content": "Salom! Men Somo AI-man. Sizga qanday yordam bera olaman?"}
-    ]
+    st.session_state.messages = []
 
-# Tarixni chiqarish
+# Tarixdagi xabarlarni ko'rsatish
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# --- ASOSIY MANTIQ ---
-if prompt := st.chat_input("Savolingizni yozing..."):
-    # Foydalanuvchi xabari
+# 4. Foydalanuvchi kirishi va AI javobi
+if prompt := st.chat_input("Savolingizni bu yerga yozing..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Groq API orqali javob olish
     with st.chat_message("assistant"):
-        try:
-            # Llama 3 - 70B modeli juda aqlli va o'zbek tilini yaxshi tushunadi
-            completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": "Sizning ismingiz Somo AI. Foydalanuvchilarga o'zbek tilida, do'stona va aniq javob berasiz."},
-                    *[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
-                ],
-                stream=False
-            )
-            
-            response_text = completion.choices[0].message.content
-            st.markdown(response_text)
-            st.session_state.messages.append({"role": "assistant", "content": response_text})
-            
-        except Exception as e:
-            st.error(f"Xatolik yuz berdi: {e}")
+        message_placeholder = st.empty()
+        full_response = ""
+        
+        # Groq modelidan javob olish
+        completion = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
+            stream=True,
+        )
+        
+        for chunk in completion:
+            full_response += (chunk.choices[0].delta.content or "")
+            message_placeholder.markdown(full_response + "▌")
+        
+        message_placeholder.markdown(full_response)
+    
+    st.session_state.messages.append({"role": "assistant", "content": full_response})
