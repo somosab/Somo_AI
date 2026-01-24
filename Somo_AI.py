@@ -1,56 +1,59 @@
 import streamlit as st
 from groq import Groq
 
-# 1. Sahifa sozlamalari va Dizayn
+# 1. Sahifa sozlamalari va chiroyli dizayn
 st.set_page_config(
-    page_title="Somo AI | Aqlli Yordamchi",
+    page_title="Somo AI | Professional",
     page_icon="🤖",
     layout="centered"
 )
 
-# Sidebar (Yon panel) dizayni
+# Sidebar (Yon panel) - Yangi Logo bilan
 with st.sidebar:
-    # Rasm linkini yangiladim, sidebar chiroyliroq chiqadi
-    st.image("https://img.freepik.com/free-vector/ai-technology-brain-background_53876-90611.jpg")
+    # Sizga yoqqan yangi Somo_AI logotipi
+    st.image("https://files.catbox.moe/97i5s7.png", use_container_width=True)
     st.title("Somo AI Sozlamalari")
-    st.info("Bu Somo AI yordamchisi. U eng so'nggi Llama-3.3 modeli asosida ishlaydi.")
-    if st.button("Chatni tozalash"):
+    st.markdown("---")
+    st.info("Somo AI — bu Llama 3.3 modeli asosida ishlaydigan aqlli yordamchi.")
+    
+    if st.button("🗑 Chatni tozalash"):
         st.session_state.messages = []
         st.rerun()
 
-# Asosiy sarlavha
+# Asosiy sarlavha qismi
 st.title("🤖 Somo AI")
-st.caption("🚀 Tezkor va aqlli sun'iy intellekt yordamchisi")
+st.caption("🚀 Tezyurar va aqlli sun'iy intellekt")
 
 # 2. Xavfsizlik: API Kalitni Streamlit Secrets'dan olish
-# Secrets bo'limida GROQ_API_KEY borligiga ishonch hosil qiling
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except Exception as e:
-    st.error("API kalit topilmadi! Streamlit Secrets sozlamalarini tekshiring.")
+    st.error("API kalit sozlamalarida xatolik bor!")
     st.stop()
 
-# 3. Chat tarixini boshqarish
+# 3. Chat tarixini saqlash
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Tarixdagi xabarlarni ko'rsatish
+# Tarixdagi xabarlarni ekranga chiqarish
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 4. Foydalanuvchi kirishi va AI javobi
-if prompt := st.chat_input("Savolingizni bu yerga yozing..."):
+# 4. Foydalanuvchi xabari va AI javobi
+if prompt := st.chat_input("Savolingizni yozing..."):
+    # Foydalanuvchi xabarini qo'shish
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # AI javobini generatsiya qilish
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         full_response = ""
         
         try:
-            # Model nomini eng barqaroriga o'zgartirdim: llama-3.3-70b-versatile
+            # Eng yangi Llama-3.3-70b modeli
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
@@ -70,4 +73,3 @@ if prompt := st.chat_input("Savolingizni bu yerga yozing..."):
             
         except Exception as e:
             st.error(f"Xatolik yuz berdi: {str(e)}")
-            st.info("Maslahat: Model nomi yoki API limitini tekshiring.")
