@@ -1,47 +1,57 @@
 import streamlit as st
 from groq import Groq
+from PyPDF2 import PdfReader
 
 # 1. Sahifa sozlamalari
-st.set_page_config(
-    page_title="Somo AI | Professional",
-    page_icon="🤖",
-    layout="centered"
-)
+st.set_page_config(page_title="Somo AI | File Analyst", page_icon="📂", layout="centered")
 
 # Sidebar dizayni
 with st.sidebar:
-    # Siz tanlagan oq-qora logo (image_318039.png asosida)
-    st.image("https://files.catbox.moe/o3f3b9.png", use_container_width=True)
+    st.image("https://files.catbox.moe/97i5s7.png", use_container_width=True)
     st.title("Somo AI Sozlamalari")
     st.markdown("---")
-    st.info("Somo AI — bu Llama 3.3 modeli asosida ishlaydigan aqlli yordamchi.")
+    
+    # Fayl yuklash bo'limi
+    uploaded_file = st.file_uploader("Fayl tahlili (PDF yoki TXT)", type=["pdf", "txt"])
     
     if st.button("🗑 Chatni tozalash"):
         st.session_state.messages = []
         st.rerun()
 
-# Markaziy sarlavha
-st.markdown("<h1 style='text-align: center;'>🤖 Somo AI</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; color: grey;'>Tezyurar va aqlli sun'iy intellekt</p>", unsafe_allow_html=True)
+# Fayldan matnni ajratib olish funksiyasi
+def get_file_text(file):
+    text = ""
+    if file.type == "application/pdf":
+        pdf_reader = PdfReader(file)
+        for page in pdf_reader.pages:
+            text += page.extract_text()
+    elif file.type == "text/plain":
+        text = str(file.read(), "utf-8")
+    return text
 
-# 2. Xavfsizlik: API Kalit
-try:
-    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-except Exception as e:
-    st.error("API kalit sozlamalarida xatolik bor!")
-    st.stop()
+# API Sozlamalari
+client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# 3. Chat xotirasi
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Xabarlarni ko'rsatish
+# Sarlavha
+st.markdown("<h1 style='text-align: center;'>📂 Somo AI File Analyst</h1>", unsafe_allow_html=True)
+
+# Yuklangan fayl haqida ma'lumot
+file_context = ""
+if uploaded_file:
+    with st.spinner("Fayl o'qilmoqda..."):
+        file_context = get_file_text(uploaded_file)
+        st.success(f"Fayl yuklandi: {uploaded_file.name}")
+
+# Chat tarixi
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 4. Chat interfeysi
-if prompt := st.chat_input("Savolingizni yozing..."):
+# Chat interfeysi
+if prompt := st.chat_input("Fayl bo'yicha savol bering..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -50,11 +60,16 @@ if prompt := st.chat_input("Savolingizni yozing..."):
         message_placeholder = st.empty()
         full_response = ""
         
+        # Tizimga fayl mazmunini tushuntirish
+        system_msg = "Sen Somo AI yordamchisisan. O'zbek tilida javob ber."
+        if file_context:
+            system_msg += f"\nMana bu fayl mazmuni asosida javob ber: {file_context[:5000]}" # Limit uchun 5000 belgi
+
         try:
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
-                    {"role": "system", "content": "Sen Somo AI yordamchisisan. Doim o'zbek tilida, aqlli va xushmuomala javob berasan."},
+                    {"role": "system", "content": system_msg},
                     *[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
                 ],
                 stream=True,
