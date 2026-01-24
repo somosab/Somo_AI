@@ -1,9 +1,7 @@
 import streamlit as st
 from groq import Groq
 from PyPDF2 import PdfReader
-from PIL import Image
 import base64
-import io
 
 # 1. Sahifa sozlamalari
 st.set_page_config(page_title="Somo AI | Universal Analyst", page_icon="🚀", layout="wide")
@@ -14,20 +12,22 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Sidebar - Yuklash markazi
+# Sidebar - Dizayn va Yuklash bo'limi
 with st.sidebar:
-    st.image("https://files.catbox.moe/97i5s7.png", use_container_width=True)
+    # Logo qismi
+    st.image("https://files.catbox.moe/o3f3b9.png", use_container_width=True)
     st.title("Somo AI Markazi")
     st.markdown("---")
     
-    st.subheader("➕ Fayl yoki Rasm qo'shish")
-    uploaded_file = st.file_uploader("PDF, TXT yoki Rasm (PNG, JPG)", type=["pdf", "txt", "png", "jpg", "jpeg"])
+    # Yuklash bo'limiga "+" belgisi bilan zamonaviy ko'rinish beramiz
+    st.markdown("### ➕ Fayl yoki Rasm")
+    uploaded_file = st.file_uploader("PDF, TXT yoki Rasm yuklang", type=["pdf", "txt", "png", "jpg", "jpeg"], label_visibility="collapsed")
     
-    if st.button("🗑 Chatni tozalash"):
+    if st.button("🗑 Chatni tozalash", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 
-# Rasm va fayl tahlili funksiyalari
+# Funktsiyalar
 def encode_image(image_file):
     return base64.b64encode(image_file.read()).decode('utf-8')
 
@@ -38,10 +38,10 @@ def get_pdf_text(file):
         text += page.extract_text()
     return text
 
-# Asosiy interfeys
-st.markdown("<h2 style='text-align: center;'>🚀 Somo AI Universal Analyst</h2>", unsafe_allow_html=True)
+# Asosiy sarlavha
+st.markdown("<h1 style='text-align: center;'>🚀 Somo AI Universal Analyst</h1>", unsafe_allow_html=True)
 
-# Yuklangan faylni qayta ishlash
+# Yuklangan faylni tahlil qilish
 file_content = ""
 image_data = None
 
@@ -51,10 +51,10 @@ if uploaded_file:
         st.sidebar.image(uploaded_file, caption="Yuklangan rasm", use_container_width=True)
     elif uploaded_file.type == "application/pdf":
         file_content = get_pdf_text(uploaded_file)
-        st.sidebar.success("PDF o'qildi!")
+        st.sidebar.success("PDF o'qildi ✅")
     else:
         file_content = str(uploaded_file.read(), "utf-8")
-        st.sidebar.success("Matn yuklandi!")
+        st.sidebar.success("Matn yuklandi ✅")
 
 # Chat tarixi
 for message in st.session_state.messages:
@@ -71,18 +71,15 @@ if prompt := st.chat_input("Savolingizni yozing..."):
         message_placeholder = st.empty()
         full_response = ""
         
-        # Modelni tanlash: Agar rasm bo'lsa Vision model, bo'lmasa oddiy
-        current_model = "llama-3.2-11b-vision-preview" if image_data else "llama-3.3-70b-versatile"
+        # YANGILANGAN MODEL: llama-3.2-90b-vision-preview
+        # Bu model hozirda eng barqaror va kuchli Vision modelidir.
+        current_model = "llama-3.2-90b-vision-preview" if image_data else "llama-3.3-70b-versatile"
         
-        messages_to_send = [
-            {"role": "system", "content": "Sen Somo AI yordamchisisan. O'zbek tilida javob berasan."}
-        ]
+        messages_to_send = [{"role": "system", "content": "Sen Somo AI yordamchisisan. O'zbek tilida javob ber."}]
         
-        # Agar fayl mazmuni bo'lsa, context sifatida qo'shish
         if file_content:
             messages_to_send.append({"role": "user", "content": f"Fayl mazmuni: {file_content[:5000]}"})
         
-        # Agar rasm bo'lsa, uni yuborish
         if image_data:
             messages_to_send.append({
                 "role": "user",
