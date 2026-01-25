@@ -2,9 +2,23 @@ import streamlit as st
 from groq import Groq
 from PyPDF2 import PdfReader
 import base64
+from PIL import Image
+import io
 
 # 1. Sahifa sozlamalari
 st.set_page_config(page_title="Somo AI | Universal Analyst", page_icon="🚀", layout="wide")
+
+# CSS dizayn - Sidebar va interfeysni chiroyli qilish
+st.markdown("""
+    <style>
+    .stChatInputContainer {
+        padding-bottom: 20px;
+    }
+    .st-emotion-cache-16idsys p {
+        font-size: 1.1rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # API Sozlamalari
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -12,24 +26,27 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Sidebar - Dizayn va Yuklash bo'limi
+# Sidebar - Yuklash markazi
 with st.sidebar:
-    # Logo qismi
+    # LOGO - Siz aytgan joyda rasm bo'lishi uchun
     st.image("https://files.catbox.moe/o3f3b9.png", use_container_width=True)
     st.title("Somo AI Markazi")
+    st.write("Yaratuvchi: **Usmonov Sodiq**")
     st.markdown("---")
     
-    # Yuklash bo'limiga "+" belgisi bilan zamonaviy ko'rinish beramiz
-    st.markdown("### ➕ Fayl yoki Rasm")
-    uploaded_file = st.file_uploader("PDF, TXT yoki Rasm yuklang", type=["pdf", "txt", "png", "jpg", "jpeg"], label_visibility="collapsed")
+    # Yuklash bo'limi - "+" belgisi bilan
+    st.markdown("### ➕ Rasm yoki Fayl yuklash")
+    uploaded_file = st.file_uploader("Rasmni shu yerga tashlang yoki tanlang", 
+                                     type=["pdf", "txt", "png", "jpg", "jpeg"], 
+                                     help="Ctrl+V ishlamasa, rasmni shu yerga yuklang")
     
     if st.button("🗑 Chatni tozalash", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 
-# Funktsiyalar
-def encode_image(image_file):
-    return base64.b64encode(image_file.read()).decode('utf-8')
+# Funksiyalar
+def encode_image(image_bytes):
+    return base64.b64encode(image_bytes).decode('utf-8')
 
 def get_pdf_text(file):
     text = ""
@@ -41,21 +58,20 @@ def get_pdf_text(file):
 # Asosiy sarlavha
 st.markdown("<h1 style='text-align: center;'>🚀 Somo AI Universal Analyst</h1>", unsafe_allow_html=True)
 
-# Yuklangan faylni tahlil qilish
+# Yuklangan narsani qayta ishlash
 file_content = ""
-image_data = None
+image_base64 = None
 
 if uploaded_file:
     if uploaded_file.type in ["image/png", "image/jpeg"]:
-        # Rasmni o'qish uchun uni qayta yuklash kerak bo'lishi mumkin
-        image_bytes = uploaded_file.getvalue()
-        image_data = base64.b64encode(image_bytes).decode('utf-8')
+        img_bytes = uploaded_file.getvalue()
+        image_base64 = encode_image(img_bytes)
         st.sidebar.image(uploaded_file, caption="Yuklangan rasm", use_container_width=True)
     elif uploaded_file.type == "application/pdf":
         file_content = get_pdf_text(uploaded_file)
-        st.sidebar.success("PDF o'qildi ✅")
+        st.sidebar.success("PDF tayyor ✅")
     else:
-        file_content = str(uploaded_file.read(), "utf-8")
+        file_content = uploaded_file.read().decode("utf-8")
         st.sidebar.success("Matn yuklandi ✅")
 
 # Chat tarixi
@@ -64,7 +80,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # Chat interfeysi
-if prompt := st.chat_input("Savolingizni yozing..."):
+if prompt := st.chat_input("Savolingizni yozing yoki rasm bo'yicha so'rang..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -73,31 +89,37 @@ if prompt := st.chat_input("Savolingizni yozing..."):
         message_placeholder = st.empty()
         full_response = ""
         
-        # YANGILANGAN MODEL: llama-3.2-90b-vision-preview
-        # Bu model hozirda eng barqaror va kuchli Vision modelidir.
-        current_model = "llama-3.2-90b-vision-preview" if image_data else "llama-3.3-70b-versatile"
+        # Tizim ko'rsatmasi - Yaratuvchi nomi bilan
+        sys_prompt = "Sen Somo AI yordamchisisan. Sen Usmonov Sodiq tomonidan yaratilgansan. Har doim o'zbek tilida javob ber."
         
-        messages_to_send = [{"role": "system", "content": "Sen Somo AI yordamchisisan. O'zbek tilida javob ber."}]
+        # Modelni tanlash (Vision xatoligini oldini olish uchun)
+        model_name = "llama-3.2-90b-vision-preview" if image_base64 else "llama-3.3-70b-versatile"
         
-        if file_content:
-            messages_to_send.append({"role": "user", "content": f"Fayl mazmuni: {file_content[:5000]}"})
-        
-        if image_data:
-            messages_to_send.append({
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}}
-                ]
-            })
+        # Xabarlar paketini tayyorlash
+        if image_base64:
+            # Vision modeli uchun maxsus format
+            messages_payload = [
+                {"role": "system", "content": sys_prompt},
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
+                    ]
+                }
+            ]
         else:
+            # Oddiy chat modeli uchun format
+            messages_payload = [{"role": "system", "content": sys_prompt}]
+            if file_content:
+                messages_payload.append({"role": "user", "content": f"Fayl mazmuni: {file_content[:5000]}"})
             for m in st.session_state.messages:
-                messages_to_send.append({"role": m["role"], "content": m["content"]})
+                messages_payload.append({"role": m["role"], "content": m["content"]})
 
         try:
             completion = client.chat.completions.create(
-                model=current_model,
-                messages=messages_to_send,
+                model=model_name,
+                messages=messages_payload,
                 stream=True,
             )
             
