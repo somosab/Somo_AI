@@ -2,21 +2,15 @@ import streamlit as st
 from groq import Groq
 from PyPDF2 import PdfReader
 import base64
-from PIL import Image
-import io
 
 # 1. Sahifa sozlamalari
 st.set_page_config(page_title="Somo AI | Universal Analyst", page_icon="🚀", layout="wide")
 
-# CSS dizayn - Sidebar va interfeysni chiroyli qilish
+# CSS - Interfeysni yanada zamonaviy qilish
 st.markdown("""
     <style>
-    .stChatInputContainer {
-        padding-bottom: 20px;
-    }
-    .st-emotion-cache-16idsys p {
-        font-size: 1.1rem;
-    }
+    .stChatInputContainer { padding-bottom: 20px; }
+    section[data-testid="stSidebar"] { width: 350px !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -26,19 +20,19 @@ client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Sidebar - Yuklash markazi
+# Sidebar - Dizayn va Yuklash
 with st.sidebar:
-    # LOGO - Siz aytgan joyda rasm bo'lishi uchun
+    # 1. Siz aytgan logotip joyi
     st.image("https://files.catbox.moe/o3f3b9.png", use_container_width=True)
     st.title("Somo AI Markazi")
-    st.write("Yaratuvchi: **Usmonov Sodiq**")
+    st.info("Yaratuvchi: **Usmonov Sodiq**")
     st.markdown("---")
     
-    # Yuklash bo'limi - "+" belgisi bilan
-    st.markdown("### ➕ Rasm yoki Fayl yuklash")
-    uploaded_file = st.file_uploader("Rasmni shu yerga tashlang yoki tanlang", 
-                                     type=["pdf", "txt", "png", "jpg", "jpeg"], 
-                                     help="Ctrl+V ishlamasa, rasmni shu yerga yuklang")
+    # 2. "+" belgisi bilan yuklash bo'limi
+    st.subheader("➕ Fayl yoki Rasm qo'shish")
+    uploaded_file = st.file_uploader("Rasmni shu yerga tashlang (yoki bosing)", 
+                                     type=["pdf", "txt", "png", "jpg", "jpeg"],
+                                     label_visibility="collapsed")
     
     if st.button("🗑 Chatni tozalash", use_container_width=True):
         st.session_state.messages = []
@@ -55,10 +49,10 @@ def get_pdf_text(file):
         text += page.extract_text()
     return text
 
-# Asosiy sarlavha
+# Sarlavha
 st.markdown("<h1 style='text-align: center;'>🚀 Somo AI Universal Analyst</h1>", unsafe_allow_html=True)
 
-# Yuklangan narsani qayta ishlash
+# Yuklangan narsalarni qayta ishlash
 file_content = ""
 image_base64 = None
 
@@ -89,15 +83,14 @@ if prompt := st.chat_input("Savolingizni yozing yoki rasm bo'yicha so'rang..."):
         message_placeholder = st.empty()
         full_response = ""
         
-        # Tizim ko'rsatmasi - Yaratuvchi nomi bilan
+        # TIZIM KO'RSATMASI - USMONOV SODIQ
         sys_prompt = "Sen Somo AI yordamchisisan. Sen Usmonov Sodiq tomonidan yaratilgansan. Har doim o'zbek tilida javob ber."
         
-        # Modelni tanlash (Vision xatoligini oldini olish uchun)
-        model_name = "llama-3.2-90b-vision-preview" if image_base64 else "llama-3.3-70b-versatile"
+        # MUHIM: Eng yangi ishlaydigan model nomi
+        model_to_use = "llama-3.2-90b-vision-preview" if image_base64 else "llama-3.3-70b-versatile"
         
-        # Xabarlar paketini tayyorlash
+        # Xabarlar strukturasini yig'ish
         if image_base64:
-            # Vision modeli uchun maxsus format
             messages_payload = [
                 {"role": "system", "content": sys_prompt},
                 {
@@ -109,7 +102,6 @@ if prompt := st.chat_input("Savolingizni yozing yoki rasm bo'yicha so'rang..."):
                 }
             ]
         else:
-            # Oddiy chat modeli uchun format
             messages_payload = [{"role": "system", "content": sys_prompt}]
             if file_content:
                 messages_payload.append({"role": "user", "content": f"Fayl mazmuni: {file_content[:5000]}"})
@@ -118,7 +110,7 @@ if prompt := st.chat_input("Savolingizni yozing yoki rasm bo'yicha so'rang..."):
 
         try:
             completion = client.chat.completions.create(
-                model=model_name,
+                model=model_to_use,
                 messages=messages_payload,
                 stream=True,
             )
@@ -132,4 +124,4 @@ if prompt := st.chat_input("Savolingizni yozing yoki rasm bo'yicha so'rang..."):
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            st.error(f"Xatolik yuz berdi: {str(e)}")
+            st.error(f"Xatolik: Model hozirda band yoki API limit tugadi. {str(e)}")
