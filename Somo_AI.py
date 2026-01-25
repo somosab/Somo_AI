@@ -1,113 +1,102 @@
 import streamlit as st
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 from groq import Groq
-from PyPDF2 import PdfReader
-import base64
+from pypdf import PdfReader
+import hashlib
 
-# 1. Sahifa sozlamalari
-st.set_page_config(page_title="Somo AI | Universal Analyst", page_icon="🚀", layout="wide")
+# 1. Google Sheets ulanishi (Secrets orqali)
+def connect_sheets():
+    try:
+        gcp_info = dict(st.secrets["gcp_service_account"])
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(gcp_info, scope)
+        client = gspread.authorize(creds)
+        # Google Sheets-dagi faylingiz nomi 'Somo_Users' ekanligini tekshiring
+        return client.open("Somo_Users").sheet1
+    except Exception as e:
+        st.error(f"Google Sheets ulanishida xato: {e}")
+        return None
 
-# API Sozlamalari
-client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "assistant", "content": "Hello! I am Somo AI, created by Usmonov Sodiq. How can I help you with math or any other tasks today?"}
-    ]
-
-# Sidebar - Yuklash
-with st.sidebar:
-    st.image("https://files.catbox.moe/o3f3b9.png", use_container_width=True)
-    st.title("Somo AI Center")
-    st.info("Creator: **Usmonov Sodiq**")
-    st.markdown("---")
-    uploaded_file = st.file_uploader("Upload PDF, TXT or Image", type=["pdf", "txt", "png", "jpg", "jpeg"])
-    
-    if st.button("🗑 Clear Chat", use_container_width=True):
-        st.session_state.messages = [{"role": "assistant", "content": "Chat cleared."}]
-        st.rerun()
-
-# Funksiyalar
-def encode_image(image_bytes):
-    return base64.b64encode(image_bytes).decode('utf-8')
-
-def get_pdf_text(file):
-    text = ""
+# 2. PDF faylni o'qish funksiyasi
+def read_pdf(file):
     pdf_reader = PdfReader(file)
+    text = ""
     for page in pdf_reader.pages:
-        text += page.extract_text()
+        content = page.extract_text()
+        if content:
+            text += content
     return text
 
-# Asosiy interfeys
-st.markdown("<h1 style='text-align: center;'>🚀 Somo AI Universal Analyst</h1>", unsafe_allow_html=True)
+# 3. Groq AI javobini olish
+def get_ai_response(prompt):
+    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+    completion = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return completion.choices[0].message.content
 
-# Yuklangan fayl ishlovi
-file_content = ""
-image_base64 = None
-if uploaded_file:
-    if uploaded_file.type in ["image/png", "image/jpeg"]:
-        image_base64 = encode_image(uploaded_file.getvalue())
-        st.sidebar.image(uploaded_file)
-    elif uploaded_file.type == "application/pdf":
-        file_content = get_pdf_text(uploaded_file)
-    else:
-        file_content = uploaded_file.read().decode("utf-8")
+# --- ASOSIY LOGIN VA CHAT LOGIKASI ---
+st.set_page_config(page_title="Somo AI | Universal Analyst", layout="wide")
+sheet = connect_sheets()
 
-# Chat tarixi (LaTeX qo'llab-quvvatlaydi)
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
 
-# Chat interfeysi
-if prompt := st.chat_input("Type your question..."):
+if not st.session_state.logged_in:
+    st.title("Somo AI - Tizimga kirish")
+    user = st.text_input("Username")
+    pwd = st.text_input("Parol", type='password')
+    
+    if st.button("Kirish") and sheet:
+        records = sheet.get_all_records()
+        hashed_pwd = hashlib.sha256(pwd.encode()).hexdigest()
+        
+        user_found = next((r for r in records if r['username'] == user and str(r['password']) == hashed_pwd), None)
+        
+        if user_found:
+            if user_found['status'] == 'blocked':
+                st.error("Siz Sodiq tomonidan bloklangansiz! 🚫")
+            else:
+                st.session_state.logged_in = True
+                st.session_state.username = user
+                st.rerun()
+        else:
+            st.error("Username yoki parol xato!")
+    st.stop()
+
+# --- CHAT VA PDF TAHLIL QISMI ---
+st.title(f"Xush kelibsiz, {st.session_state.username}! 🤖")
+
+with st.sidebar:
+    st.header("Hujjat yuklash")
+    uploaded_pdf = st.file_uploader("PDF tahlil qilish", type="pdf")
+    if st.button("Chiqish"):
+        st.session_state.logged_in = False
+        st.rerun()
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Avvalgi xabarlarni ko'rsatish
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+# Yangi xabar kiritish
+if prompt := st.chat_input("Savolingizni yozing..."):
+    pdf_context = ""
+    if uploaded_pdf:
+        pdf_context = f"\n\n[Yuklangan PDF mazmuni]: {read_pdf(uploaded_pdf)[:3000]}"
+    
+    full_prompt = prompt + pdf_context
+    
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        full_response = ""
-        
-        # MATEMATIKA VA TIL UCHUN MAXSUS SYSTEM PROMPT
-        sys_prompt = (
-            "You are Somo AI, created by Usmonov Sodiq. "
-            "IMPORTANT: Always use LaTeX for mathematical formulas. "
-            "For example, use $2^2$ for powers, $\\frac{a}{b}$ for fractions. "
-            "Enclose math in dollar signs: $...$ for inline or $$...$$ for blocks. "
-            "Respond in the language the user speaks. Default is English."
-        )
-        
-        model_name = "llama-3.2-90b-vision-preview" if image_base64 else "llama-3.3-70b-versatile"
-        
-        # Xabarlarni tayyorlash
-        messages_payload = [{"role": "system", "content": sys_prompt}]
-        if file_content:
-            messages_payload.append({"role": "user", "content": f"Context: {file_content[:5000]}"})
-        
-        if image_base64:
-            messages_payload.append({
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}"}}
-                ]
-            })
-        else:
-            for m in st.session_state.messages:
-                messages_payload.append({"role": m["role"], "content": m["content"]})
-
-        try:
-            completion = client.chat.completions.create(
-                model=model_name,
-                messages=messages_payload,
-                stream=True,
-            )
-            for chunk in completion:
-                if chunk.choices[0].delta.content:
-                    full_response += chunk.choices[0].delta.content
-                    message_placeholder.markdown(full_response + "▌")
-            
-            message_placeholder.markdown(full_response)
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
-            
-        except Exception as e:
-            st.error(f"Error: {str(e)}")
+        response = get_ai_response(full_prompt)
+        st.markdown(response)
+    st.session_state.messages.append({"role": "assistant", "content": response})
