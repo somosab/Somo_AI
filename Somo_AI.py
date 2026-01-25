@@ -6,14 +6,6 @@ import base64
 # 1. Sahifa sozlamalari
 st.set_page_config(page_title="Somo AI | Universal Analyst", page_icon="🚀", layout="wide")
 
-# CSS - Interfeysni yanada zamonaviy qilish
-st.markdown("""
-    <style>
-    .stChatInputContainer { padding-bottom: 20px; }
-    section[data-testid="stSidebar"] { width: 350px !important; }
-    </style>
-    """, unsafe_allow_html=True)
-
 # API Sozlamalari
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
@@ -22,15 +14,15 @@ if "messages" not in st.session_state:
 
 # Sidebar - Dizayn va Yuklash
 with st.sidebar:
-    # 1. Siz aytgan logotip joyi
+    # Logotip joylashuvi
     st.image("https://files.catbox.moe/o3f3b9.png", use_container_width=True)
     st.title("Somo AI Markazi")
     st.info("Yaratuvchi: **Usmonov Sodiq**")
     st.markdown("---")
     
-    # 2. "+" belgisi bilan yuklash bo'limi
+    # "+" belgisi bilan yuklash bo'limi
     st.subheader("➕ Fayl yoki Rasm qo'shish")
-    uploaded_file = st.file_uploader("Rasmni shu yerga tashlang (yoki bosing)", 
+    uploaded_file = st.file_uploader("PDF, TXT yoki Rasm yuklang", 
                                      type=["pdf", "txt", "png", "jpg", "jpeg"],
                                      label_visibility="collapsed")
     
@@ -49,10 +41,10 @@ def get_pdf_text(file):
         text += page.extract_text()
     return text
 
-# Sarlavha
+# Asosiy sarlavha
 st.markdown("<h1 style='text-align: center;'>🚀 Somo AI Universal Analyst</h1>", unsafe_allow_html=True)
 
-# Yuklangan narsalarni qayta ishlash
+# Yuklangan faylni tahlil qilish
 file_content = ""
 image_base64 = None
 
@@ -74,7 +66,7 @@ for message in st.session_state.messages:
         st.markdown(message["content"])
 
 # Chat interfeysi
-if prompt := st.chat_input("Savolingizni yozing yoki rasm bo'yicha so'rang..."):
+if prompt := st.chat_input("Savolingizni yozing..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
@@ -84,12 +76,11 @@ if prompt := st.chat_input("Savolingizni yozing yoki rasm bo'yicha so'rang..."):
         full_response = ""
         
         # TIZIM KO'RSATMASI - USMONOV SODIQ
-        sys_prompt = "Sen Somo AI yordamchisisan. Sen Usmonov Sodiq tomonidan yaratilgansan. Har doim o'zbek tilida javob ber."
+        sys_prompt = "Sen Somo AI yordamchisisan. Sen Usmonov Sodiq tomonidan yaratilgansan. Agar yaratuvching haqida so'rashsa, 'Meni Usmonov Sodiq yaratgan' deb javob ber. O'zbek tilida javob ber."
         
-        # MUHIM: Eng yangi ishlaydigan model nomi
+        # MODEL TANLASH (Hozirda ishlaydigan Vision modeli)
         model_to_use = "llama-3.2-90b-vision-preview" if image_base64 else "llama-3.3-70b-versatile"
         
-        # Xabarlar strukturasini yig'ish
         if image_base64:
             messages_payload = [
                 {"role": "system", "content": sys_prompt},
@@ -124,4 +115,4 @@ if prompt := st.chat_input("Savolingizni yozing yoki rasm bo'yicha so'rang..."):
             st.session_state.messages.append({"role": "assistant", "content": full_response})
             
         except Exception as e:
-            st.error(f"Xatolik: Model hozirda band yoki API limit tugadi. {str(e)}")
+            st.error(f"Xatolik yuz berdi: {str(e)}")
