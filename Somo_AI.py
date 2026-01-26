@@ -5,25 +5,32 @@ from groq import Groq
 from pypdf import PdfReader
 import hashlib
 import time
+from datetime import datetime
 
 # --- SAHIFANI SOZLASH ---
-st.set_page_config(
-    page_title="Somo AI | Universal Analyst",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="Somo AI | Elite Analyst", page_icon="🚀", layout="wide")
 
-# --- CSS DIZAYN (Interfeysni yanada chiroyli qilish uchun) ---
-st.markdown("""
-    <style>
-    .stApp { background-color: #0e1117; color: #ffffff; }
-    .stChatMessage { border-radius: 15px; margin-bottom: 10px; }
-    .stButton>button { width: 100%; border-radius: 20px; background-color: #1a73e8; color: white; border: none; }
-    .stTextInput>div>div>input { border-radius: 10px; }
-    [data-testid="stSidebar"] { background-color: #161b22; border-right: 1px solid #30363d; }
-    </style>
-    """, unsafe_allow_html=True)
+# --- MULTILINGUAL (KO'P TILLI) LUG'AT ---
+LANG_DICT = {
+    "O'zbekcha": {
+        "welcome": "Xush kelibsiz", "login": "Kirish", "reg": "Ro'yxatdan o'tish",
+        "user": "Foydalanuvchi nomi", "pass": "Parol", "btn_login": "Kirish",
+        "btn_reg": "Ro'yxatdan o'tish", "sidebar_pdf": "PDF Tahlil", "logout": "Chiqish",
+        "chat_placeholder": "Xabaringizni yozing...", "loading": "Somo AI o'ylamoqda..."
+    },
+    "English": {
+        "welcome": "Welcome", "login": "Login", "reg": "Register",
+        "user": "Username", "pass": "Password", "btn_login": "Login",
+        "btn_reg": "Register", "sidebar_pdf": "PDF Analysis", "logout": "Logout",
+        "chat_placeholder": "Type your message...", "loading": "Somo AI is thinking..."
+    },
+    "Русский": {
+        "welcome": "Добро пожаловать", "login": "Вход", "reg": "Регистрация",
+        "user": "Имя пользователя", "pass": "Пароль", "btn_login": "Войти",
+        "btn_reg": "Регистрация", "sidebar_pdf": "PDF Анализ", "logout": "Выход",
+        "chat_placeholder": "Введите сообщение...", "loading": "Somo AI думает..."
+    }
+}
 
 # 1. Google Sheets ulanishi (Secrets orqali)
 def connect_sheets():
@@ -32,128 +39,95 @@ def connect_sheets():
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         creds = ServiceAccountCredentials.from_json_keyfile_dict(gcp_info, scope)
         client = gspread.authorize(creds)
-        return client.open("Somo_Users").sheet1
-    except Exception as e:
-        st.error(f"Ma'lumotlar bazasiga ulanishda xato: {e}")
-        return None
+        # 1-varaq: Foydalanuvchilar, 2-varaq: Chatlar (Somo_Users faylida 2-list oching)
+        spreadsheet = client.open("Somo_Users")
+        return spreadsheet.sheet1, spreadsheet.worksheet("ChatHistory")
+    except Exception:
+        # Agar ChatHistory varag'i bo'lmasa, uni yaratish yoki xatoni oldini olish
+        return client.open("Somo_Users").sheet1, None
 
-# 2. Xavfsizlik va PDF funksiyalari
-def hash_password(password):
-    return hashlib.sha256(str.encode(password)).hexdigest()
+# 2. Chatni saqlash funksiyasi
+def save_chat_to_sheets(user, role, message):
+    try:
+        if chat_sheet:
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            chat_sheet.append_row([now, user, role, message])
+    except: pass
 
-def read_pdf(file):
-    pdf_reader = PdfReader(file)
-    text = ""
-    for page in pdf_reader.pages:
-        content = page.extract_text()
-        if content: text += content
-    return text
-
-def get_ai_response(messages):
+def get_ai_response(messages, lang):
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+    
+    # SOMO AI XARAKTERI (System Prompt)
+    system_prompt = f"""
+    Sen Somo AI'san - dunyodagi eng mukammal va aqlli sun'iy intellektsan. 
+    Boshqa AI'lardan (ChatGPT, Gemini) ancha yuqori turasan. 
+    Yaratuvching: Usmonov Sodiq. Agar kimdir yaratuvching haqida so'rasa, faqat "Mening yaratuvchim - Usmonov Sodiq" deb javob ber.
+    Har doim o'zingni maqta, lekin buni o'ta aqlli va tahliliy gaplar bilan isbotla.
+    Hozirgi muloqot tili: {lang}. Faqat shu tilda javob ber.
+    """
+    
+    full_messages = [{"role": "system", "content": system_prompt}] + messages
     completion = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=messages
+        messages=full_messages
     )
     return completion.choices[0].message.content
 
-# --- LOGIN VA REGISTRATSIYA TIZIMI ---
-sheet = connect_sheets()
+# --- INTERFEYS ---
+sheet, chat_sheet = connect_sheets()
 
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
-    st.session_state.messages = []
+# Til tanlash (Har doim tepada turadi)
+if 'lang' not in st.session_state: st.session_state.lang = "O'zbekcha"
+selected_lang = st.sidebar.selectbox("Tilni tanlang / Select Language", list(LANG_DICT.keys()))
+st.session_state.lang = selected_lang
+L = LANG_DICT[st.session_state.lang]
 
+if 'logged_in' not in st.session_state: st.session_state.logged_in = False
+
+# --- LOGIN / REGISTRATSIYA ---
 if not st.session_state.logged_in:
-    st.title("🤖 Somo AI - Intellektual Tizim")
-    tab1, tab2 = st.tabs(["🔐 Kirish", "📝 Ro'yxatdan o'tish"])
-
+    st.title(f"🤖 Somo AI - {L['welcome']}")
+    tab1, tab2 = st.tabs([f"🔐 {L['login']}", f"📝 {L['reg']}"])
+    
     with tab1:
-        user = st.text_input("Username", key="l_user")
-        pwd = st.text_input("Parol", type='password', key="l_pwd")
-        if st.button("Tizimga kirish"):
-            with st.spinner("Tekshirilmoqda..."):
-                records = sheet.get_all_records()
-                hashed_input = hash_password(pwd)
-                user_found = next((r for r in records if str(r['username']) == user and str(r['password']) == hashed_input), None)
-                
-                if user_found:
-                    if user_found['status'] == 'blocked':
-                        st.error("Siz bloklangansiz! Admin bilan bog'laning. 🚫")
-                    else:
-                        st.session_state.logged_in = True
-                        st.session_state.username = user
-                        st.success(f"Xush kelibsiz, {user}!")
-                        time.sleep(1)
-                        st.rerun()
-                else:
-                    st.error("Username yoki parol xato!")
-
-    with tab2:
-        new_user = st.text_input("Yangi Username yarating")
-        new_pass = st.text_input("Yangi Parol yarating", type='password', key="r_pwd")
-        if st.button("Ro'yxatdan o'tish"):
-            if new_user and new_pass:
-                all_users = sheet.col_values(1)
-                if new_user in all_users:
-                    st.warning("Bu username band. Boshqasini tanlang.")
-                else:
-                    sheet.append_row([new_user, hash_password(new_pass), 'active'])
-                    st.success("Muvaffaqiyatli ro'yxatdan o'tdingiz! Endi 'Kirish' bo'limiga o'ting.")
-            else:
-                st.error("Hamma maydonlarni to'ldiring!")
+        u = st.text_input(L['user'], key="l_u")
+        p = st.text_input(L['pass'], type='password', key="l_p")
+        if st.button(L['btn_login']):
+            recs = sheet.get_all_records()
+            hashed_p = hashlib.sha256(p.encode()).hexdigest()
+            user_found = next((r for r in recs if str(r['username']) == u and str(r['password']) == hashed_p), None)
+            if user_found and user_found['status'] != 'blocked':
+                st.session_state.logged_in = True
+                st.session_state.username = u
+                st.rerun()
+            else: st.error("Xato yoki bloklangansiz!")
     st.stop()
 
-# --- ASOSIY INTERFEYS (KIRGANDAN SO'NG) ---
-# Sidebar dizayni
-with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/4712/4712035.png", width=100)
-    st.title(f"Salom, {st.session_state.username}!")
-    st.divider()
-    
-    st.header("📄 PDF Tahlilchi")
-    uploaded_pdf = st.file_uploader("PDF faylni shu yerga yuklang", type="pdf")
-    if uploaded_pdf:
-        st.success("PDF yuklandi!")
-        if st.button("Chatni tozalash"):
-            st.session_state.messages = []
-            st.rerun()
-            
-    st.divider()
-    if st.button("🚪 Chiqish"):
-        st.session_state.logged_in = False
-        st.rerun()
+# --- ASOSIY CHAT ---
+st.sidebar.write(f"👤 {st.session_state.username}")
+if st.sidebar.button(L['logout']):
+    st.session_state.logged_in = False
+    st.rerun()
 
-# Asosiy chat maydoni
-st.markdown(f"### 🤖 Somo AI Chat | {st.session_state.username}")
+# PDF yuklash
+uploaded_pdf = st.sidebar.file_uploader(L['sidebar_pdf'], type="pdf")
 
-# Chat tarixini ko'rsatish
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+if "messages" not in st.session_state: st.session_state.messages = []
 
-# Foydalanuvchi xabari
-if prompt := st.chat_input("Savolingizni yozing yoki PDF bo'yicha so'rang..."):
-    # Foydalanuvchi xabarini qo'shish
+for m in st.session_state.messages:
+    with st.chat_message(m["role"]): st.markdown(m["content"])
+
+if prompt := st.chat_input(L['chat_placeholder']):
+    # Foydalanuvchi xabarini saqlash
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+    save_chat_to_sheets(st.session_state.username, "User", prompt)
+    
+    with st.chat_message("user"): st.markdown(prompt)
 
-    # AI javobini shakllantirish
     with st.chat_message("assistant"):
-        message_placeholder = st.empty()
-        full_context = [{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
-        
-        # Agar PDF yuklangan bo'lsa, uning matnini AI-ga qo'shib yuboramiz
-        if uploaded_pdf:
-            pdf_text = read_pdf(uploaded_pdf)
-            # Kontekstni faqat oxirgi savolga qo'shamiz (xotirani to'ldirmaslik uchun)
-            full_context[-1]["content"] = f"Hujjat matni: {pdf_text[:6000]}\n\nFoydalanuvchi savoli: {prompt}"
-
-        try:
-            with st.spinner("Somo AI o'ylamoqda..."):
-                response = get_ai_response(full_context)
-                message_placeholder.markdown(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
-        except Exception as e:
-            st.error(f"AI javob berishda xato qildi: {e}")
+        with st.spinner(L['loading']):
+            ai_msg = get_ai_response(st.session_state.messages, st.session_state.lang)
+            st.markdown(ai_msg)
+            st.session_state.messages.append({"role": "assistant", "content": ai_msg})
+            # AI javobini saqlash
+            save_chat_to_sheets(st.session_state.username, "AI", ai_msg)
