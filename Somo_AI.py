@@ -6,15 +6,16 @@ from pypdf import PdfReader
 import hashlib
 from datetime import datetime
 
-# --- PREMIUM DIZAYN (CSS) ---
-st.set_page_config(page_title="Somo AI | Ultimate Edition", page_icon="💎", layout="wide")
+# --- KOSMIK QORA DIZAYN ---
+st.set_page_config(page_title="Somo AI | Elite", page_icon="🚀", layout="wide")
 st.markdown("""
     <style>
-    .stApp { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; }
-    .chat-bubble { border-radius: 15px; padding: 15px; margin: 10px 0; border: 1px solid #334155; }
-    .stButton>button { background: linear-gradient(90deg, #3b82f6, #2563eb); color: white; border-radius: 8px; border: none; transition: 0.3s; }
-    .stButton>button:hover { transform: scale(1.02); box-shadow: 0 4px 15px rgba(37, 99, 235, 0.4); }
-    [data-testid="stSidebar"] { background-color: rgba(15, 23, 42, 0.95); border-right: 1px solid #334155; }
+    .stApp { background: radial-gradient(circle, #111827 0%, #000000 100%); color: #e5e7eb; }
+    .stChatMessage { border-radius: 20px; border: 1px solid #1f2937; background: #111827; }
+    .stButton>button { background: linear-gradient(45deg, #4f46e5, #9333ea); border: none; color: white; border-radius: 12px; height: 3em; transition: 0.4s; }
+    .stButton>button:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(79, 70, 229, 0.4); }
+    [data-testid="stSidebar"] { background-color: #030712; border-right: 1px solid #1f2937; }
+    .welcome-card { background: rgba(31, 41, 55, 0.5); padding: 30px; border-radius: 20px; border: 1px solid #374151; text-align: center; margin-top: 50px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -30,71 +31,86 @@ def connect_sheets():
     except: return None, None
 
 def generate_chat_title(message):
-    """AI xabarga qarab qisqa nom beradi"""
-    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-    completion = client.chat.completions.create(
-        model="llama3-8b-8192",
-        messages=[{"role": "user", "content": f"Ushbu gapdan 3-4 so'zlik sarlavha yasa: {message}"}]
-    )
-    return completion.choices[0].message.content.strip().replace('"', '')
+    try:
+        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+        # Xatoni oldini olish uchun barqaror model ishlatamiz
+        completion = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": f"Ushbu xabarga 3 ta so'zdan iborat sarlavha ber: {message}"}]
+        )
+        return completion.choices[0].message.content.strip().replace('"', '')
+    except: return "Yangi Suhbat"
 
 def get_ai_response(messages, lang):
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-    sys_msg = f"Sen Somo AI'san. Yaratuvching: Usmonov Sodiq. Sen eng aqllisan. Til: {lang}."
-    full_messages = [{"role": "system", "content": sys_msg}] + messages
-    return client.chat.completions.create(model="llama-3.3-70b-versatile", messages=full_messages).choices[0].message.content
+    sys_prompt = f"Sen Somo AI'san. Yaratuvching: Usmonov Sodiq. Sen dunyoda yagonasan. Javob tili: {lang}."
+    full_msgs = [{"role": "system", "content": sys_prompt}] + messages
+    return client.chat.completions.create(model="llama-3.3-70b-versatile", messages=full_msgs).choices[0].message.content
 
-# --- DATABASE VA LOGIN ---
-user_sheet, chat_sheet = connect_sheets()
-
-# Til tanlash lug'ati
-LANGS = {
-    "O'zbekcha": {"log": "Kirish", "reg": "Registratsiya", "user": "Foydalanuvchi", "pass": "Parol", "file": "PDF yuklash"},
-    "English": {"log": "Login", "reg": "Register", "user": "Username", "pass": "Password", "file": "Upload PDF"}
+# --- MULTILINGUAL (12+ tillar) ---
+LANG_DICT = {
+    "🇺🇿 O'zbekcha": {"w": "Xush kelibsiz", "s": "Savolingizni yozing...", "p": "PDF yuklang", "l": "Chiqish"},
+    "🇺🇸 English": {"w": "Welcome", "s": "Ask me anything...", "p": "Upload PDF", "l": "Logout"},
+    "🇷🇺 Русский": {"w": "Добро пожаловать", "s": "Задайте вопрос...", "p": "Загрузить PDF", "l": "Выйти"},
+    "🇹🇷 Türkçe": {"w": "Hoş geldiniz", "s": "Bir şey sor...", "p": "PDF Yükle", "l": "Çıkış"},
+    "🇩🇪 Deutsch": {"w": "Willkommen", "s": "Frag mich was...", "p": "PDF Hochladen", "l": "Abmelden"},
+    "🇫🇷 Français": {"w": "Bienvenue", "s": "Posez une question...", "p": "Charger PDF", "l": "Quitter"},
+    "🇸🇦 العربية": {"w": "أهلاً بك", "s": "اسألني أي شيء...", "p": "تحميل PDF", "l": "تسجيل الخروج"},
+    "🇰🇷 한국어": {"w": "환영합니다", "s": "무엇이든 물어보세요...", "p": "PDF 업로드", "l": "로그아웃"},
+    "🇯🇵 日本語": {"w": "ようこそ", "s": "何でも聞いてください...", "p": "PDFアップロード", "l": "ログアウト"},
+    "🇨🇳 中文": {"w": "欢迎", "s": "问我任何事...", "p": "上传PDF", "l": "登出"}
 }
 
-if 'lang' not in st.session_state: st.session_state.lang = "O'zbekcha"
-lang_choice = st.sidebar.selectbox("🌐 Language", list(LANGS.keys()))
-st.session_state.lang = lang_choice
-L = LANGS[st.session_state.lang]
+# Sidebar sozlamalari
+sel_lang_key = st.sidebar.selectbox("🌐 Tilni tanlang / Select Language", list(LANG_DICT.keys()))
+L = LANG_DICT[sel_lang_key]
+
+user_sheet, chat_sheet = connect_sheets()
 
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 
-# --- TIZIMGA KIRISH ---
+# --- LOGIN (Faqat username va parol so'raladi) ---
 if not st.session_state.logged_in:
-    st.title("🤖 Somo AI | Premium")
-    t1, t2 = st.tabs([L['log'], L['reg']])
-    with t1:
-        u = st.text_input(L['user'], key="login_u")
-        p = st.text_input(L['pass'], type='password', key="login_p")
-        if st.button(L['log']):
-            recs = user_sheet.get_all_records()
-            hp = hashlib.sha256(p.encode()).hexdigest()
-            u_data = next((r for r in recs if str(r['username']) == u and str(r['password']) == hp), None)
-            if u_data and u_data['status'] == 'active':
-                st.session_state.logged_in = True
-                st.session_state.username = u
-                st.rerun()
+    st.title(f"🚀 Somo AI | {sel_lang_key}")
+    u = st.text_input("Username")
+    p = st.text_input("Parol", type='password')
+    if st.button("Kirish"):
+        recs = user_sheet.get_all_records()
+        hp = hashlib.sha256(p.encode()).hexdigest()
+        user_data = next((r for r in recs if str(r['username']) == u and str(r['password']) == hp), None)
+        if user_data and user_data['status'] == 'active':
+            st.session_state.logged_in = True
+            st.session_state.username = u
+            st.session_state.messages = []
+            st.rerun()
     st.stop()
 
-# --- ASOSIY CHAT ---
-st.sidebar.title(f"✨ {st.session_state.username}")
-if st.sidebar.button("🚪 Logout"):
+# --- ASOSIY INTERFEYS ---
+st.sidebar.markdown(f"### ✨ {st.session_state.username}")
+if st.sidebar.button(L['l']):
     st.session_state.logged_in = False
     st.rerun()
 
-pdf_file = st.sidebar.file_uploader(L['file'], type="pdf")
+up_pdf = st.sidebar.file_uploader(L['p'], type="pdf")
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-    st.session_state.current_title = "Yangi Suhbat"
+# KREATIV SALOMLASHISH EKRANI
+if not st.session_state.messages:
+    st.markdown(f"""
+        <div class="welcome-card">
+            <h1>🚀 {L['w']}, {st.session_state.username}!</h1>
+            <p style="font-size: 1.2em;">Men Somo AI - Usmonov Sodiq tomonidan yaratilgan koinotdagi eng aqlli intellektman.</p>
+            <p>Bugun qanday buyuk ishlarni amalga oshiramiz?</p>
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+                <code style="color: #9333ea;">#Tahlil</code> <code style="color: #4f46e5;">#PDF_O'qish</code> <code style="color: #10b981;">#Sodiq_Genius</code>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
-# Chatni ko'rsatish
+# Chat ko'rsatish
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-if prompt := st.chat_input("..."):
-    # Birinchi xabarda chat nomini yaratish
+if prompt := st.chat_input(L['s']):
     if not st.session_state.messages:
         st.session_state.current_title = generate_chat_title(prompt)
     
@@ -103,22 +119,16 @@ if prompt := st.chat_input("..."):
 
     with st.chat_message("assistant"):
         context = list(st.session_state.messages)
-        if pdf_file:
-            pdf_text = PdfReader(pdf_file).pages[0].extract_text() # pypdf ishlatildi
-            context[-1]["content"] += f"\n[PDF]: {pdf_text[:2000]}"
+        if up_pdf:
+            pdf_txt = PdfReader(up_pdf).pages[0].extract_text()
+            context[-1]["content"] += f"\n[DOC]: {pdf_txt[:3000]}"
             
-        res = get_ai_response(context, st.session_state.lang)
+        res = get_ai_response(context, sel_lang_key)
         st.markdown(res)
         st.session_state.messages.append({"role": "assistant", "content": res})
         
-        # Google Sheets-ga saqlash (AI sarlavhasi bilan)
+        # Sheets-ga saqlash
         if chat_sheet:
-            chat_sheet.append_row([
-                st.session_state.current_title, # AI yaratgan sarlavha
-                datetime.now().strftime("%H:%M"), 
-                st.session_state.username, 
-                "User/AI", 
-                prompt[:500]
-            ])
+            chat_sheet.append_row([st.session_state.get('current_title', 'Suhbat'), datetime.now().strftime("%H:%M"), st.session_state.username, "AI", prompt[:500]])
 
-st.sidebar.info(f"📍 Chat: {st.session_state.current_title}")
+st.sidebar.caption(f"📍 {st.session_state.get('current_title', '')}")
