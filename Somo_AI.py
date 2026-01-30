@@ -13,19 +13,11 @@ from datetime import datetime
 st.set_page_config(page_title="Somo AI | Universal Infinity", page_icon="💎", layout="wide")
 st.markdown("""
     <style>
-    .stApp { 
-        background: radial-gradient(circle at center, #000000 0%, #020617 100%); 
-        color: #ffffff; 
-    }
-    [data-testid="stSidebar"] { 
-        background-color: #000000 !important; 
-        border-right: 1px solid #1e293b; 
-    }
+    .stApp { background: radial-gradient(circle at center, #000000 0%, #020617 100%); color: #ffffff; }
+    [data-testid="stSidebar"] { background-color: #000000 !important; border-right: 1px solid #1e293b; }
     .stChatMessage { 
-        border-radius: 20px; 
-        border: 1px solid rgba(255, 255, 255, 0.05) !important; 
-        background: rgba(15, 23, 42, 0.8) !important; 
-        backdrop-filter: blur(10px);
+        border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.05) !important; 
+        background: rgba(15, 23, 42, 0.8) !important; backdrop-filter: blur(10px);
         margin-bottom: 15px;
     }
     .stButton>button { 
@@ -38,6 +30,10 @@ st.markdown("""
         background: #38bdf8; color: #000000;
         box-shadow: 0 0 20px #38bdf8; 
     }
+    /* Logout va Clear tugmalari uchun maxsus qizil stil */
+    .logout-btn>div>button { border-color: #f43f5e !important; color: #f43f5e !important; }
+    .logout-btn>div>button:hover { background: #f43f5e !important; color: white !important; box-shadow: 0 0 20px #f43f5e !important; }
+    
     .katex { color: #38bdf8 !important; font-size: 1.2em !important; }
     </style>
     """, unsafe_allow_html=True)
@@ -66,7 +62,7 @@ def extract_universal_content(file):
         elif ext == 'pptx':
             prs = pptx.Presentation(file)
             return "\n".join([s.text for sl in prs.slides for s in sl.shapes if hasattr(s, "text")])
-    except: return "Faylni o'qishda xatolik yuz berdi."
+    except: return "Faylni o'qishda xatolik."
     return ""
 
 # --- 🔐 AUTHENTICATION ---
@@ -75,7 +71,6 @@ if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 if not st.session_state.logged_in:
     st.markdown('<h1 style="text-align:center; color:#38bdf8; margin-top:50px;">🌌 Somo AI Infinity</h1>', unsafe_allow_html=True)
     t1, t2 = st.tabs(["🔑 Kirish", "📝 Ro'yxatdan o'tish"])
-    
     with t1:
         u = st.text_input("Username", placeholder="Ismingiz...")
         p = st.text_input("Parol", type='password', placeholder="Parolingiz...")
@@ -83,27 +78,42 @@ if not st.session_state.logged_in:
             recs = user_sheet.get_all_records()
             hp = hashlib.sha256(p.encode()).hexdigest()
             user = next((r for r in recs if str(r['username']) == u), None)
-            
             if user:
                 if str(user['password']) == hp:
                     if user['status'] == 'active':
                         st.session_state.logged_in, st.session_state.username, st.session_state.messages = True, u, []
                         st.rerun()
                     else: st.error("❌ Hisobingiz bloklangan!")
-                else: st.error("⚠️ Parol noto'g'ri! Iltimos, qaytadan urinib ko'ring.")
-            else: st.error("🔍 Bunday foydalanuvchi topilmadi!")
-
+                else: st.error("⚠️ Parol noto'g'ri!")
+            else: st.error("🔍 Username topilmadi!")
     with t2:
-        nu, np = st.text_input("Yangi Username"), st.text_input("Yangi Parol", type='password')
+        nu, np = st.text_input("Yangi Login"), st.text_input("Yangi Parol", type='password')
         if st.button("Hisobni yaratish"):
             if nu and np:
                 user_sheet.append_row([nu, hashlib.sha256(np.encode()).hexdigest(), "active"])
-                st.success("🎉 Muvaffaqiyatli! Kirish bo'limiga o'ting.")
+                st.success("🎉 Muvaffaqiyatli! Kirishga o'ting.")
     st.stop()
 
-# --- 💬 CHAT & PERSONALITY ENGINE ---
+# --- 💬 SIDEBAR (CONTROL PANEL) ---
 st.sidebar.markdown(f"### 👤 {st.session_state.username}")
+
+# Tozalash tugmasi
+if st.sidebar.button("🗑 Chatni tozalash"):
+    st.session_state.messages = []
+    st.rerun()
+
+# Fayl yuklash
 up_file = st.sidebar.file_uploader("📂 Fayl tahlili (PDF, Word, Excel, PPTX)", type=["pdf", "docx", "xlsx", "csv", "pptx"])
+
+st.sidebar.markdown("---")
+# Chiqish tugmasi (Qizil stil bilan)
+st.sidebar.markdown('<div class="logout-btn">', unsafe_allow_html=True)
+if st.sidebar.button("🚪 Tizimdan chiqish"):
+    st.session_state.logged_in = False
+    st.session_state.username = ""
+    st.session_state.messages = []
+    st.rerun()
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
 # --- ✨ KREATIV BOSH SAHIFA ---
 if len(st.session_state.messages) == 0:
@@ -116,11 +126,11 @@ if len(st.session_state.messages) == 0:
             <div style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
                 <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid #38bdf8; padding: 15px; border-radius: 12px; width: 180px;">
                     <h4 style="color:#38bdf8;">📐 Matematika</h4>
-                    <p style="font-size: 0.8rem;">Murakkab misollarni LaTeX formatida yechaman.</p>
+                    <p style="font-size: 0.8rem;">Misollarni LaTeX formatida yechaman.</p>
                 </div>
                 <div style="background: rgba(129, 140, 248, 0.05); border: 1px solid #818cf8; padding: 15px; border-radius: 12px; width: 180px;">
                     <h4 style="color:#818cf8;">📂 Fayllar</h4>
-                    <p style="font-size: 0.8rem;">Word, PDF, Excel va PPTX tahlil qilaman.</p>
+                    <p style="font-size: 0.8rem;">PDF, Excel va PPTX tahlil qilaman.</p>
                 </div>
                 <div style="background: rgba(244, 63, 94, 0.05); border: 1px solid #f43f5e; padding: 15px; border-radius: 12px; width: 180px;">
                     <h4 style="color:#f43f5e;">👨‍💻 Creator</h4>
@@ -130,7 +140,7 @@ if len(st.session_state.messages) == 0:
         </div>
     """, unsafe_allow_html=True)
 
-# Xabarlarni ko'rsatish
+# Chatni ko'rsatish
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
@@ -140,23 +150,17 @@ if prompt := st.chat_input("Somo AI ga savol bering..."):
 
     with st.chat_message("assistant"):
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        user_current = st.session_state.username
-        
         sys_msg = f"""Sening isming Somo AI. Yaratuvching: Usmonov Sodiq. 
-        Hozirgi foydalanuvchi: {user_current}. 
-        Agar senga foydalanuvchi 'men kimman?' deb murojaat qilsa, uning ismi {user_current} ekanini ayt.
-        Matematik misollarni va formulalarni FAQAT LaTeX ($...$) formatida yoz. 
-        Misol: $a^2 + \\frac{{b}}{{c}} = d$. 
-        Yuklangan fayllarni diqqat bilan tahlil qil va foydalanuvchiga yordam ber."""
-
+        Foydalanuvchi: {st.session_state.username}. 
+        Matematikani FAQAT LaTeX ($...$) formatida yoz. Misol: $a + \\frac{{2}}{{a}} = 6$."""
+        
         ctx = [{"role": "system", "content": sys_msg}] + st.session_state.messages
         if up_file:
-            ctx.insert(1, {"role": "system", "content": f"Foydalanuvchi yuklagan fayl mazmuni: {extract_universal_content(up_file)}"})
+            ctx.insert(1, {"role": "system", "content": f"Fayl: {extract_universal_content(up_file)}"})
         
         response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=ctx).choices[0].message.content
         st.markdown(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
         
-        try:
-            chat_sheet.append_row([datetime.now().strftime("%H:%M"), st.session_state.username, "AI", prompt[:500]])
+        try: chat_sheet.append_row([datetime.now().strftime("%H:%M"), st.session_state.username, "AI", prompt[:500]])
         except: pass
