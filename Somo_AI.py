@@ -9,7 +9,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 from groq import Groq
 from datetime import datetime
 
-# --- 🛰 PRESTIGE BLACK DESIGN ---
+# --- 🛰 UNIVERSAL PREMIUM DESIGN ---
 st.set_page_config(page_title="Somo AI | Universal Infinity", page_icon="🌌", layout="wide")
 st.markdown("""
     <style>
@@ -22,19 +22,15 @@ st.markdown("""
     }
     .stButton>button { 
         background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%); 
-        color: #38bdf8; border: 1px solid #38bdf8;
-        border-radius: 12px; font-weight: 700; transition: 0.4s;
-        height: 45px; width: 100%;
+        color: #38bdf8; border: 1px solid #38bdf8; border-radius: 12px; 
+        font-weight: 700; transition: 0.4s; height: 45px; width: 100%;
     }
     .stButton>button:hover { 
-        background: #38bdf8; color: #000000;
-        box-shadow: 0 0 20px #38bdf8; 
+        background: #38bdf8; color: #000000; box-shadow: 0 0 20px #38bdf8; 
     }
-    /* Logout va Clear tugmalari uchun maxsus qizil stil */
     .logout-btn>div>button { border-color: #f43f5e !important; color: #f43f5e !important; }
-    .logout-btn>div>button:hover { background: #f43f5e !important; color: white !important; box-shadow: 0 0 20px #f43f5e !important; }
-    
-    .katex { color: #38bdf8 !important; font-size: 1.2em !important; }
+    .logout-btn>div>button:hover { background: #f43f5e !important; color: white !important; }
+    .katex { color: #38bdf8 !important; font-size: 1.1em !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -58,11 +54,11 @@ def extract_universal_content(file):
         elif ext == 'docx': return mammoth.extract_raw_text(file).value
         elif ext in ['xlsx', 'csv']:
             df = pd.read_excel(file) if ext == 'xlsx' else pd.read_csv(file)
-            return f"Jadval ma'lumotlari: {df.head(30).to_string()}"
+            return f"Jadval ma'lumotlari: {df.to_string()}"
         elif ext == 'pptx':
             prs = pptx.Presentation(file)
             return "\n".join([s.text for sl in prs.slides for s in sl.shapes if hasattr(s, "text")])
-    except: return "Faylni o'qishda xatolik."
+    except: return "Faylni tahlil qilishda xatolik yuz berdi."
     return ""
 
 # --- 🔐 AUTHENTICATION ---
@@ -72,69 +68,57 @@ if not st.session_state.logged_in:
     st.markdown('<h1 style="text-align:center; color:#38bdf8; margin-top:50px;">🌌 Somo AI Infinity</h1>', unsafe_allow_html=True)
     t1, t2 = st.tabs(["🔑 Kirish", "📝 Ro'yxatdan o'tish"])
     with t1:
-        u = st.text_input("Username", placeholder="Ismingiz...")
-        p = st.text_input("Parol", type='password', placeholder="Parolingiz...")
-        if st.button("Tizimga kirish"):
+        u = st.text_input("Username")
+        p = st.text_input("Parol", type='password')
+        if st.button("Kirish"):
             recs = user_sheet.get_all_records()
             hp = hashlib.sha256(p.encode()).hexdigest()
             user = next((r for r in recs if str(r['username']) == u), None)
-            if user:
-                if str(user['password']) == hp:
-                    if user['status'] == 'active':
-                        st.session_state.logged_in, st.session_state.username, st.session_state.messages = True, u, []
-                        st.rerun()
-                    else: st.error("❌ Hisobingiz bloklangan!")
-                else: st.error("⚠️ Parol noto'g'ri!")
-            else: st.error("🔍 Username topilmadi!")
+            if user and str(user['password']) == hp:
+                st.session_state.logged_in, st.session_state.username, st.session_state.messages = True, u, []
+                st.rerun()
+            else: st.error("⚠️ Username yoki parol noto'g'ri!")
     with t2:
-        nu, np = st.text_input("Yangi Login"), st.text_input("Yangi Parol", type='password')
-        if st.button("Hisobni yaratish"):
+        nu, np = st.text_input("Yangi Username"), st.text_input("Yangi Parol", type='password')
+        if st.button("Hisob yaratish"):
             if nu and np:
                 user_sheet.append_row([nu, hashlib.sha256(np.encode()).hexdigest(), "active"])
-                st.success("🎉 Muvaffaqiyatli! Kirishga o'ting.")
+                st.success("🎉 Tayyor! Endi kirishga o'ting.")
     st.stop()
 
-# --- 💬 SIDEBAR (CONTROL PANEL) ---
+# --- 💬 SIDEBAR CONTROL ---
 st.sidebar.markdown(f"### 👤 {st.session_state.username}")
-
-# Tozalash tugmasi
 if st.sidebar.button("🗑 Chatni tozalash"):
     st.session_state.messages = []
     st.rerun()
-
-# Fayl yuklash
-up_file = st.sidebar.file_uploader("📂 Fayl tahlili (PDF, Word, Excel, PPTX)", type=["pdf", "docx", "xlsx", "csv", "pptx"])
-
+up_file = st.sidebar.file_uploader("📂 Fayl (PDF, Word, Excel, PPTX)", type=["pdf", "docx", "xlsx", "csv", "pptx"])
 st.sidebar.markdown("---")
-# Chiqish tugmasi (Qizil stil bilan)
 st.sidebar.markdown('<div class="logout-btn">', unsafe_allow_html=True)
 if st.sidebar.button("🚪 Tizimdan chiqish"):
     st.session_state.logged_in = False
-    st.session_state.username = ""
-    st.session_state.messages = []
     st.rerun()
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-# --- ✨ KREATIV BOSH SAHIFA ---
+# --- ✨ CREATIVE UNIVERSAL DASHBOARD ---
 if len(st.session_state.messages) == 0:
     st.markdown(f"""
-        <div style="text-align: center; padding: 50px 0;">
+        <div style="text-align: center; padding: 40px 0;">
             <h1 style="font-size: 3rem; background: linear-gradient(90deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
                 Assalomu alaykum, {st.session_state.username}! ✨
             </h1>
-            <p style="font-size: 1.2rem; color: #94a3b8;">Men Somo AI - sizning universal yordamchingizman.</p>
+            <p style="font-size: 1.2rem; color: #94a3b8;">Somo AI - har qanday savol va fayllar bilan ishlay oladigan universal yordamchi.</p>
             <div style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
-                <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid #38bdf8; padding: 15px; border-radius: 12px; width: 180px;">
-                    <h4 style="color:#38bdf8;">📐 Matematika</h4>
-                    <p style="font-size: 0.8rem;">Misollarni LaTeX formatida yechaman.</p>
+                <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid #38bdf8; padding: 15px; border-radius: 12px; width: 200px;">
+                    <h4 style="color:#38bdf8;">🧠 Aqlli Tahlil</h4>
+                    <p style="font-size: 0.8rem;">Matematika, fizika, dasturlash va har qanday fan bo'yicha yordam beraman.</p>
                 </div>
-                <div style="background: rgba(129, 140, 248, 0.05); border: 1px solid #818cf8; padding: 15px; border-radius: 12px; width: 180px;">
-                    <h4 style="color:#818cf8;">📂 Fayllar</h4>
-                    <p style="font-size: 0.8rem;">PDF, Excel va PPTX tahlil qilaman.</p>
+                <div style="background: rgba(129, 140, 248, 0.05); border: 1px solid #818cf8; padding: 15px; border-radius: 12px; width: 200px;">
+                    <h4 style="color:#818cf8;">📑 Hujjatlar</h4>
+                    <p style="font-size: 0.8rem;">Word, PDF, Excel va PPTX fayllarni o'qiyman va xulosa qilaman.</p>
                 </div>
-                <div style="background: rgba(244, 63, 94, 0.05); border: 1px solid #f43f5e; padding: 15px; border-radius: 12px; width: 180px;">
-                    <h4 style="color:#f43f5e;">👨‍💻 Creator</h4>
-                    <p style="font-size: 0.8rem;">Yaratuvchim: Usmonov Sodiq.</p>
+                <div style="background: rgba(244, 63, 94, 0.05); border: 1px solid #f43f5e; padding: 15px; border-radius: 12px; width: 200px;">
+                    <h4 style="color:#f43f5e;">✍️ Ijodkorlik</h4>
+                    <p style="font-size: 0.8rem;">Sizga insho, kod, she'r yoki biznes-reja yozishda yordamlashaman.</p>
                 </div>
             </div>
         </div>
@@ -144,19 +128,21 @@ if len(st.session_state.messages) == 0:
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-if prompt := st.chat_input("Somo AI ga savol bering..."):
+if prompt := st.chat_input("Istalgan mavzuda savol bering..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"): st.markdown(prompt)
 
     with st.chat_message("assistant"):
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        sys_msg = f"""Sening isming Somo AI. Yaratuvching: Usmonov Sodiq. Sen universalsan payti bilan o'zingni maqta doim emas.
+        sys_msg = f"""Sening isming Somo AI. Yaratuvching: Usmonov Sodiq. 
         Foydalanuvchi: {st.session_state.username}. 
-        Matematikani FAQAT LaTeX ($...$) formatida yoz. Misol: $a + \\frac{{2}}{{a}} = 6$."""
+        Sen universal AIsan. Faqat matematika emas, balki til, adabiyot, tarix, dasturlash va boshqa barcha sohalarda mukammal bilimga egasan.
+        Javoblaringni tushunarli va professional tilda yoz. 
+        Agar matematik formula kelsa, uni LaTeX ($...$) formatida ko'rsat."""
         
         ctx = [{"role": "system", "content": sys_msg}] + st.session_state.messages
         if up_file:
-            ctx.insert(1, {"role": "system", "content": f"Fayl: {extract_universal_content(up_file)}"})
+            ctx.insert(1, {"role": "system", "content": f"Yuklangan fayl mazmuni: {extract_universal_content(up_file)}"})
         
         response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=ctx).choices[0].message.content
         st.markdown(response)
@@ -164,4 +150,3 @@ if prompt := st.chat_input("Somo AI ga savol bering..."):
         
         try: chat_sheet.append_row([datetime.now().strftime("%H:%M"), st.session_state.username, "AI", prompt[:500]])
         except: pass
-
