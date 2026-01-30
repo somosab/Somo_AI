@@ -3,3 +3,6 @@ gspread
 oauth2client
 groq
 pypdf
+python-docx
+pandas
+openpyxl
