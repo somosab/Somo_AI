@@ -10,7 +10,7 @@ from groq import Groq
 from datetime import datetime
 
 # --- 🌌 DEEP BLACK PREMIUM DESIGN ---
-st.set_page_config(page_title="Somo AI | Elite Infinity", page_icon="🌌", layout="wide")
+st.set_page_config(page_title="Somo AI | Elite Infinity", page_icon="💎", layout="wide")
 st.markdown("""
     <style>
     .stApp { background: radial-gradient(circle, #000000 0%, #020617 100%); color: #ffffff; }
