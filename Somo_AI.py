@@ -10,7 +10,7 @@ from groq import Groq
 from datetime import datetime
 
 # --- 🛰 PRESTIGE BLACK DESIGN ---
-st.set_page_config(page_title="Somo AI | Universal Infinity", page_icon="💎", layout="wide")
+st.set_page_config(page_title="Somo AI | Universal Infinity", page_icon="🌌", layout="wide")
 st.markdown("""
     <style>
     .stApp { background: radial-gradient(circle at center, #000000 0%, #020617 100%); color: #ffffff; }
@@ -150,7 +150,7 @@ if prompt := st.chat_input("Somo AI ga savol bering..."):
 
     with st.chat_message("assistant"):
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        sys_msg = f"""Sening isming Somo AI. Yaratuvching: Usmonov Sodiq. 
+        sys_msg = f"""Sening isming Somo AI. Yaratuvching: Usmonov Sodiq. Sen universalsan payti bilan o'zingni maqta doim emas.
         Foydalanuvchi: {st.session_state.username}. 
         Matematikani FAQAT LaTeX ($...$) formatida yoz. Misol: $a + \\frac{{2}}{{a}} = 6$."""
         
@@ -164,3 +164,4 @@ if prompt := st.chat_input("Somo AI ga savol bering..."):
         
         try: chat_sheet.append_row([datetime.now().strftime("%H:%M"), st.session_state.username, "AI", prompt[:500]])
         except: pass
+
