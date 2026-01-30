@@ -94,19 +94,37 @@ if not st.session_state.logged_in:
 st.sidebar.markdown(f"### 👤 {st.session_state.username}")
 up_file = st.sidebar.file_uploader("📂 Fayl (Word, PDF, Excel, PPTX)", type=["pdf", "docx", "xlsx", "csv", "pptx"])
 
-# Chatni ko'rsatish
+# --- ✨ KREATIV BOSH SAHIFA (WELCOME SCREEN) ---
+if len(st.session_state.messages) == 0:
+    st.markdown(f"""
+        <div style="text-align: center; padding: 50px 0;">
+            <h1 style="font-size: 3.5rem; background: linear-gradient(90deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                Assalomu alaykum, {st.session_state.username}! ✨
+            </h1>
+            <p style="font-size: 1.5rem; color: #94a3b8;">Men Somo AI - sizning universal intellektual yordamchingizman.</p>
+            <div style="display: flex; justify-content: center; gap: 20px; margin-top: 30px;">
+                <div style="background: rgba(56, 189, 248, 0.1); border: 1px solid #38bdf8; padding: 20px; border-radius: 15px; width: 200px;">
+                    <h4>📚 Ta'lim</h4>
+                    <p style="font-size: 0.9rem;">Matematik misollarni LaTeX formatida yechaman.</p>
+                </div>
+                <div style="background: rgba(129, 140, 248, 0.1); border: 1px solid #818cf8; padding: 20px; border-radius: 15px; width: 200px;">
+                    <h4>📂 Fayllar</h4>
+                    <p style="font-size: 0.9rem;">PDF, Word, Excel va PPTX fayllarni tahlil qilaman.</p>
+                </div>
+                <div style="background: rgba(244, 63, 94, 0.1); border: 1px solid #f43f5e; padding: 20px; border-radius: 15px; width: 200px;">
+                    <h4>👨‍💻 Creator</h4>
+                    <p style="font-size: 0.9rem;">Yaratuvchim: Usmonov Sodiq.</p>
+                </div>
+            </div>
+            <p style="margin-top: 40px; color: #64748b; font-style: italic;">Boshlash uchun pastga savol yozing yoki fayl yuklang...</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+# Chat xabarlarini ko'rsatish (agar xabarlar bo'lsa)
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-if prompt := st.chat_input("Somo AI ga savol bering..."):
-    # AI'ga kimligini va kim bilan gaplashayotganini uqtiramiz
-    user_name = st.session_state.username
-    
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"): st.markdown(prompt)
 
-    with st.chat_message("assistant"):
-        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
         
         # 🧠 BU YERDA AI O'ZINI VA SIZNI TANIYDI
         sys_msg = f"""Sening isming Somo AI. 
@@ -137,3 +155,4 @@ if prompt := st.chat_input("Somo AI ga savol bering..."):
         try:
             chat_sheet.append_row([datetime.now().strftime("%Y-%m-%d %H:%M"), st.session_state.username, "AI", prompt[:500]])
         except: pass
+
