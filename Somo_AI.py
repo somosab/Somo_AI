@@ -9,36 +9,46 @@ from oauth2client.service_account import ServiceAccountCredentials
 from groq import Groq
 from datetime import datetime
 
-# --- 🛰 LUXURY UNIVERSE DESIGN ---
-st.set_page_config(page_title="Somo AI | Universal Infinity", page_icon="💎", layout="wide")
+# --- 🛰 MAXIMAL BLACK DESIGN ---
+st.set_page_config(page_title="Somo AI | Deep Space", page_icon="💎", layout="wide")
 st.markdown("""
     <style>
-    .stApp { background: radial-gradient(circle at top right, #000428, #004e92); color: #ffffff; }
-    [data-testid="stSidebar"] { background-color: rgba(0, 0, 0, 0.8) !important; border-right: 1px solid #1e3a8a; }
-    
-    /* Neumorphism & Glassmorphism blend */
-    .stChatMessage { 
-        border-radius: 25px; border: 1px solid rgba(255, 255, 255, 0.15) !important; 
-        background: rgba(255, 255, 255, 0.05) !important; backdrop-filter: blur(20px);
-        margin: 15px 0; box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    /* Fonni butunlay qora va to'q ko'k gradiyent qildik */
+    .stApp { 
+        background: radial-gradient(circle at center, #000000 0%, #020617 100%); 
+        color: #ffffff; 
+    }
+    [data-testid="stSidebar"] { 
+        background-color: #000000 !important; 
+        border-right: 1px solid #1e293b; 
     }
     
-    /* 💎 Glow Buttons */
+    /* Xabarlar dizayni (Glassmorphism qora fonda) */
+    .stChatMessage { 
+        border-radius: 20px; 
+        border: 1px solid rgba(255, 255, 255, 0.05) !important; 
+        background: rgba(15, 23, 42, 0.8) !important; 
+        backdrop-filter: blur(10px);
+        margin-bottom: 15px;
+    }
+    
+    /* Neon tugmalar */
     .stButton>button { 
-        background: linear-gradient(90deg, #00d2ff 0%, #3a7bd5 100%); 
-        color: white; border-radius: 15px; border: none; font-weight: 800;
-        height: 55px; letter-spacing: 1px; transition: 0.5s ease;
+        background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%); 
+        color: #38bdf8; border: 1px solid #38bdf8;
+        border-radius: 10px; font-weight: 700; transition: 0.4s;
     }
     .stButton>button:hover { 
-        transform: scale(1.02); box-shadow: 0 0 30px rgba(0, 210, 255, 0.7); 
+        background: #38bdf8; color: #000000;
+        box-shadow: 0 0 20px #38bdf8; 
     }
     
-    /* 📐 Math Presentation */
-    .katex { font-size: 1.3em !important; color: #00f2fe !important; }
+    /* Matematik LaTeX rangi */
+    .katex { color: #38bdf8 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 🔗 CORE CONNECTIONS ---
+# --- 🔗 BAZA FUNKSIYALARI ---
 def connect_sheets():
     try:
         gcp_info = dict(st.secrets["gcp_service_account"])
@@ -51,76 +61,78 @@ def connect_sheets():
 
 user_sheet, chat_sheet = connect_sheets()
 
-# --- 📂 ALL-IN-ONE FILE PARSER ---
 def extract_universal_content(file):
     ext = file.name.split('.')[-1].lower()
     try:
-        if ext == 'pdf':
-            return "".join([p.extract_text() for p in PdfReader(file).pages])
-        elif ext == 'docx':
-            return mammoth.extract_raw_text(file).value
+        if ext == 'pdf': return "".join([p.extract_text() for p in PdfReader(file).pages])
+        elif ext == 'docx': return mammoth.extract_raw_text(file).value
         elif ext in ['xlsx', 'csv']:
             df = pd.read_excel(file) if ext == 'xlsx' else pd.read_csv(file)
-            return f"Jadval: {df.head(20).to_string()}"
+            return df.head(20).to_string()
         elif ext == 'pptx':
             prs = pptx.Presentation(file)
             return "\n".join([shape.text for slide in prs.slides for shape in slide.shapes if hasattr(shape, "text")])
-    except Exception as e: return f"Xato: {e}"
+    except: return "Faylni o'qishda xatolik yuz berdi."
     return ""
 
-# --- 🔐 AUTHENTICATION ---
+# --- 🔐 AUTHENTICATION (Xato parolni ogohlantirish bilan) ---
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
-    st.markdown('<h1 style="text-align:center; margin-top:100px;">🌌 Somo AI Infinity</h1>', unsafe_allow_html=True)
-    t1, t2 = st.tabs(["🔑 Kirish", "✍️ Ro'yxatdan o'tish"])
+    st.markdown('<h1 style="text-align:center; color:#38bdf8;">🌌 Somo AI Infinity</h1>', unsafe_allow_html=True)
+    t1, t2 = st.tabs(["🔑 Kirish", "📝 Ro'yxatdan o'tish"])
+    
     with t1:
-        u, p = st.text_input("Username"), st.text_input("Parol", type='password')
-        if st.button("Tizimga kirish"):
+        u = st.text_input("Username", placeholder="Ismingizni yozing")
+        p = st.text_input("Parol", type='password', placeholder="Parolingizni kiriting")
+        if st.button("Kirish"):
             recs = user_sheet.get_all_records()
             hp = hashlib.sha256(p.encode()).hexdigest()
-            user = next((r for r in recs if str(r['username']) == u and str(r['password']) == hp), None)
-            if user and user['status'] == 'active':
-                st.session_state.logged_in, st.session_state.username, st.session_state.messages = True, u, []
-                st.rerun()
+            user = next((r for r in recs if str(r['username']) == u), None)
+            
+            if user:
+                if str(user['password']) == hp:
+                    if user['status'] == 'active':
+                        st.session_state.logged_in, st.session_state.username, st.session_state.messages = True, u, []
+                        st.rerun()
+                    else: st.error("❌ Hisobingiz bloklangan!")
+                else: st.error("⚠️ Parol noto'g'ri! Iltimos, qaytadan urinib ko'ring.")
+            else: st.error("🔍 Bunday foydalanuvchi topilmadi!")
+
     with t2:
-        nu, np = st.text_input("Yangi Login"), st.text_input("Yangi Parol", type='password')
-        if st.button("Yaratish"):
-            user_sheet.append_row([nu, hashlib.sha256(np.encode()).hexdigest(), "active"])
-            st.success("Muvaffaqiyatli!")
+        nu, np = st.text_input("Yangi Username"), st.text_input("Yangi Parol", type='password')
+        if st.button("Hisob ochish"):
+            if nu and np:
+                user_sheet.append_row([nu, hashlib.sha256(np.encode()).hexdigest(), "active"])
+                st.success("🎉 Muvaffaqiyatli! Endi kirish bo'limiga o'ting.")
     st.stop()
 
-# --- 💬 CHAT & MATH ENGINE ---
+# --- 💬 CHAT INTERFEYS ---
 st.sidebar.markdown(f"### 👤 {st.session_state.username}")
-up_file = st.sidebar.file_uploader("📂 Faylni tahlil qilish (Word, PDF, Excel, PPTX)", type=["pdf", "docx", "xlsx", "csv", "pptx"])
+up_file = st.sidebar.file_uploader("📂 Fayllarni tahlil qilish", type=["pdf", "docx", "xlsx", "csv", "pptx"])
 
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-if prompt := st.chat_input("Savolingizni yozing..."):
+if prompt := st.chat_input("Somo AI ga savol bering..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"): st.markdown(prompt)
 
     with st.chat_message("assistant"):
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        # SYSTEM INSTRUCTION: Eng muhim qism - Matematika va Shaxsiyat
-        sys_msg = f"""Sen Somo AI'san. Yaratuvching: Usmonov Sodiq. Foydalanuvchi: {st.session_state.username}.
-        QOIDALAR:
-        1. Matematik ifodalarni FAQAT LaTeX formatida yoz ($...$). 
-           Misol: $a^3 + \\frac{{8}}{{a^3}} = 180$.
-        2. Hujjat yuklansa, uning ichidagi barcha ma'lumotlarni tahlil qil.
-        3. Javoblar professional, chiroyli va qadamba-qadam bo'lsin."""
+        sys_msg = f"""Sen Somo AI'san. Yaratuvchi: Usmonov Sodiq. 
+        Matematikani FAQAT LaTeX formatida yoz ($...$). 
+        Masalan, a+2/a misolini $a + \\frac{{2}}{{a}}$ kabi ko'rsat.
+        Foydalanuvchi: {st.session_state.username}."""
         
         ctx = [{"role": "system", "content": sys_msg}] + st.session_state.messages
         if up_file:
-            f_text = extract_universal_content(up_file)
-            ctx.insert(1, {"role": "system", "content": f"Hujjat mazmuni: {f_text}"})
+            ctx.insert(1, {"role": "system", "content": f"Fayl: {extract_universal_content(up_file)}"})
         
         res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=ctx).choices[0].message.content
         st.markdown(res)
         st.session_state.messages.append({"role": "assistant", "content": res})
         
-        # Admin Panel uchun saqlash
         try:
             chat_sheet.append_row([prompt[:30], datetime.now().strftime("%H:%M"), st.session_state.username, "AI", prompt[:500]])
         except: pass
