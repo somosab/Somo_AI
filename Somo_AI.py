@@ -8,8 +8,8 @@ from oauth2client.service_account import ServiceAccountCredentials
 from groq import Groq
 from datetime import datetime
 
-# --- 1. PREMIUM DIZAYN (Koinot Qorasi & Neon) ---
-st.set_page_config(page_title="Somo AI | Universal", page_icon="💎", layout="wide")
+# --- 🌌 PREMIUM SPACE DESIGN ---
+st.set_page_config(page_title="Somo AI | Universal Analyst", page_icon="💎", layout="wide")
 st.markdown("""
     <style>
     .stApp { background: radial-gradient(circle, #020617 0%, #000000 100%); color: #f1f5f9; }
@@ -28,7 +28,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. BAZA VA AI BILAN ALOQA ---
+# --- 🔗 BAZA ULANISHI ---
 def connect_sheets():
     try:
         gcp_info = dict(st.secrets["gcp_service_account"])
@@ -41,38 +41,30 @@ def connect_sheets():
 
 user_sheet, chat_sheet = connect_sheets()
 
+# --- 📁 UNIVERSAL FILE PARSER ---
 def extract_content(file):
-    """Ko'p formatli fayllarni o'qish: PDF, DOCX, XLSX, CSV"""
     ext = file.name.split('.')[-1].lower()
     try:
         if ext == 'pdf':
-            return "".join([p.extract_text() for p in PdfReader(file).pages[:5]])
+            return "".join([p.extract_text() for p in PdfReader(file).pages[:10]])
         elif ext == 'docx':
             return "\n".join([p.text for p in Document(file).paragraphs])
         elif ext in ['xlsx', 'csv']:
             df = pd.read_excel(file) if ext == 'xlsx' else pd.read_csv(file)
-            return df.head(15).to_string()
-    except: return ""
+            return f"Jadval sarlavhalari: {list(df.columns)}\nMa'lumotlar:\n{df.head(10).to_string()}"
+    except Exception as e: return f"Faylni o'qishda xato: {e}"
     return ""
 
-def get_ai_res(msgs, lang, name):
-    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-    sys_msg = f"Sen Somo AI'san. Yaratuvchi: Usmonov Sodiq. Foydalanuvchi: {name}. Til: {lang}. Doimo ismi bilan murojaat qil."
-    return client.chat.completions.create(
-        model="llama-3.3-70b-versatile", 
-        messages=[{"role":"system","content":sys_msg}] + msgs
-    ).choices[0].message.content
-
-# --- 3. LOGIN VA UNIKAL REGISTRATSIYA ---
+# --- 🔑 AUTH SYSTEM (UNIQUE USER) ---
 if 'logged_in' not in st.session_state: st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
-    st.markdown('<div class="glass-card"><h1>🌌 Somo AI Galaxy</h1><p>Universal Intelligent System</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="glass-card"><h1>🌌 Somo AI Galaxy</h1><p>Usmonov Sodiq Loyihasi</p></div>', unsafe_allow_html=True)
     t1, t2 = st.tabs(["🔑 Kirish", "📝 Ro'yxatdan o'tish"])
     
     with t1:
         u, p = st.text_input("Username", key="l_u"), st.text_input("Parol", type='password', key="l_p")
-        if st.button("Tizimga kirish"):
+        if st.button("Kirish"):
             recs = user_sheet.get_all_records()
             hp = hashlib.sha256(p.encode()).hexdigest()
             user = next((r for r in recs if str(r['username']) == u and str(r['password']) == hp), None)
@@ -84,59 +76,58 @@ if not st.session_state.logged_in:
 
     with t2:
         nu, np = st.text_input("Yangi Username", key="r_u"), st.text_input("Yangi Parol", type='password', key="r_p")
-        if st.button("Hisob yaratish"):
+        if st.button("Ro'yxatdan o'tish"):
             recs = user_sheet.get_all_records()
-            if any(str(r['username']) == nu for r in recs): st.warning("Ushbu username band!")
+            if any(str(r['username']) == nu for r in recs): st.warning("Bu ism band!")
             elif nu and np:
                 user_sheet.append_row([nu, hashlib.sha256(np.encode()).hexdigest(), "active"])
-                st.success("Muvaffaqiyatli! Endi Kirish bo'limiga o'ting.")
+                st.success("Muvaffaqiyatli! Kirish bo'limiga o'ting.")
     st.stop()
 
-# --- 4. ASOSIY INTERFEYS ---
-# Tillarni ko'paytirdik (15+ tillar)
-LANGS = {"🇺🇿 O'zbekcha": "Uzbek", "🇺🇸 English": "English", "🇷🇺 Русский": "Russian", "🇹🇷 Türkçe": "Turkish", "🇸🇦 العربية": "Arabic", "🇰🇷 한국어": "Korean"}
-sel_lang = st.sidebar.selectbox("🌐 Tilni tanlang", list(LANGS.keys()))
+# --- 💬 MAIN CHAT INTERFACE ---
+st.sidebar.markdown(f"### 👤 Foydalanuvchi: {st.session_state.username}")
+sel_lang = st.sidebar.selectbox("🌐 Til", ["O'zbekcha", "English", "Русский", "Türkçe"])
 
-st.sidebar.markdown(f"### 👤 {st.session_state.username}")
 if st.sidebar.button("🗑 Chatni tozalash"):
     st.session_state.messages = []
     st.rerun()
 
-if st.sidebar.button("🚪 Chiqish"):
-    st.session_state.logged_in = False
-    st.rerun()
+up_file = st.sidebar.file_uploader("📄 Fayl tahlili (PDF, Word, Excel, CSV)", type=["pdf", "docx", "xlsx", "csv"])
 
-up_file = st.sidebar.file_uploader("📄 Fayl tahlili (PDF, Word, Excel)", type=["pdf", "docx", "xlsx", "csv"])
-
-# Welcome Screen
+# Welcome
 if not st.session_state.messages:
-    st.markdown(f'<div class="glass-card"><h2>Xush kelibsiz, {st.session_state.username}! 👋</h2><p>Hujjatlarni yuklang va xohlagan savolingizni bering.</p></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="glass-card"><h2>Xush kelibsiz, {st.session_state.username}! 👋</h2><p>Hujjatlarni yuklang va tahlilni boshlang.</p></div>', unsafe_allow_html=True)
 
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-if prompt := st.chat_input("Somo AI sizni eshitadi..."):
-    # AI orqali chat nomini yaratish (faqat birinchi xabarda)
+if prompt := st.chat_input("Somo AI ga savol bering..."):
+    # Sarlavha yaratish (Admin panel uchun)
     if not st.session_state.messages:
-        client_mini = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        st.session_state.chat_title = client_mini.chat.completions.create(
-            model="llama-3.1-8b-instant", 
-            messages=[{"role":"user","content":f"Short title: {prompt}"}]
-        ).choices[0].message.content[:30]
+        try:
+            temp_client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+            st.session_state.chat_title = temp_client.chat.completions.create(
+                model="llama-3.1-8b-instant", messages=[{"role":"user","content":f"Short title: {prompt}"}]
+            ).choices[0].message.content[:30]
+        except: st.session_state.chat_title = "Yangi Suhbat"
 
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"): st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        context = list(st.session_state.messages)
+        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+        sys_instr = f"Sen Somo AI'san. Yaratuvching: Usmonov Sodiq. Foydalanuvchi: {st.session_state.username}. Til: {sel_lang}."
+        
+        context_msgs = [{"role": "system", "content": sys_instr}] + st.session_state.messages
         if up_file:
             f_text = extract_content(up_file)
-            context[-1]["content"] += f"\n\n[FILE DATA]: {f_text}"
+            context_msgs[-1]["content"] += f"\n\n[HUJJAT]: {f_text}"
         
-        response = get_ai_res(context, LANGS[sel_lang], st.session_state.username)
+        # Javob olish
+        response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=context_msgs).choices[0].message.content
         st.markdown(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
         
-        # Google Sheets arxiv (Admin panel uchun)
+        # Bazaga saqlash
         if chat_sheet:
             chat_sheet.append_row([st.session_state.chat_title, datetime.now().strftime("%H:%M"), st.session_state.username, "AI", prompt[:500]])
