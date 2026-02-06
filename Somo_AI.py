@@ -8,12 +8,34 @@ from pypdf import PdfReader
 from oauth2client.service_account import ServiceAccountCredentials
 from groq import Groq
 from datetime import datetime
+# Yangi qo'shilgan kutubxona (brauzerda saqlash uchun)
+from streamlit_cookies_manager import EncryptedCookieManager
 
 # --- 🛰 UNIVERSAL PREMIUM DESIGN ---
-st.set_page_config(page_title="Somo AI | Universal Infinity", page_icon="💎", layout="wide")
+st.set_page_config(page_title="Somo AI | Universal Infinity", page_icon="🌌", layout="wide")
+
+# Cookies manager sozlamasi
+cookies = EncryptedCookieManager(password=st.secrets.get("COOKIE_PASSWORD", "Somo_AI_Secret_Key_2026"))
+if not cookies.ready():
+    st.stop()
+
 st.markdown("""
     <style>
-    .stApp { background: radial-gradient(circle at center, #000000 0%, #020617 100%); color: #ffffff; }
+    /* Umumiy fonni qora qilish va brauzerni Dark modega majburlash */
+    :root { color-scheme: dark !important; }
+    .stApp { background: radial-gradient(circle at center, #000000 0%, #020617 100%) !important; color: #ffffff !important; }
+    
+    /* INPUT MAYDONLARINI (Username/Parol) MAJBURIY TO'Q RANGGA O'TKAZISH */
+    div[data-baseweb="input"], [data-testid="stTextInput"] div {
+        background-color: #111827 !important;
+        border: 1px solid #38bdf8 !important;
+        border-radius: 12px !important;
+    }
+    input {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+
     [data-testid="stSidebar"] { background-color: #000000 !important; border-right: 1px solid #1e293b; }
     .stChatMessage { 
         border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.05) !important; 
@@ -47,6 +69,16 @@ def connect_sheets():
 
 user_sheet, chat_sheet = connect_sheets()
 
+# --- 🍪 AVTOMATIK KIRISH (AUTO-LOGIN) LOGIKASI ---
+if 'logged_in' not in st.session_state:
+    saved_user = cookies.get("somo_user")
+    if saved_user:
+        st.session_state.logged_in = True
+        st.session_state.username = saved_user
+        st.session_state.messages = []
+    else:
+        st.session_state.logged_in = False
+
 def extract_universal_content(file):
     ext = file.name.split('.')[-1].lower()
     try:
@@ -62,8 +94,6 @@ def extract_universal_content(file):
     return ""
 
 # --- 🔐 AUTHENTICATION ---
-if 'logged_in' not in st.session_state: st.session_state.logged_in = False
-
 if not st.session_state.logged_in:
     st.markdown('<h1 style="text-align:center; color:#38bdf8; margin-top:50px;">🌌 Somo AI Infinity</h1>', unsafe_allow_html=True)
     t1, t2 = st.tabs(["🔑 Kirish", "📝 Ro'yxatdan o'tish"])
@@ -76,6 +106,8 @@ if not st.session_state.logged_in:
             user = next((r for r in recs if str(r['username']) == u), None)
             if user and str(user['password']) == hp:
                 st.session_state.logged_in, st.session_state.username, st.session_state.messages = True, u, []
+                cookies["somo_user"] = u # Brauzerga saqlash
+                cookies.save()
                 st.rerun()
             else: st.error("⚠️ Username yoki parol noto'g'ri!")
     with t2:
@@ -96,6 +128,8 @@ st.sidebar.markdown("---")
 st.sidebar.markdown('<div class="logout-btn">', unsafe_allow_html=True)
 if st.sidebar.button("🚪 Tizimdan chiqish"):
     st.session_state.logged_in = False
+    cookies["somo_user"] = "" # Cookieni o'chirish
+    cookies.save()
     st.rerun()
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
