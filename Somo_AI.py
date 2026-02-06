@@ -18,7 +18,7 @@ cookies = EncryptedCookieManager(password=st.secrets.get("COOKIE_PASSWORD", "Som
 if not cookies.ready():
     st.stop()
 
-# --- 🎨 2. INFINITY DARK CSS (RASMDAGI DIZAYN) ---
+# --- 🎨 2. MUKAMMAL INFINITY DIZAYN (CSS) ---
 st.markdown("""
     <style>
     /* 1. MAJBURIY DARK REJIM */
@@ -30,8 +30,7 @@ st.markdown("""
         color: #ffffff !important; 
     }
     
-    /* 3. INPUT MAYDONLARI (OQ FONNI YO'QOTISH) */
-    /* Bu qism Login va Chat inputlarini rasmdagidek to'q qiladi */
+    /* 3. INPUT MAYDONLARI (OQ FONNI YO'QOTISH VA TO'Q QILISH) */
     div[data-baseweb="input"], [data-testid="stTextInput"] div, [data-testid="stForm"] {
         background-color: #0f172a !important; /* To'q ko'k-qora */
         border: 1px solid rgba(56, 189, 248, 0.3) !important; /* Neon havorang hoshiya */
@@ -41,7 +40,7 @@ st.markdown("""
     input {
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
-        caret-color: #38bdf8 !important; /* Kursor rangi */
+        caret-color: #38bdf8 !important;
     }
     
     /* 4. SIDEBAR (QOP-QORA) */
@@ -64,7 +63,6 @@ st.markdown("""
         background: #38bdf8; 
         color: #000000; 
         box-shadow: 0 0 15px rgba(56, 189, 248, 0.6); 
-        border-color: #38bdf8;
     }
 
     /* 6. CHAT XABARLARI (GLASSMORPHISM) */
@@ -73,8 +71,12 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.05); 
         backdrop-filter: blur(10px);
         border-radius: 15px;
+        margin-bottom: 10px;
     }
     
+    /* 7. MATH FORMULALAR RANGI */
+    .katex { color: #38bdf8 !important; font-size: 1.1em !important; }
+
     /* Tizimdan chiqish tugmasi (Qizil) */
     .logout-btn>div>button { border-color: #f43f5e !important; color: #f43f5e !important; }
     .logout-btn>div>button:hover { background: #f43f5e !important; color: white !important; box-shadow: 0 0 15px rgba(244, 63, 94, 0.6); }
@@ -118,12 +120,12 @@ def extract_universal_content(file):
     except: return "Faylni tahlil qilishda xatolik yuz berdi."
     return ""
 
-# --- 🔐 4. LOGIN INTERFACE (RASMDAGI KABI) ---
+# --- 🔐 4. LOGIN INTERFACE ---
 if not st.session_state.logged_in:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown('<h1 style="text-align:center; color:#38bdf8; margin-top:80px; font-size: 3rem;">🌌 Somo AI Infinity</h1>', unsafe_allow_html=True)
-        st.markdown('<p style="text-align:center; color:#94a3b8; margin-bottom: 30px;">Universal aqlli yordamchi tizimiga xush kelibsiz</p>', unsafe_allow_html=True)
+        st.markdown('<p style="text-align:center; color:#94a3b8; margin-bottom: 30px;">Universal aqlli yordamchi tizimi</p>', unsafe_allow_html=True)
         
         t1, t2 = st.tabs(["🔑 Kirish", "📝 Ro'yxatdan o'tish"])
         with t1:
@@ -147,8 +149,7 @@ if not st.session_state.logged_in:
                     st.success("🎉 Tayyor! Endi kirishga o'ting.")
     st.stop()
 
-# --- 🖥 5. MAIN DASHBOARD ---
-# Sidebar
+# --- 🖥 5. DASHBOARD & CHAT ---
 st.sidebar.markdown(f"### 👤 {st.session_state.username}")
 if st.sidebar.button("🗑 Chatni tozalash"):
     st.session_state.messages = []
@@ -165,7 +166,7 @@ if st.sidebar.button("🚪 Tizimdan chiqish"):
     st.rerun()
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-# Dashboard Cards (Rasmdagi 3 ta katakcha)
+# Dashboard Kartalari (HTML)
 if len(st.session_state.messages) == 0:
     st.markdown(f"""
         <div style="text-align: center; padding: 20px 0 40px 0;">
@@ -178,11 +179,11 @@ if len(st.session_state.messages) == 0:
         <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; margin-bottom: 40px;">
             <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #38bdf8; padding: 20px; border-radius: 16px; width: 250px; text-align: center; box-shadow: 0 4px 20px rgba(56, 189, 248, 0.1);">
                 <h3 style="color:#38bdf8; margin-bottom: 10px;">🧠 Aqlli Tahlil</h3>
-                <p style="font-size: 0.9rem; color: #cbd5e1;">Matematika, IT, Fizika va har qanday murakkab fanlar bo'yicha aniq yechimlar.</p>
+                <p style="font-size: 0.9rem; color: #cbd5e1;">Matematika, IT, Fizika va har qanday murakkab fanlar bo'yicha yordam.</p>
             </div>
             <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #818cf8; padding: 20px; border-radius: 16px; width: 250px; text-align: center; box-shadow: 0 4px 20px rgba(129, 140, 248, 0.1);">
                 <h3 style="color:#818cf8; margin-bottom: 10px;">📑 Hujjatlar</h3>
-                <p style="font-size: 0.9rem; color: #cbd5e1;">PDF, Word, Excel fayllarni yuklang va ular bo'yicha suhbatlashing.</p>
+                <p style="font-size: 0.9rem; color: #cbd5e1;">PDF, Word, Excel fayllarni o'qib, ular bo'yicha savol-javob qilaman.</p>
             </div>
             <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #f43f5e; padding: 20px; border-radius: 16px; width: 250px; text-align: center; box-shadow: 0 4px 20px rgba(244, 63, 94, 0.1);">
                 <h3 style="color:#f43f5e; margin-bottom: 10px;">✍️ Ijodkorlik</h3>
