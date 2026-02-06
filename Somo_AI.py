@@ -19,9 +19,24 @@ cookies = EncryptedCookieManager(password=st.secrets.get("COOKIE_PASSWORD", "Som
 if not cookies.ready():
     st.stop()
 
+# --- 🎨 SECRETS VA PREMIUM DIZAYN INTEGRATSIYASI ---
 st.markdown("""
     <style>
-    .stApp { background: radial-gradient(circle at center, #000000 0%, #020617 100%); color: #ffffff; }
+    /* Secrets-dagi theme sozlamalarini majburiy qo'llash */
+    :root { color-scheme: dark !important; }
+    .stApp { background: radial-gradient(circle at center, #000000 0%, #020617 100%) !important; color: #ffffff !important; }
+    
+    /* INPUT MAYDONLARINI (Username/Parol) TO'Q RANGGA O'TKAZISH (image_8f4ec6.jpg dagi kabi) */
+    div[data-baseweb="input"], [data-testid="stTextInput"] div {
+        background-color: #111827 !important;
+        border: 1px solid #38bdf8 !important;
+        border-radius: 12px !important;
+    }
+    input {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+
     [data-testid="stSidebar"] { background-color: #000000 !important; border-right: 1px solid #1e293b; }
     .stChatMessage { 
         border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.05) !important; 
