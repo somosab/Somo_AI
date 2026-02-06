@@ -8,10 +8,9 @@ from pypdf import PdfReader
 from oauth2client.service_account import ServiceAccountCredentials
 from groq import Groq
 from datetime import datetime
-# Yangi qo'shilgan kutubxona (brauzerda saqlash uchun)
 from streamlit_cookies_manager import EncryptedCookieManager
 
-# --- 🛰 UNIVERSAL PREMIUM DESIGN ---
+# --- 🛰 UNIVERSAL PREMIUM & AUTO-DARK DESIGN ---
 st.set_page_config(page_title="Somo AI | Universal Infinity", page_icon="🌌", layout="wide")
 
 # Cookies manager sozlamasi
@@ -19,10 +18,31 @@ cookies = EncryptedCookieManager(password=st.secrets.get("COOKIE_PASSWORD", "Som
 if not cookies.ready():
     st.stop()
 
+# BRAUZERNI AVTOMATIK DARK REJIMGA MAJBURLASH VA INPUTLARNI TUZATISH
 st.markdown("""
     <style>
-    .stApp { background: radial-gradient(circle at center, #000000 0%, #020617 100%); color: #ffffff; }
+    /* Umumiy fonni qora qilish */
+    .stApp { 
+        background: radial-gradient(circle at center, #000000 0%, #020617 100%) !important; 
+        color: #ffffff !important; 
+    }
+    
+    /* Brauzerni Dark mode-ga majburlash */
+    :root { color-scheme: dark !important; }
+
+    /* Login/Parol maydonlarini qora va matnni oq qilish */
+    div[data-baseweb="input"] {
+        background-color: #111827 !important;
+        border: 1px solid #38bdf8 !important;
+        border-radius: 10px !important;
+    }
+    input {
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+    
     [data-testid="stSidebar"] { background-color: #000000 !important; border-right: 1px solid #1e293b; }
+    
     .stChatMessage { 
         border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.05) !important; 
         background: rgba(15, 23, 42, 0.8) !important; backdrop-filter: blur(10px);
@@ -55,7 +75,7 @@ def connect_sheets():
 
 user_sheet, chat_sheet = connect_sheets()
 
-# --- 🍪 AVTOMATIK KIRISH (AUTO-LOGIN) LOGIKASI ---
+# --- 🍪 AVTOMATIK KIRISH LOGIKASI ---
 if 'logged_in' not in st.session_state:
     saved_user = cookies.get("somo_user")
     if saved_user:
@@ -92,7 +112,7 @@ if not st.session_state.logged_in:
             user = next((r for r in recs if str(r['username']) == u), None)
             if user and str(user['password']) == hp:
                 st.session_state.logged_in, st.session_state.username, st.session_state.messages = True, u, []
-                cookies["somo_user"] = u # Brauzerga saqlash
+                cookies["somo_user"] = u 
                 cookies.save()
                 st.rerun()
             else: st.error("⚠️ Username yoki parol noto'g'ri!")
@@ -114,7 +134,7 @@ st.sidebar.markdown("---")
 st.sidebar.markdown('<div class="logout-btn">', unsafe_allow_html=True)
 if st.sidebar.button("🚪 Tizimdan chiqish"):
     st.session_state.logged_in = False
-    cookies["somo_user"] = "" # Cookieni o'chirish
+    cookies["somo_user"] = "" 
     cookies.save()
     st.rerun()
 st.sidebar.markdown('</div>', unsafe_allow_html=True)
@@ -130,21 +150,20 @@ if len(st.session_state.messages) == 0:
             <div style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
                 <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid #38bdf8; padding: 15px; border-radius: 12px; width: 200px;">
                     <h4 style="color:#38bdf8;">🧠 Aqlli Tahlil</h4>
-                    <p style="font-size: 0.8rem;">Matematika, fizika, dasturlash va har qanday fan bo'yicha yordam beraman.</p>
+                    <p style="font-size: 0.8rem;">Matematika, fizika, dasturlash va barcha fanlardan yordam beraman.</p>
                 </div>
                 <div style="background: rgba(129, 140, 248, 0.05); border: 1px solid #818cf8; padding: 15px; border-radius: 12px; width: 200px;">
                     <h4 style="color:#818cf8;">📑 Hujjatlar</h4>
-                    <p style="font-size: 0.8rem;">Word, PDF, Excel va PPTX fayllarni o'qiyman va xulosa qilaman.</p>
+                    <p style="font-size: 0.8rem;">PDF, Excel va Word fayllarni o'qiyman va tahlil qilaman.</p>
                 </div>
                 <div style="background: rgba(244, 63, 94, 0.05); border: 1px solid #f43f5e; padding: 15px; border-radius: 12px; width: 200px;">
                     <h4 style="color:#f43f5e;">✍️ Ijodkorlik</h4>
-                    <p style="font-size: 0.8rem;">Sizga insho, kod, she'r yoki biznes-reja yozishda yordamlashaman.</p>
+                    <p style="font-size: 0.8rem;">Sizga insho, kod va loyihalar yaratishda yordamlashaman.</p>
                 </div>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-# Chatni ko'rsatish
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
@@ -154,19 +173,11 @@ if prompt := st.chat_input("Istalgan mavzuda savol bering..."):
 
     with st.chat_message("assistant"):
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        sys_msg = f"""Sening isming Somo AI. Yaratuvching: Usmonov Sodiq. 
-        Foydalanuvchi: {st.session_state.username}. 
-        Sen universal AIsan. Faqat matematika emas, balki til, adabiyot, tarix, dasturlash va boshqa barcha sohalarda mukammal bilimga egasan.
-        Javoblaringni tushunarli va professional tilda yoz. 
-        Agar matematik formula kelsa, uni LaTeX ($...$) formatida ko'rsat."""
-        
+        sys_msg = f"Sening isming Somo AI. Yaratuvching: Usmonov Sodiq. Foydalanuvchi: {st.session_state.username}. Sen universal AIsan. Matematikani LaTeX formatida yoz."
         ctx = [{"role": "system", "content": sys_msg}] + st.session_state.messages
-        if up_file:
-            ctx.insert(1, {"role": "system", "content": f"Yuklangan fayl mazmuni: {extract_universal_content(up_file)}"})
-        
+        if up_file: ctx.insert(1, {"role": "system", "content": f"Fayl: {extract_universal_content(up_file)}"})
         response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=ctx).choices[0].message.content
         st.markdown(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
-        
         try: chat_sheet.append_row([datetime.now().strftime("%H:%M"), st.session_state.username, "AI", prompt[:500]])
         except: pass
