@@ -8,6 +8,7 @@ from pypdf import PdfReader
 from oauth2client.service_account import ServiceAccountCredentials
 from groq import Groq
 from datetime import datetime
+# Yangi qo'shilgan kutubxona (brauzerda saqlash uchun)
 from streamlit_cookies_manager import EncryptedCookieManager
 
 # --- 🛰 UNIVERSAL PREMIUM & AUTO-DARK DESIGN ---
@@ -18,44 +19,61 @@ cookies = EncryptedCookieManager(password=st.secrets.get("COOKIE_PASSWORD", "Som
 if not cookies.ready():
     st.stop()
 
-# BRAUZERNI AVTOMATIK DARK REJIMGA MAJBURLASH VA INPUTLARNI TUZATISH
+# --- 🎨 STRONG-DARK UI TUNING (Oq maydonlarni yo'qotish) ---
 st.markdown("""
     <style>
-    /* Umumiy fonni qora qilish */
-    .stApp { 
+    /* 1. Butun ilova fonini va brauzer rangini majburiy qora qilish */
+    .stApp, [data-testid="stAppViewContainer"] { 
         background: radial-gradient(circle at center, #000000 0%, #020617 100%) !important; 
         color: #ffffff !important; 
     }
     
-    /* Brauzerni Dark mode-ga majburlash */
+    /* Brauzerni Dark mode-ga majburlash (Oq fonlarni qaytarish uchun) */
     :root { color-scheme: dark !important; }
 
-    /* Login/Parol maydonlarini qora va matnni oq qilish */
-    div[data-baseweb="input"] {
-        background-color: #111827 !important;
-        border: 1px solid #38bdf8 !important;
-        border-radius: 10px !important;
+    /* 2. LOGIN VA PAROL MAYDONLARINI (INPUT) TUZATISH */
+    div[data-baseweb="input"], [data-testid="stTextInput"] div {
+        background-color: #111827 !important; /* To'q ko'k-qora fon */
+        border: 1px solid #38bdf8 !important; /* Neon ko'k hoshiya */
+        border-radius: 12px !important;
     }
+    
+    /* Input ichidagi yozuvlarni oq qilish */
     input {
         color: #ffffff !important;
         -webkit-text-fill-color: #ffffff !important;
+        caret-color: #ffffff !important;
     }
-    
-    [data-testid="stSidebar"] { background-color: #000000 !important; border-right: 1px solid #1e293b; }
-    
+
+    /* 3. TABS (Kirish / Ro'yxatdan o'tish) matnlari */
+    .stTabs button p {
+        color: #ffffff !important;
+        font-weight: 600 !important;
+    }
+
+    /* 4. SIDEBAR DIZAYNI */
+    [data-testid="stSidebar"] { 
+        background-color: #000000 !important; 
+        border-right: 1px solid #1e293b !important; 
+    }
+
+    /* 5. CHAT XABARLARI */
     .stChatMessage { 
         border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.05) !important; 
         background: rgba(15, 23, 42, 0.8) !important; backdrop-filter: blur(10px);
         margin-bottom: 15px;
     }
+
+    /* 6. TUGMALAR (BUTTONS) */
     .stButton>button { 
-        background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%); 
-        color: #38bdf8; border: 1px solid #38bdf8; border-radius: 12px; 
-        font-weight: 700; transition: 0.4s; height: 45px; width: 100%;
+        background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%) !important; 
+        color: #38bdf8 !important; border: 1px solid #38bdf8 !important; 
+        border-radius: 12px; font-weight: 700; transition: 0.4s; height: 45px; width: 100%;
     }
     .stButton>button:hover { 
-        background: #38bdf8; color: #000000; box-shadow: 0 0 20px #38bdf8; 
+        background: #38bdf8 !important; color: #000000 !important; box-shadow: 0 0 20px #38bdf8; 
     }
+    
     .logout-btn>div>button { border-color: #f43f5e !important; color: #f43f5e !important; }
     .logout-btn>div>button:hover { background: #f43f5e !important; color: white !important; }
     .katex { color: #38bdf8 !important; font-size: 1.1em !important; }
@@ -75,7 +93,7 @@ def connect_sheets():
 
 user_sheet, chat_sheet = connect_sheets()
 
-# --- 🍪 AVTOMATIK KIRISH LOGIKASI ---
+# --- 🍪 AVTOMATIK KIRISH (AUTO-LOGIN) LOGIKASI ---
 if 'logged_in' not in st.session_state:
     saved_user = cookies.get("somo_user")
     if saved_user:
@@ -146,7 +164,7 @@ if len(st.session_state.messages) == 0:
             <h1 style="font-size: 3rem; background: linear-gradient(90deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
                 Assalomu alaykum, {st.session_state.username}! ✨
             </h1>
-            <p style="font-size: 1.2rem; color: #94a3b8;">Somo AI - har qanday savol va fayllar bilan ishlay oladigan universal yordamchi.</p>
+            <p style="font-size: 1.2rem; color: #94a3b8;">Somo AI - universal yordamchi.</p>
             <div style="display: flex; justify-content: center; gap: 15px; margin-top: 30px;">
                 <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid #38bdf8; padding: 15px; border-radius: 12px; width: 200px;">
                     <h4 style="color:#38bdf8;">🧠 Aqlli Tahlil</h4>
@@ -154,16 +172,17 @@ if len(st.session_state.messages) == 0:
                 </div>
                 <div style="background: rgba(129, 140, 248, 0.05); border: 1px solid #818cf8; padding: 15px; border-radius: 12px; width: 200px;">
                     <h4 style="color:#818cf8;">📑 Hujjatlar</h4>
-                    <p style="font-size: 0.8rem;">PDF, Excel va Word fayllarni o'qiyman va tahlil qilaman.</p>
+                    <p style="font-size: 0.8rem;">Word, PDF, Excel va PPTX fayllarni o'qiyman.</p>
                 </div>
                 <div style="background: rgba(244, 63, 94, 0.05); border: 1px solid #f43f5e; padding: 15px; border-radius: 12px; width: 200px;">
                     <h4 style="color:#f43f5e;">✍️ Ijodkorlik</h4>
-                    <p style="font-size: 0.8rem;">Sizga insho, kod va loyihalar yaratishda yordamlashaman.</p>
+                    <p style="font-size: 0.8rem;">Sizga insho, kod yoki biznes-reja yozishda yordamlashaman.</p>
                 </div>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
+# Chatni ko'rsatish
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
@@ -173,11 +192,16 @@ if prompt := st.chat_input("Istalgan mavzuda savol bering..."):
 
     with st.chat_message("assistant"):
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        sys_msg = f"Sening isming Somo AI. Yaratuvching: Usmonov Sodiq. Foydalanuvchi: {st.session_state.username}. Sen universal AIsan. Matematikani LaTeX formatida yoz."
+        sys_msg = f"""Sening isming Somo AI. Yaratuvching: Usmonov Sodiq. Foydalanuvchi: {st.session_state.username}. 
+        Sen universal AIsan. Matematikani LaTeX formatida ($...$) yoz."""
+        
         ctx = [{"role": "system", "content": sys_msg}] + st.session_state.messages
-        if up_file: ctx.insert(1, {"role": "system", "content": f"Fayl: {extract_universal_content(up_file)}"})
+        if up_file:
+            ctx.insert(1, {"role": "system", "content": f"Fayl mazmuni: {extract_universal_content(up_file)}"})
+        
         response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=ctx).choices[0].message.content
         st.markdown(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
+        
         try: chat_sheet.append_row([datetime.now().strftime("%H:%M"), st.session_state.username, "AI", prompt[:500]])
         except: pass
