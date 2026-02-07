@@ -10,94 +10,82 @@ from groq import Groq
 from datetime import datetime
 from streamlit_cookies_manager import EncryptedCookieManager
 
-# --- 🛰 1. CONFIGURATION ---
+# --- 🛰 UNIVERSAL PREMIUM DESIGN ---
 st.set_page_config(page_title="Somo AI | Universal Infinity", page_icon="🌌", layout="wide")
 
-# Cookies setup
+# Cookies manager sozlamasi
 cookies = EncryptedCookieManager(password=st.secrets.get("COOKIE_PASSWORD", "Somo_AI_Secret_Key_2026"))
 if not cookies.ready():
     st.stop()
 
-# --- 🎨 2. MUKAMMAL KONTRAST DIZAYN (BLACK & WHITE) ---
+# --- 🎨 MUKAMMAL KONTRAST STYLING ---
 st.markdown("""
     <style>
-    /* 1. ASOSIY FON - QOP-QORA VA HOVLI MOVIVIY */
+    /* Umumiy fon */
     .stApp { 
-        background-color: #000000 !important;
-        background: radial-gradient(circle at center, #000000 0%, #0f172a 100%) !important; 
+        background: radial-gradient(circle at center, #000000 0%, #020617 100%) !important; 
         color: #ffffff !important; 
     }
-    
-    /* 2. INPUT MAYDONLARI (LOGIN & PAROL) - QARAMA-QARSHI KONTRAST */
-    /* Bu yerda Inputning foni OQ (White) qilinmoqda */
-    div[data-baseweb="input"] {
-        background-color: #ffffff !important; 
-        border: 2px solid #38bdf8 !important; /* Chiroyli moviy hoshiya */
-        border-radius: 12px !important; 
-        height: 50px !important;
-        width: 100% !important;
-        box-shadow: 0 0 15px rgba(56, 189, 248, 0.2); /* Yengil yog'du */
-    }
-    
-    /* Input ichidagi yozuv QORA (Black) bo'ladi */
-    input[type="text"], input[type="password"] {
-        color: #000000 !important; 
-        -webkit-text-fill-color: #000000 !important;
-        font-weight: 600 !important;
-        font-size: 1.1rem !important;
-        background-color: transparent !important;
+
+    /* Sidebar dizayni */
+    [data-testid="stSidebar"] { 
+        background-color: #000000 !important; 
+        border-right: 1px solid #1e293b; 
     }
 
-    /* 3. CHAT INPUT (PASTDAGI YOZISH JOYI) */
-    .stChatInputContainer {
-        padding-bottom: 20px;
+    /* INPUT MAYDONLARI - OQ FON, QORA YOZUV (Mukammal Kontrast) */
+    div[data-baseweb="input"], div[data-baseweb="base-input"] {
+        background-color: #ffffff !important;
+        border-radius: 12px !important;
+        border: 2px solid #38bdf8 !important;
     }
     
-    /* Chat yozish joyi foni OQ, yozuvi QORA */
-    div[data-testid="stChatInput"] textarea {
-        background-color: #ffffff !important;
+    input {
         color: #000000 !important;
         -webkit-text-fill-color: #000000 !important;
-        border: 2px solid #38bdf8 !important;
-        border-radius: 15px !important;
-    }
-    
-    /* Placeholder rangi (yozmasdan oldingi yozuv) */
-    div[data-testid="stChatInput"] textarea::placeholder {
-        color: #64748b !important;
+        font-weight: 600 !important;
     }
 
-    /* 4. TUGMALAR VA TABLAR */
+    /* CHAT INPUT (Pastdagi savol yozish joyi) */
+    .stChatInputContainer textarea {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border-radius: 12px !important;
+    }
+
+    /* CHAT XABARLARI */
+    .stChatMessage { 
+        border-radius: 20px; 
+        border: 1px solid rgba(255, 255, 255, 0.1) !important; 
+        background: rgba(15, 23, 42, 0.6) !important; 
+        backdrop-filter: blur(15px);
+        margin-bottom: 15px;
+        padding: 15px;
+    }
+
+    /* TUGMALAR */
     .stButton>button { 
-        background: linear-gradient(90deg, #ffffff 0%, #f1f5f9 100%) !important; 
+        background: #ffffff !important; 
         color: #000000 !important; 
-        border: none !important; 
-        border-radius: 10px !important; 
-        font-weight: 800 !important; 
-        height: 45px; 
-        width: 100%;
-        transition: 0.3s;
+        border: 2px solid #38bdf8 !important; 
+        border-radius: 12px !important; 
+        font-weight: 700; 
+        transition: 0.4s; 
+        height: 48px;
     }
     .stButton>button:hover { 
         background: #38bdf8 !important; 
         color: #ffffff !important; 
-        box-shadow: 0 0 20px #38bdf8; 
+        box-shadow: 0 0 25px #38bdf8; 
     }
 
-    /* Tablarni sozlash */
-    .stTabs [data-baseweb="tab-list"] { background-color: transparent !important; }
-    .stTabs [data-baseweb="tab"] { color: #94a3b8 !important; font-weight: bold; }
-    .stTabs [aria-selected="true"] { color: #ffffff !important; border-bottom-color: #38bdf8 !important; }
-
-    /* 5. SIDEBAR */
-    [data-testid="stSidebar"] { 
-        background-color: #000000 !important; 
-        border-right: 1px solid #334155; 
-    }
+    /* Formula va Matn ranglari */
+    .katex { color: #38bdf8 !important; font-size: 1.15em !important; }
+    h1, h2, h3 { color: #ffffff !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 🔗 3. CORE CONNECTIONS (O'ZGARISHSIZ) ---
+# --- 🔗 CORE CONNECTIONS ---
 def connect_sheets():
     try:
         gcp_info = dict(st.secrets["gcp_service_account"])
@@ -110,7 +98,7 @@ def connect_sheets():
 
 user_sheet, chat_sheet = connect_sheets()
 
-# --- 🔄 AUTO-LOGIN LOGIC ---
+# --- 🍪 AUTO-LOGIN LOGIKASI ---
 if 'logged_in' not in st.session_state:
     saved_user = cookies.get("somo_user")
     if saved_user:
@@ -127,31 +115,21 @@ def extract_universal_content(file):
         elif ext == 'docx': return mammoth.extract_raw_text(file).value
         elif ext in ['xlsx', 'csv']:
             df = pd.read_excel(file) if ext == 'xlsx' else pd.read_csv(file)
-            return f"Jadval: {df.to_string()}"
+            return f"Jadval ma'lumotlari: {df.to_string()}"
         elif ext == 'pptx':
             prs = pptx.Presentation(file)
             return "\n".join([s.text for sl in prs.slides for s in sl.shapes if hasattr(s, "text")])
-    except: return "Xatolik."
+    except: return "Faylni tahlil qilishda xatolik yuz berdi."
     return ""
 
-# --- 🔐 4. LOGIN INTERFACE ---
+# --- 🔐 AUTHENTICATION ---
 if not st.session_state.logged_in:
-    # Logo va Sarlavha
-    st.markdown("""
-        <div style="text-align: center; margin-top: 60px; margin-bottom: 40px;">
-             <h1 style="color:#ffffff; font-size: 4rem; text-shadow: 0 0 20px #38bdf8;">🌌 Somo AI Infinity</h1>
-             <p style="color:#94a3b8; font-size: 1.2rem;">Cheksiz imkoniyatlar sari qadam qo'ying</p>
-        </div>
-    """, unsafe_allow_html=True)
-
-    t1, t2 = st.tabs(["🔑 TIZIMGA KIRISH", "📝 RO'YXATDAN O'TISH"])
-    
+    st.markdown('<h1 style="text-align:center; color:#ffffff; font-size: 3.5rem; margin-top:50px;">🌌 Somo AI Infinity</h1>', unsafe_allow_html=True)
+    t1, t2 = st.tabs(["🔑 Kirish", "📝 Ro'yxatdan o'tish"])
     with t1:
-        st.markdown("<br>", unsafe_allow_html=True)
-        u = st.text_input("Foydalanuvchi nomi (Username)", key="login_u", placeholder="Loginni kiriting...")
-        p = st.text_input("Maxfiy so'z (Parol)", type='password', key="login_p", placeholder="Parolni kiriting...")
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("KIRISH", key="btn_login"):
+        u = st.text_input("Username", placeholder="Ismingizni kiriting...")
+        p = st.text_input("Parol", type='password', placeholder="Maxfiy kod...")
+        if st.button("Kirish"):
             recs = user_sheet.get_all_records()
             hp = hashlib.sha256(p.encode()).hexdigest()
             user = next((r for r in recs if str(r['username']) == u), None)
@@ -160,75 +138,75 @@ if not st.session_state.logged_in:
                 cookies["somo_user"] = u
                 cookies.save()
                 st.rerun()
-            else: st.error("⚠️ Login yoki parol xato!")
-
+            else: st.error("⚠️ Username yoki parol noto'g'ri!")
     with t2:
-        st.markdown("<br>", unsafe_allow_html=True)
-        nu = st.text_input("Yangi Login", key="reg_u", placeholder="O'ylab toping...")
-        np = st.text_input("Yangi Parol", type='password', key="reg_p", placeholder="Kuchli parol...")
-        st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("HISOB YARATISH", key="btn_reg"):
+        nu, np = st.text_input("Yangi Username", key="reg_u"), st.text_input("Yangi Parol", type='password', key="reg_p")
+        if st.button("Hisob yaratish"):
             if nu and np:
                 user_sheet.append_row([nu, hashlib.sha256(np.encode()).hexdigest(), "active"])
-                st.success("🎉 Muvaffaqiyatli! Kirish bo'limiga o'ting.")
+                st.success("🎉 Tayyor! Endi kirishga o'ting.")
     st.stop()
 
-# --- 💬 5. MAIN APP (CHAT & DASHBOARD) ---
+# --- 💬 SIDEBAR CONTROL ---
 st.sidebar.markdown(f"### 👤 {st.session_state.username}")
-if st.sidebar.button("🗑 Yangi suhbat"):
+if st.sidebar.button("🗑 Chatni tozalash"):
     st.session_state.messages = []
     st.rerun()
-
-up_file = st.sidebar.file_uploader("📂 Fayl yuklash", type=["pdf", "docx", "xlsx", "csv", "pptx"])
-
+up_file = st.sidebar.file_uploader("📂 Fayl (PDF, Word, Excel, PPTX)", type=["pdf", "docx", "xlsx", "csv", "pptx"])
 st.sidebar.markdown("---")
-if st.sidebar.button("🚪 Chiqish"):
+if st.sidebar.button("🚪 Tizimdan chiqish"):
     st.session_state.logged_in = False
     cookies["somo_user"] = ""
     cookies.save()
     st.rerun()
 
-# Dashboard (Agar chat bo'sh bo'lsa)
-if not st.session_state.messages:
+# --- ✨ DASHBOARD ---
+if len(st.session_state.messages) == 0:
     st.markdown(f"""
-        <div style="text-align: center; padding: 50px 0;">
-            <h1 style="font-size: 3.5rem; color: #ffffff; text-shadow: 0 0 10px #38bdf8;">Assalomu alaykum, {st.session_state.username}!</h1>
-            <p style="color: #cbd5e1; font-size: 1.3rem; margin-top: 10px;">Bugun qanday muammoni hal qilamiz?</p>
-        </div>
-        <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
-            <div style="background: #ffffff; color: #000; padding: 25px; border-radius: 15px; width: 250px; text-align: center;">
-                <h3 style="color:#000;">🧠 Tahlil</h3>
-                <p>Matematika va fanlar.</p>
-            </div>
-            <div style="background: #ffffff; color: #000; padding: 25px; border-radius: 15px; width: 250px; text-align: center;">
-                <h3 style="color:#000;">📑 Hujjat</h3>
-                <p>Fayllar bilan ishlash.</p>
-            </div>
-            <div style="background: #ffffff; color: #000; padding: 25px; border-radius: 15px; width: 250px; text-align: center;">
-                <h3 style="color:#000;">🎨 Ijod</h3>
-                <p>Kreativ yechimlar.</p>
+        <div style="text-align: center; padding: 40px 0;">
+            <h1 style="font-size: 3.5rem; background: linear-gradient(90deg, #38bdf8, #ffffff); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                Assalomu alaykum, {st.session_state.username}! ✨
+            </h1>
+            <p style="font-size: 1.3rem; color: #94a3b8;">Somo AI - Mukammallikka yo'l.</p>
+            <div style="display: flex; justify-content: center; gap: 20px; margin-top: 40px;">
+                <div style="background: #ffffff; color: #000; padding: 25px; border-radius: 20px; width: 230px; box-shadow: 0 10px 30px rgba(56,189,248,0.3);">
+                    <h3 style="color:#000 !important;">🧠 Aqlli Tahlil</h3>
+                    <p style="font-size: 0.9rem;">Ilmiy va texnik muammolar yechimi.</p>
+                </div>
+                <div style="background: #ffffff; color: #000; padding: 25px; border-radius: 20px; width: 230px; box-shadow: 0 10px 30px rgba(56,189,248,0.3);">
+                    <h3 style="color:#000 !important;">📑 Hujjatlar</h3>
+                    <p style="font-size: 0.9rem;">Fayllardan ma'lumot olish.</p>
+                </div>
+                <div style="background: #ffffff; color: #000; padding: 25px; border-radius: 20px; width: 230px; box-shadow: 0 10px 30px rgba(56,189,248,0.3);">
+                    <h3 style="color:#000 !important;">✍️ Ijodkorlik</h3>
+                    <p style="font-size: 0.9rem;">Kod, insho va rejalar yaratish.</p>
+                </div>
             </div>
         </div>
     """, unsafe_allow_html=True)
 
-# Chat Xabarlari
+# Chatni ko'rsatish
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-# Chat Input (Pastki qism)
-if prompt := st.chat_input("Savolingizni bu yerga yozing..."):
+if prompt := st.chat_input("Istalgan mavzuda savol bering..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"): st.markdown(prompt)
 
     with st.chat_message("assistant"):
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        sys_msg = f"Isming Somo AI. Yaratuvchi: Usmonov Sodiq. Foydalanuvchi: {st.session_state.username}."
+        sys_msg = f"""Sening isming Somo AI. Yaratuvching: Usmonov Sodiq. 
+        Foydalanuvchi: {st.session_state.username}. 
+        Sen universal AIsan. Matematika, dasturlash, til, tarix va boshqa barcha sohalarda professional yordam berasan.
+        Javoblaringni tushunarli va chiroyli formatda (Markdown, LaTeX) yoz."""
+        
         ctx = [{"role": "system", "content": sys_msg}] + st.session_state.messages
         if up_file:
-            ctx.insert(1, {"role": "system", "content": f"Fayl: {extract_universal_content(up_file)}"})
+            ctx.insert(1, {"role": "system", "content": f"Yuklangan fayl: {extract_universal_content(up_file)}"})
         
         response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=ctx).choices[0].message.content
         st.markdown(response)
         st.session_state.messages.append({"role": "assistant", "content": response})
-        try: chat_sheet.append_row([datetime.now().strftime("%H:%M"), st.session_state.username, "AI", prompt[:200]])
+        
+        try: chat_sheet.append_row([datetime.now().strftime("%H:%M"), st.session_state.username, "AI", prompt[:500]])
         except: pass
