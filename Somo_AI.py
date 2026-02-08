@@ -10,7 +10,7 @@ from datetime import datetime
 from streamlit_cookies_manager import EncryptedCookieManager
 
 # --- 🛰 1. SISTEMA SOZLAMALARI ---
-st.set_page_config(page_title="Somo AI | Universal Infinity", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="Somo AI | Universal Infinity", page_icon="🌌", layout="wide")
 
 # Cookies - Sessiyani eslab qolish (Bir marta kirish kifoya)
 cookies = EncryptedCookieManager(password=st.secrets.get("COOKIE_PASSWORD", "Somo_AI_Secret_Key_2026_Final_V3"))
@@ -250,3 +250,4 @@ if pr := st.chat_input("Somo AI ga xabar yuboring..."):
                 chat_db.append_row([now_time, "Somo AI", "Assistant", res])
         except Exception as e:
             st.error(f"Xatolik yuz berdi!")
+
