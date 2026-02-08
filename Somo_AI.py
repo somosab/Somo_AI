@@ -11,32 +11,34 @@ from datetime import datetime
 from streamlit_cookies_manager import EncryptedCookieManager
 
 # --- 🛰 1. SISTEMA SOZLAMALARI ---
-st.set_page_config(page_title="Somo AI | Infinity", page_icon="🌌", layout="wide")
+st.set_page_config(page_title="Somo AI | Infinity", page_icon="🧠", layout="wide")
 
-# Cookies - Foydalanuvchini eslab qolish (Refresh bo'lganda chiqib ketmaslik uchun)
+# Cookies - Foydalanuvchini eslab qolish
 cookies = EncryptedCookieManager(password=st.secrets.get("COOKIE_PASSWORD", "Somo_AI_Secret_Key_2026"))
 if not cookies.ready():
     st.stop()
 
-# --- 🎨 2. MUKAMMAL CSS (SIDEBAR VA LOGINNI TO'G'IRLASH) ---
+# --- 🎨 2. MUKAMMAL CSS (SIDEBARNI QORA VA CHIROYLI QILISH) ---
 st.markdown("""
     <style>
-    /* Umumiy fon */
-    .stApp { background-color: #f8fafc !important; }
+    /* 1. Asosiy fon oqish/yorqin */
+    .stApp { background-color: #ffffff !important; }
 
-    /* SIDEBARNI TO'LIQ BOSHQARISH */
+    /* 2. SIDEBARNI TO'LIQ QORA QILISH */
     [data-testid="stSidebar"] {
-        background-color: #0f172a !important; 
-        min-width: 300px !important;
+        background-color: #0a0f1e !important; /* Chuqur qora-ko'k */
+        border-right: 1px solid #1e293b;
     }
 
-    /* Sidebar ichidagi barcha oq dog'larni yo'qotish (Majburiy rang berish) */
-    [data-testid="stSidebar"] .stMarkdown, [data-testid="stSidebar"] p, 
-    [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {
+    /* Sidebar ichidagi barcha matnlarni OQ qilish */
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, 
+    [data-testid="stSidebar"] label, [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] .stMarkdown {
         color: #ffffff !important;
+        font-family: 'Inter', sans-serif;
     }
 
-    /* TUGMALAR: Oq bo'lib qolgan tugmalarni binafsha qilish */
+    /* 3. TUGMALARNI QAYTA DIZAYN QILISH (Binafsha Gradient) */
     div[data-testid="stSidebar"] button {
         background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
         color: white !important;
@@ -44,49 +46,59 @@ st.markdown("""
         border-radius: 12px !important;
         padding: 12px 20px !important;
         font-weight: 700 !important;
+        font-size: 15px !important;
         width: 100% !important;
         box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3) !important;
+        transition: all 0.3s ease !important;
         margin-top: 10px !important;
     }
+    
     div[data-testid="stSidebar"] button:hover {
         transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px rgba(168, 85, 247, 0.4) !important;
+        box-shadow: 0 8px 25px rgba(168, 85, 247, 0.5) !important;
+        filter: brightness(1.1);
     }
 
-    /* FAYL YUKLASH (Drag and Drop) maydonini to'g'irlash */
+    /* 4. FAYL YUKLASH MAYDONI (Qora bo'limda ko'rinadigan qilish) */
     [data-testid="stFileUploader"] {
-        background-color: #1e293b !important;
-        border: 2px dashed #6366f1 !important;
-        border-radius: 15px !important;
-        padding: 15px !important;
+        background-color: #161e2d !important;
+        border: 2px dashed #4f46e5 !important;
+        border-radius: 14px !important;
+        padding: 10px !important;
     }
-    [data-testid="stFileUploader"] section { color: white !important; }
-    [data-testid="stFileUploader"] button { 
-        background-color: #334155 !important; 
+    [data-testid="stFileUploader"] section {
+        background-color: transparent !important;
         color: white !important;
-        border: 1px solid #6366f1 !important;
+    }
+    [data-testid="stFileUploader"] div[role="button"] {
+        background-color: #1e293b !important;
+        color: white !important;
+        border: 1px solid #4f46e5 !important;
     }
 
-    /* DASHBOARD KARTALARI */
-    .dashboard-container {
+    /* 5. ASOSIY SAHIFA DASHBOARD KARTALARI */
+    .card-container {
         display: flex;
         flex-wrap: wrap;
-        gap: 20px;
+        gap: 25px;
         justify-content: center;
-        margin-top: 30px;
+        margin-top: 40px;
     }
-    .card {
+    .modern-card {
         background: white;
-        border-radius: 25px;
-        padding: 30px;
-        flex: 1 1 300px;
-        max-width: 380px;
+        border-radius: 24px;
+        padding: 35px;
+        width: 320px;
         text-align: center;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.05);
-        border: 1px solid #e2e8f0;
-        transition: 0.4s ease;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        border: 1px solid #f1f5f9;
+        transition: 0.4s;
     }
-    .card:hover { transform: translateY(-10px); border-color: #6366f1; }
+    .modern-card:hover {
+        transform: translateY(-12px);
+        border-color: #6366f1;
+        box-shadow: 0 20px 40px rgba(99, 102, 241, 0.1);
+    }
     
     .text-gradient {
         background: linear-gradient(90deg, #4f46e5, #ec4899);
@@ -97,8 +109,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 🔗 3. CORE SERVICES (GROQ & DATABASE) ---
-def init_services():
+# --- 🔗 3. CORE SERVICES (GROQ & GSHEETS) ---
+def connect_services():
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
     try:
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -106,13 +118,12 @@ def init_services():
         gc = gspread.authorize(creds)
         ss = gc.open("Somo_Users")
         return client, ss.sheet1, ss.worksheet("ChatHistory")
-    except:
-        return client, None, None
+    except: return client, None, None
 
-client, user_db, chat_db = init_services()
+client, user_db, chat_db = connect_services()
 
-# --- 📂 4. FAYL TAHLILI FUNKSIYASI ---
-def get_file_content(file):
+# --- 📂 4. FAYL TAHLILI ---
+def parse_uploaded_file(file):
     try:
         if file.type == "application/pdf":
             return " ".join([p.extract_text() for p in PdfReader(file).pages])
@@ -124,56 +135,51 @@ def get_file_content(file):
     except: return ""
     return ""
 
-# --- 🔐 5. LOGIN VA REGISTRATSIYA BO'LIMI (TO'LIQ) ---
+# --- 🔐 5. LOGIN/REGISTRATION LOGIC ---
 if 'logged_in' not in st.session_state:
-    saved_user = cookies.get("somo_session_v2")
-    if saved_user:
-        st.session_state.username = saved_user
+    session = cookies.get("somo_infinity_auth")
+    if session:
+        st.session_state.username = session
         st.session_state.logged_in = True
     else: st.session_state.logged_in = False
 
 if not st.session_state.logged_in:
     st.markdown("<h1 style='text-align:center;'>🌌 Somo AI <span class='text-gradient'>Infinity</span></h1>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1.8, 1])
-    
-    with col2:
-        tab1, tab2 = st.tabs(["🔐 Kirish", "✍️ Ro'yxatdan o'tish"])
-        
-        with tab1:
-            u = st.text_input("Username", key="login_u")
-            p = st.text_input("Parol", type='password', key="login_p")
-            if st.button("Tizimga kirish", use_container_width=True):
-                users = user_db.get_all_records()
-                hashed_p = hashlib.sha256(p.encode()).hexdigest()
-                found = next((r for r in users if str(r['username']) == u and str(r['password']) == hashed_p), None)
-                if found:
+    _, col, _ = st.columns([1, 1.5, 1])
+    with col:
+        t1, t2 = st.tabs(["🔑 Kirish", "📝 Ro'yxatdan o'tish"])
+        with t1:
+            u = st.text_input("Username", key="l_u")
+            p = st.text_input("Parol", type='password', key="l_p")
+            if st.button("Tizimga kirish 🚀", use_container_width=True):
+                data = user_db.get_all_records()
+                hp = hashlib.sha256(p.encode()).hexdigest()
+                user = next((r for r in data if str(r['username']) == u and str(r['password']) == hp), None)
+                if user:
                     st.session_state.username = u
                     st.session_state.logged_in = True
-                    cookies["somo_session_v2"] = u
+                    cookies["somo_infinity_auth"] = u
                     cookies.save()
                     st.rerun()
-                else: st.error("Login yoki parol noto'g'ri!")
-        
-        with tab2:
-            nu = st.text_input("Yangi Username", key="reg_u")
-            np = st.text_input("Yangi Parol", type='password', key="reg_p")
-            cp = st.text_input("Parolni tasdiqlang", type='password', key="reg_cp")
-            if st.button("Hisob yaratish", use_container_width=True):
-                if np == cp and nu:
-                    hashed_np = hashlib.sha256(np.encode()).hexdigest()
-                    user_db.append_row([nu, hashed_np, "active", str(datetime.now())])
-                    st.success("Muvaffaqiyatli! Endi Kirish bo'limiga o'ting.")
-                else: st.warning("Ma'lumotlar xato yoki bo'sh!")
+                else: st.error("Xatolik: Login yoki parol noto'g'ri!")
+        with t2:
+            nu = st.text_input("Yangi Username", key="r_u")
+            np = st.text_input("Yangi Parol", type='password', key="r_p")
+            if st.button("Hisob yaratish ✨", use_container_width=True):
+                if nu and np:
+                    h_np = hashlib.sha256(np.encode()).hexdigest()
+                    user_db.append_row([nu, h_np, "active", str(datetime.now())])
+                    st.success("Hisob yaratildi! Endi 'Kirish' bo'limiga o'ting.")
     st.stop()
 
-# --- 🚀 6. ASOSIY INTERFEYS (MUKAMMAL SIDEBAR BILAN) ---
+# --- 🚀 6. MAIN APP INTERFACE ---
 with st.sidebar:
     st.markdown(f"""
-        <div style='text-align: center; padding: 20px;'>
-            <div style='background: linear-gradient(45deg, #6366f1, #a855f7); width: 80px; height: 80px; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 35px; color: white;'>
+        <div style='text-align: center; margin-bottom: 25px;'>
+            <div style='background: linear-gradient(45deg, #4f46e5, #ec4899); width: 75px; height: 75px; border-radius: 50%; margin: 0 auto; display: flex; align-items: center; justify-content: center; font-size: 32px; color: white; font-weight: bold; border: 3px solid #1e293b;'>
                 {st.session_state.username[0].upper()}
             </div>
-            <h2 style='margin-top:15px; color: white !important;'>{st.session_state.username}</h2>
+            <h3 style='margin-top:12px; font-size: 20px;'>{st.session_state.username}</h3>
         </div>
     """, unsafe_allow_html=True)
 
@@ -183,53 +189,49 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("📂 **FAYL TAHLILI (PDF/DOCX)**")
-    uploaded_file = st.file_uploader("Faylni shu yerga tashlang", type=["pdf", "docx", "pptx"], label_visibility="collapsed")
-    
-    file_text = ""
-    if uploaded_file:
-        file_text = get_file_content(uploaded_file)
-        st.success("Fayl o'qildi ✅")
+    f_up = st.file_uploader("Faylni tanlang", type=["pdf", "docx", "pptx"], label_visibility="collapsed")
+    f_content = parse_uploaded_file(f_up) if f_up else ""
+    if f_up: st.success("Fayl muvaffaqiyatli yuklandi!")
 
     st.markdown("<br>"*10, unsafe_allow_html=True)
     if st.button("🚪 Tizimdan chiqish"):
-        cookies["somo_session_v2"] = ""
+        cookies["somo_infinity_auth"] = ""
         cookies.save()
         st.session_state.clear()
         st.rerun()
 
-# --- 💬 7. CHAT LOGIKASI ---
+# Dashboard Content
 if "messages" not in st.session_state: st.session_state.messages = []
 
 if not st.session_state.messages:
     st.markdown(f"""
-        <div style='text-align: center;'>
+        <div style='text-align: center; padding: 20px;'>
             <h1 style='font-size: 3.5rem;'>Xush kelibsiz, <span class='text-gradient'>{st.session_state.username}</span>!</h1>
-            <p style='color: #64748b; font-size: 1.2rem;'>Infinity versiyasi bilan barcha chegaralarni yengib o'ting.</p>
+            <p style='color: #64748b; font-size: 1.3rem;'>Bugun qanday muammoni hal qilamiz?</p>
         </div>
-        <div class="dashboard-container">
-            <div class="card"><h3>🧠 Aqlli Tahlil</h3><p>Murakkab muammolar va fanlar bo'yicha eng aniq yechimlar.</p></div>
-            <div class="card"><h3>📄 Hujjatlar</h3><p>Yuklangan fayllarni soniyalar ichida tushunish va tahlil qilish.</p></div>
-            <div class="card"><h3>🎨 Kreativlik</h3><p>Bloglar, insholar va yangi g'oyalar uchun mukammal manba.</p></div>
+        <div class="card-container">
+            <div class="modern-card"><h2>🧠</h2><h3>Aqlli Tahlil</h3><p>Murakkab fanlar va kodlar bo'yicha aniq yechimlar.</p></div>
+            <div class="modern-card"><h2>📄</h2><h3>Hujjatlar</h3><p>Fayllarni o'qish, tahlil qilish va xulosa chiqarish.</p></div>
+            <div class="modern-card"><h2>🎨</h2><h3>Kreativlik</h3><p>Insholar, bloglar va biznes g'oyalar yaratish.</p></div>
         </div>
     """, unsafe_allow_html=True)
 
-# Chat ko'rinishi
+# Chat Log
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-if prompt := st.chat_input("Savolingizni yozing..."):
+if prompt := st.chat_input("Savolingizni yoki topshiringizni yozing..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"): st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        context = f"\n\n[Fayl mazmuni]: {file_text[:3000]}" if file_text else ""
-        full_query = f"Foydalanuvchi: {st.session_state.username}. {context}\nSavol: {prompt}"
+        context = f"\n\n[Fayl]: {f_content[:3000]}" if f_content else ""
         try:
-            response = client.chat.completions.create(
-                messages=[{"role": "user", "content": full_query}],
+            res = client.chat.completions.create(
+                messages=[{"role": "user", "content": f"{prompt} {context}"}],
                 model="llama-3.3-70b-versatile",
             ).choices[0].message.content
-            st.markdown(response)
-            st.session_state.messages.append({"role": "assistant", "content": response})
-            if chat_db: chat_db.append_row([st.session_state.username, prompt, response[:500], str(datetime.now())])
-        except: st.error("AI bilan bog'lanishda xatolik yuz berdi.")
+            st.markdown(res)
+            st.session_state.messages.append({"role": "assistant", "content": res})
+            if chat_db: chat_db.append_row([st.session_state.username, prompt, res[:500], str(datetime.now())])
+        except: st.error("AI tizimida uzilish bo'ldi. Qayta urinib ko'ring.")
