@@ -17,74 +17,67 @@ cookies = EncryptedCookieManager(password=st.secrets.get("COOKIE_PASSWORD", "Som
 if not cookies.ready():
     st.stop()
 
-# --- 🎨 2. MUKAMMAL OCHIQ KO'K DIZAYN (CSS) ---
+# --- 🎨 2. MUKAMMAL MOSLASHUVCHAN DIZAYN (CSS) ---
 st.markdown("""
     <style>
     /* Umumiy fon */
     .stApp { background-color: #f0f9ff !important; }
 
     /* BURCHAKDAGI XATO YOZUVLARNI YO'QOTISH */
-    [data-testid="stSidebarNav"] { display: none !important; }
-    .st-emotion-cache-1vt458p { display: none !important; }
+    [data-testid="stSidebarNav"], .st-emotion-cache-1vt458p, .st-emotion-cache-k77z8z { 
+        display: none !important; 
+    }
     
-    /* CHAP BO'LIM (SIDEBAR) - TOZA OCHIQ KO'K */
+    /* SIDEBAR - OCHIQ KO'K */
     [data-testid="stSidebar"] {
         background-color: #bae6fd !important;
         border-right: 2px solid #7dd3fc;
     }
-    
-    /* Sidebar ichidagi barcha bloklar rangini tekislash */
-    [data-testid="stSidebar"] section, 
-    [data-testid="stSidebar"] .stVerticalBlock {
+    [data-testid="stSidebar"] section, [data-testid="stSidebar"] .stVerticalBlock {
         background-color: #bae6fd !important;
     }
     
-    /* Sidebar matnlari */
-    [data-testid="stSidebar"] .stMarkdown p, 
-    [data-testid="stSidebar"] label, 
-    [data-testid="stSidebar"] span {
+    /* MATNLAR */
+    [data-testid="stSidebar"] .stMarkdown p, [data-testid="stSidebar"] label, [data-testid="stSidebar"] span {
         color: #0369a1 !important;
         font-weight: 700 !important;
     }
 
-    /* TUGMALAR DIZAYNI */
+    /* TUGMALAR */
     div[data-testid="stSidebar"] button {
         background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
         color: white !important;
         border: 2px solid #ffffff !important;
         border-radius: 15px !important;
         padding: 10px 20px !important;
-        font-weight: 700 !important;
         width: 100% !important;
-        transition: 0.3s all ease !important;
         box-shadow: 0 4px 10px rgba(0,0,0,0.1) !important;
     }
-    
-    div[data-testid="stSidebar"] button:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3) !important;
-    }
 
-    /* FAYL YUKLASH MAYDONI */
-    [data-testid="stFileUploader"] {
-        background-color: #f0f9ff !important;
-        border: 2px dashed #0ea5e9 !important;
-        border-radius: 15px !important;
-    }
-
-    /* ASOSIY SAHIFA KARTALARI */
+    /* ASOSIY SAHIFA KARTALARI (DASHBOARD) */
     .card-box {
         background: white;
-        border-radius: 25px;
-        padding: 30px;
+        border-radius: 20px;
+        padding: 20px;
         text-align: center;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
         border: 1px solid #e0f2fe;
-        transition: 0.4s;
+        margin-bottom: 20px;
+        transition: 0.3s;
     }
-    .card-box:hover { 
-        transform: translateY(-10px); 
-        border-color: #0ea5e9;
+
+    /* 📱 MOBIL QURILMALAR UCHUN OPTIMIZATSIYA */
+    @media (max-width: 768px) {
+        .card-box {
+            padding: 15px !important;
+            margin-bottom: 10px !important;
+        }
+        .card-box h1 { font-size: 25px !important; }
+        .card-box h3 { font-size: 18px !important; }
+        .card-box p { font-size: 13px !important; }
+        
+        /* Dashboard sarlavhasini kichraytirish */
+        h1 { font-size: 24px !important; }
     }
     
     .gradient-text {
@@ -111,7 +104,7 @@ def get_connections():
 user_db, chat_db = get_connections()
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
-# --- 📂 4. FAYL TAHLILI FUNKSIYASI ---
+# --- 📂 4. FAYL TAHLILI ---
 def process_doc(file):
     try:
         if file.type == "application/pdf":
@@ -122,7 +115,7 @@ def process_doc(file):
     except: return ""
     return ""
 
-# --- 🔐 5. LOGIN VA TIZIMDAN CHIQISH ---
+# --- 🔐 5. LOGIN VA LOGOUT ---
 if 'logged_in' not in st.session_state:
     session_user = cookies.get("somo_user_session")
     if session_user:
@@ -131,7 +124,6 @@ if 'logged_in' not in st.session_state:
     else:
         st.session_state.logged_in = False
 
-# Tizimdan chiqishni to'g'irlaydigan funksiya
 def perform_logout():
     cookies["somo_user_session"] = ""
     cookies.save()
@@ -139,8 +131,8 @@ def perform_logout():
     st.rerun()
 
 if not st.session_state.logged_in:
-    st.markdown("<h1 style='text-align:center; margin-top:50px;'>🌌 Somo AI <span class='gradient-text'>Infinity</span></h1>", unsafe_allow_html=True)
-    c1, c2, c3 = st.columns([1, 1.5, 1])
+    st.markdown("<h1 style='text-align:center; margin-top:30px;'>🌌 Somo AI <span class='gradient-text'>Infinity</span></h1>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns([0.1, 1, 0.1])
     with c2:
         choice = st.tabs(["🔑 Kirish", "📝 Ro'yxatdan o'tish"])
         with choice[0]:
@@ -156,86 +148,61 @@ if not st.session_state.logged_in:
                     cookies["somo_user_session"] = u
                     cookies.save()
                     st.rerun()
-                else: st.error("Xato: Ma'lumotlar noto'g'ri!")
+                else: st.error("Ma'lumot xato!")
         with choice[1]:
             nu = st.text_input("Yangi Username", key="r_u")
             np = st.text_input("Yangi Parol", type='password', key="r_p")
-            if st.button("Ro'yxatdan o'tish ✨", use_container_width=True):
+            if st.button("Yaratish ✨", use_container_width=True):
                 if nu and np:
                     hp = hashlib.sha256(np.encode()).hexdigest()
                     user_db.append_row([nu, hp, "active", str(datetime.now())])
-                    st.success("Muvaffaqiyatli! Endi Kirish bo'limiga o'ting.")
+                    st.success("Tayyor! Kirishga o'ting.")
     st.stop()
 
 # --- 🚀 6. ASOSIY INTERFEYS ---
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+if "messages" not in st.session_state: st.session_state.messages = []
 
-# SIDEBAR (TOZA VA MUKAMMAL)
 with st.sidebar:
-    st.markdown(f"""
-        <div style='text-align: center; padding: 20px;'>
-            <div style='background: linear-gradient(135deg, #0ea5e9, #6366f1); width: 80px; height: 80px; border-radius: 50%; margin: 0 auto; line-height: 80px; font-size: 35px; color: white; font-weight: bold; border: 3px solid white;'>
-                {st.session_state.username[0].upper()}
-            </div>
-            <h2 style='color: #0369a1; margin-top: 10px;'>{st.session_state.username}</h2>
-        </div>
-    """, unsafe_allow_html=True)
-
-    if st.button("🗑 Chatni tozalash"):
+    st.markdown(f"<div style='text-align: center; padding: 10px;'><div style='background: linear-gradient(135deg, #0ea5e9, #6366f1); width: 60px; height: 60px; border-radius: 50%; margin: 0 auto; line-height: 60px; font-size: 25px; color: white; font-weight: bold;'>{st.session_state.username[0].upper()}</div><h3 style='color: #0369a1;'>{st.session_state.username}</h3></div>", unsafe_allow_html=True)
+    
+    if st.button("🗑 Tozalash"):
         st.session_state.messages = []
         st.rerun()
 
     st.markdown("---")
-    st.markdown("📂 **HUJJATLAR TAHLILI**")
     f = st.file_uploader("Fayl", type=["pdf", "docx"], label_visibility="collapsed")
     txt_ctx = process_doc(f) if f else ""
-    if f: st.success("✅ Hujjat yuklandi")
-
-    st.markdown("<br>"*10, unsafe_allow_html=True)
-    if st.button("🚪 Tizimdan chiqish"):
+    
+    st.markdown("<br>"*5, unsafe_allow_html=True)
+    if st.button("🚪 Chiqish"):
         perform_logout()
 
-# DASHBOARD
+# DASHBOARD (MOBILDA KICHRAYADI)
 if not st.session_state.messages:
-    st.markdown(f"<h1 style='text-align: center; margin-top: 30px;'>Xush kelibsiz, <span class='gradient-text'>{st.session_state.username}</span>! ✨</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #64748b;'>Somo AI - Har qanday savolingizga javob beruvchi universal yordamchi.</p>", unsafe_allow_html=True)
+    st.markdown(f"<h2 style='text-align: center;'>Salom, <span class='gradient-text'>{st.session_state.username}</span>!</h2>", unsafe_allow_html=True)
     
     cols = st.columns(3)
-    with cols[0]: st.markdown('<div class="card-box"><h1>🧠</h1><h3>Aqlli Tahlil</h3><p>Murakkab matematika va mantiqiy savollar</p></div>', unsafe_allow_html=True)
-    with cols[1]: st.markdown('<div class="card-box"><h1>📄</h1><h3>Hujjatlar</h3><p>PDF va Word fayllarni o\'qish va xulosalash</p></div>', unsafe_allow_html=True)
-    with cols[2]: st.markdown('<div class="card-box"><h1>🎨</h1><h3>Ijodkorlik</h3><p>Kodlar, ssenariylar va biznes g\'oyalar</p></div>', unsafe_allow_html=True)
+    with cols[0]: st.markdown('<div class="card-box"><h1>🧠</h1><h3>Tahlil</h3><p>Mantiqiy savollar</p></div>', unsafe_allow_html=True)
+    with cols[1]: st.markdown('<div class="card-box"><h1>📄</h1><h3>Hujjat</h3><p>Fayllarni o\'qish</p></div>', unsafe_allow_html=True)
+    with cols[2]: st.markdown('<div class="card-box"><h1>🎨</h1><h3>Ijod</h3><p>Yangi g\'oyalar</p></div>', unsafe_allow_html=True)
 
-# CHAT KO'RSATISH
+# CHAT
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-# INPUT VA AI JAVOBI
-if pr := st.chat_input("Somo AI ga savol bering..."):
+if pr := st.chat_input("Savol yozing..."):
     st.session_state.messages.append({"role": "user", "content": pr})
     with st.chat_message("user"): st.markdown(pr)
 
     with st.chat_message("assistant"):
         try:
-            # System Prompt
-            instr = f"Sening isming Somo AI. Yaratuvching: Usmonov Sodiq. Foydalanuvchi: {st.session_state.username}. Professional javob ber. Matematikani LaTeX ($...$) da yoz."
-            
+            instr = f"Isming Somo AI. Yaratuvching: Usmonov Sodiq. Professional javob ber."
             msgs = [{"role": "system", "content": instr}]
-            if txt_ctx: msgs.append({"role": "system", "content": f"Hujjat mazmuni: {txt_ctx[:4000]}"})
+            if txt_ctx: msgs.append({"role": "system", "content": f"Hujjat: {txt_ctx[:3000]}"})
+            for old in st.session_state.messages[-10:]: msgs.append(old)
             
-            # Xotira (Oxirgi 12 xabar)
-            for old in st.session_state.messages[-12:]: msgs.append(old)
-            
-            res_box = st.empty()
-            full_res = client.chat.completions.create(
-                messages=msgs,
-                model="llama-3.3-70b-versatile",
-                temperature=0.6
-            ).choices[0].message.content
-            
-            res_box.markdown(full_res)
-            st.session_state.messages.append({"role": "assistant", "content": full_res})
-            
-            if chat_db: chat_db.append_row([st.session_state.username, pr, full_res[:500], str(datetime.now())])
-        except Exception as e:
-            st.error(f"Xatolik: {str(e)}")
+            res = client.chat.completions.create(messages=msgs, model="llama-3.3-70b-versatile").choices[0].message.content
+            st.markdown(res)
+            st.session_state.messages.append({"role": "assistant", "content": res})
+            if chat_db: chat_db.append_row([st.session_state.username, pr, res[:500], str(datetime.now())])
+        except: st.error("Xatolik!")
