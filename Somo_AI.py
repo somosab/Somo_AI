@@ -67,17 +67,20 @@ st.markdown("""
         justify-content: center;
         margin-top: 30px;
         padding: 20px;
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
     }
     .card-box {
         background: white;
         border-radius: 20px;
-        padding: 35px;
+        padding: 40px 35px;
         text-align: center;
         box-shadow: 0 10px 30px rgba(0,0,0,0.08);
         border: 2px solid #e2e8f0;
         transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         flex: 1;
-        min-width: 280px;
+        min-width: 320px;
         max-width: 380px;
         cursor: pointer;
     }
@@ -86,15 +89,31 @@ st.markdown("""
         box-shadow: 0 20px 40px rgba(14, 165, 233, 0.2);
         border-color: #0ea5e9;
     }
+    .card-box h1 {
+        font-size: 48px;
+        margin-bottom: 15px;
+    }
+    .card-box h3 {
+        font-size: 22px;
+        font-weight: 700;
+        color: #0f172a;
+        margin-bottom: 10px;
+    }
+    .card-box p {
+        font-size: 15px;
+        color: #64748b;
+        line-height: 1.6;
+    }
     @media (max-width: 768px) {
         .card-box {
-            min-width: 150px !important;
-            padding: 20px !important;
+            min-width: 260px !important;
+            max-width: 100% !important;
+            padding: 25px 20px !important;
             margin-bottom: 15px !important;
         }
-        .card-box h1 { font-size: 28px !important; }
-        .card-box h3 { font-size: 17px !important; }
-        .card-box p { font-size: 13px !important; }
+        .card-box h1 { font-size: 38px !important; }
+        .card-box h3 { font-size: 19px !important; }
+        .card-box p { font-size: 14px !important; }
         h1 { font-size: 26px !important; }
     }
     .gradient-text {
@@ -346,7 +365,7 @@ with st.sidebar:
     if st.button("🚪 Chiqish", use_container_width=True, key="logout_btn", type="primary"):
         handle_logout()
 
-# --- 🎨 DASHBOARD ---
+# --- 🎨 DASHBOARD (3 TA KARTA) ---
 if not st.session_state.messages:
     st.markdown(f"""
         <h1 style='text-align: center; margin-bottom: 10px;'>
@@ -362,38 +381,23 @@ if not st.session_state.messages:
             <div class='card-box'>
                 <h1>🧠</h1>
                 <h3>Aqlli Tahlil</h3>
-                <p>Murakkab mantiq va matematika</p>
+                <p>Murakkab mantiq, matematika va muammolarni professional darajada yechish</p>
             </div>
             <div class='card-box'>
                 <h1>📄</h1>
-                <h3>Hujjatlar</h3>
-                <p>PDF va Word tahlili</p>
+                <h3>Hujjatlar Tahlili</h3>
+                <p>PDF va Word fayllarni tahlil qilish, umumashtirilgan xulosalar berish</p>
             </div>
             <div class='card-box'>
                 <h1>🎨</h1>
                 <h3>Ijodkorlik</h3>
-                <p>Kod va kreativ yechimlar</p>
-            </div>
-            <div class='card-box'>
-                <h1>🌐</h1>
-                <h3>Tillar</h3>
-                <p>Ko'p tilda muloqot</p>
-            </div>
-            <div class='card-box'>
-                <h1>💡</h1>
-                <h3>Maslahatlar</h3>
-                <p>Professional yechimlar</p>
-            </div>
-            <div class='card-box'>
-                <h1>📚</h1>
-                <h3>Ta'lim</h3>
-                <p>O'qitish va tushuntirish</p>
+                <p>G'oyalar generatsiyasi, kod yozish va kreativ yechimlar ishlab chiqish</p>
             </div>
         </div>
     """, unsafe_allow_html=True)
     
     st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown("<div style='text-align: center; color: #94a3b8;'><p>💡 Pastdagi chat oynasiga savolingizni yozing</p></div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; color: #94a3b8;'><p>💡 Maslahat: Pastdagi chat oynasiga savolingizni yozing yoki fayl yuklang</p></div>", unsafe_allow_html=True)
 
 # --- 💬 CHAT ---
 for m in st.session_state.messages:
