@@ -9,7 +9,6 @@ from groq import Groq
 from datetime import datetime
 from streamlit_cookies_manager import EncryptedCookieManager
 import json
-import time
 
 # --- 🛰 1. SISTEMA SOZLAMALARI ---
 st.set_page_config(
@@ -26,252 +25,336 @@ cookies = EncryptedCookieManager(
 if not cookies.ready():
     st.stop()
 
-# --- 🎨 2. PREMIUM VA MOSLASHUVCHAN DIZAYN (CSS) ---
+# --- 🎨 2. PREMIUM DIZAYN (CSS) ---
 st.markdown("""
     <style>
-    /* Umumiy fon - Premium gradient */
+    /* Import Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    
+    /* Umumiy fon va font */
+    * {
+        font-family: 'Inter', sans-serif;
+    }
+    
     .stApp { 
-        background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 50%, #ddd6fe 100%) !important;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%) !important;
     }
 
-    /* BURCHAKDAGI MATNLARNI YO'QOTISH */
+    /* SIDEBAR YO'Q QILISH UCHUN YASHIRIN MATNLAR */
     [data-testid="stSidebarNav"] { display: none !important; }
     .st-emotion-cache-1vt458p, .st-emotion-cache-k77z8z, .st-emotion-cache-12fmjuu { 
         font-size: 0px !important; 
         color: transparent !important;
     }
 
-    /* SIDEBAR - MUKAMMAL GRADIENT */
+    /* SIDEBAR - PREMIUM DARK GRADIENT */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #e0f2fe 0%, #bae6fd 50%, #c7d2fe 100%) !important;
-        border-right: 3px solid #7dd3fc;
+        background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
+        border-right: 3px solid #334155;
     }
     [data-testid="stSidebar"] section, [data-testid="stSidebar"] .stVerticalBlock {
         background: transparent !important;
     }
 
-    /* SIDEBAR TUGMALARI - Premium ko'rinish */
+    /* SIDEBAR TUGMALARI - PREMIUM STYLE */
     div[data-testid="stSidebar"] button {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%) !important;
-        color: #0284c7 !important;
-        border: 2px solid #0ea5e9 !important;
-        border-radius: 12px !important;
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 14px !important;
         font-weight: 700 !important;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        font-size: 15px !important;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         width: 100% !important;
-        padding: 12px !important;
-        margin: 5px 0 !important;
-        box-shadow: 0 2px 8px rgba(14, 165, 233, 0.15);
+        padding: 14px 20px !important;
+        margin: 8px 0 !important;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
     }
     div[data-testid="stSidebar"] button:hover {
-        background: linear-gradient(135deg, #0ea5e9, #6366f1) !important;
-        color: white !important;
-        transform: translateY(-3px);
-        box-shadow: 0 8px 20px rgba(14, 165, 233, 0.4);
+        background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%) !important;
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
+    }
+    div[data-testid="stSidebar"] button:active {
+        transform: translateY(-1px) scale(0.98);
     }
 
-    /* DASHBOARD KARTALARI - 3D effekt */
+    /* DASHBOARD KARTALARI - 3TA PREMIUM KARTALAR */
     .dashboard-container {
         display: flex;
         flex-wrap: wrap;
-        gap: 25px;
+        gap: 30px;
         justify-content: center;
-        margin-top: 30px;
+        margin: 50px auto;
+        max-width: 1400px;
         padding: 20px;
     }
     
-    .card-box {
-        background: linear-gradient(145deg, #ffffff, #f1f5f9);
-        border-radius: 20px;
-        padding: 35px;
+    .premium-card {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        border-radius: 24px;
+        padding: 50px 40px;
         text-align: center;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.08), 0 1px 8px rgba(0,0,0,0.05);
-        border: 2px solid #e2e8f0;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+        border: 2px solid #475569;
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         flex: 1;
-        min-width: 280px;
-        max-width: 380px;
-        cursor: pointer;
+        min-width: 320px;
+        max-width: 420px;
         position: relative;
         overflow: hidden;
     }
     
-    .card-box::before {
+    .premium-card::before {
         content: '';
         position: absolute;
         top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.1), transparent);
-        transition: 0.5s;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
+        opacity: 0;
+        transition: opacity 0.5s ease;
+        z-index: 1;
     }
     
-    .card-box:hover::before {
-        left: 100%;
+    .premium-card:hover::before {
+        opacity: 1;
     }
     
-    .card-box:hover {
-        transform: translateY(-12px) scale(1.02);
-        box-shadow: 0 20px 40px rgba(14, 165, 233, 0.25);
-        border-color: #0ea5e9;
+    .premium-card:hover {
+        transform: translateY(-15px) scale(1.03);
+        box-shadow: 0 30px 80px rgba(59, 130, 246, 0.4);
+        border-color: #3b82f6;
+    }
+    
+    .premium-card .card-icon {
+        font-size: 80px;
+        margin-bottom: 25px;
+        filter: drop-shadow(0 4px 8px rgba(59, 130, 246, 0.3));
+        position: relative;
+        z-index: 2;
+    }
+    
+    .premium-card h2 {
+        color: #f1f5f9;
+        font-size: 32px;
+        font-weight: 800;
+        margin: 20px 0 15px 0;
+        background: linear-gradient(135deg, #60a5fa, #a78bfa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        position: relative;
+        z-index: 2;
+    }
+    
+    .premium-card p {
+        color: #cbd5e1;
+        font-size: 16px;
+        line-height: 1.6;
+        margin: 0;
+        position: relative;
+        z-index: 2;
     }
 
     /* 📱 MOBIL OPTIMIZATSIYA */
     @media (max-width: 768px) {
-        .card-box {
-            min-width: 150px !important;
-            padding: 20px !important;
-            margin-bottom: 15px !important;
+        .premium-card {
+            min-width: 280px !important;
+            padding: 35px 25px !important;
+            margin-bottom: 20px !important;
         }
-        .card-box h1 { font-size: 28px !important; }
-        .card-box h3 { font-size: 17px !important; }
-        .card-box p { font-size: 13px !important; }
-        h1 { font-size: 26px !important; }
+        .premium-card .card-icon { font-size: 60px !important; }
+        .premium-card h2 { font-size: 26px !important; }
+        .premium-card p { font-size: 14px !important; }
+        .main-title { font-size: 36px !important; }
+        .subtitle { font-size: 16px !important; }
     }
 
-    /* Gradient matn - animatsiya bilan */
+    /* GRADIENT TEXT ANIMATSIYA */
     .gradient-text {
-        background: linear-gradient(90deg, #0284c7, #6366f1, #8b5cf6, #ec4899);
+        background: linear-gradient(90deg, #60a5fa, #a78bfa, #f472b6, #60a5fa);
         background-size: 300% 300%;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
-        font-weight: 800;
-        animation: gradient-shift 4s ease infinite;
+        font-weight: 900;
+        animation: gradient-flow 4s ease infinite;
     }
     
-    @keyframes gradient-shift {
+    @keyframes gradient-flow {
         0%, 100% { background-position: 0% 50%; }
         50% { background-position: 100% 50%; }
     }
     
-    /* Login Tablar - Premium */
+    /* LOGIN TABLAR - PREMIUM */
     .stTabs [data-baseweb="tab-list"] { 
-        gap: 20px; 
+        gap: 15px; 
         background: transparent;
+        border-bottom: 2px solid #334155;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 55px;
-        background: linear-gradient(145deg, #ffffff, #f8fafc);
+        height: 60px;
+        background: linear-gradient(135deg, #1e293b, #334155);
         border-radius: 12px 12px 0 0;
-        padding: 0 25px;
-        border: 2px solid #e2e8f0;
-        transition: all 0.3s;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        padding: 0 30px;
+        border: 2px solid #475569;
+        transition: all 0.3s ease;
+        color: #94a3b8;
+        font-weight: 600;
     }
     .stTabs [data-baseweb="tab"]:hover {
-        background: linear-gradient(145deg, #f1f5f9, #e2e8f0);
-        border-color: #0ea5e9;
-        transform: translateY(-2px);
+        background: linear-gradient(135deg, #334155, #475569);
+        border-color: #3b82f6;
+        color: #f1f5f9;
     }
-    
-    /* Chat xabarlari - Premium */
-    .stChatMessage {
-        background: linear-gradient(145deg, #ffffff, #fafafa);
-        border-radius: 15px;
-        padding: 15px;
-        margin: 10px 0;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.06);
-        border: 1px solid #e2e8f0;
-    }
-    
-    /* Input maydoni - Premium */
-    .stChatInputContainer {
-        border-top: 2px solid #e2e8f0;
-        background: linear-gradient(180deg, #ffffff, #f8fafc);
-        padding: 15px;
-        box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
-    }
-    
-    /* Statistika kartalari */
-    .stat-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-        border-radius: 15px;
-        padding: 20px;
-        border-left: 4px solid #0ea5e9;
-        margin: 10px 0;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    }
-    
-    /* Feedback forma */
-    .feedback-box {
-        background: linear-gradient(145deg, #ffffff, #f8fafc);
-        border-radius: 20px;
-        padding: 30px;
-        margin: 20px 0;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-        border: 2px solid #e2e8f0;
-    }
-    
-    /* Yulduzlar reytingi */
-    .star-rating {
-        font-size: 32px;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .star-rating:hover {
-        transform: scale(1.2);
-    }
-    
-    /* Loading animatsiya */
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
-    }
-    .loading {
-        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-    }
-    
-    /* Success message */
-    .success-message {
-        background: linear-gradient(135deg, #10b981, #059669);
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
         color: white;
-        padding: 15px 25px;
-        border-radius: 12px;
-        text-align: center;
-        font-weight: 600;
-        animation: slideIn 0.5s ease;
+        border-color: #60a5fa;
     }
     
-    @keyframes slideIn {
-        from { transform: translateY(-20px); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
+    /* CHAT XABARLARI - PREMIUM */
+    .stChatMessage {
+        background: linear-gradient(135deg, #1e293b, #334155) !important;
+        border-radius: 18px !important;
+        padding: 20px !important;
+        margin: 15px 0 !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+        border: 1px solid #475569 !important;
     }
     
-    /* Metric cards */
-    .metric-card {
-        background: linear-gradient(135deg, #ffffff, #f0f9ff);
-        border-radius: 12px;
-        padding: 15px;
-        text-align: center;
-        border: 2px solid #bae6fd;
-        transition: 0.3s;
-    }
-    .metric-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(14, 165, 233, 0.2);
+    .stChatMessage[data-testid="user-message"] {
+        border-left: 4px solid #3b82f6 !important;
     }
     
-    /* Templates section */
-    .template-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 20px;
-        margin: 20px 0;
+    .stChatMessage[data-testid="assistant-message"] {
+        border-left: 4px solid #8b5cf6 !important;
     }
     
-    .template-card {
-        background: white;
-        border-radius: 15px;
-        padding: 25px;
-        border: 2px solid #e2e8f0;
-        transition: 0.3s;
-        cursor: pointer;
+    /* INPUT MAYDONI - PREMIUM */
+    .stChatInputContainer {
+        border-top: 2px solid #334155 !important;
+        background: linear-gradient(135deg, #0f172a, #1e293b) !important;
+        padding: 20px !important;
     }
-    .template-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 15px 35px rgba(99, 102, 241, 0.2);
-        border-color: #6366f1;
+    
+    .stChatInput textarea {
+        background: #1e293b !important;
+        color: #f1f5f9 !important;
+        border: 2px solid #475569 !important;
+        border-radius: 14px !important;
+        font-size: 16px !important;
+        padding: 15px !important;
+    }
+    
+    .stChatInput textarea:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+    }
+    
+    /* METRICS - PREMIUM */
+    [data-testid="stMetricValue"] {
+        color: #60a5fa !important;
+        font-size: 28px !important;
+        font-weight: 800 !important;
+    }
+    
+    [data-testid="stMetricLabel"] {
+        color: #cbd5e1 !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+    }
+    
+    /* TEXT INPUTS - PREMIUM */
+    .stTextInput input {
+        background: #1e293b !important;
+        color: #f1f5f9 !important;
+        border: 2px solid #475569 !important;
+        border-radius: 12px !important;
+        padding: 14px 18px !important;
+        font-size: 15px !important;
+    }
+    
+    .stTextInput input:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
+    }
+    
+    /* FORM SUBMIT BUTTON - PREMIUM */
+    .stButton button[kind="primaryFormSubmit"] {
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 14px 28px !important;
+        font-weight: 700 !important;
+        font-size: 16px !important;
+        box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4) !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .stButton button[kind="primaryFormSubmit"]:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6) !important;
+    }
+    
+    /* SLIDER - PREMIUM */
+    .stSlider {
+        padding: 10px 0;
+    }
+    
+    /* FILE UPLOADER - PREMIUM */
+    [data-testid="stFileUploader"] {
+        background: #1e293b !important;
+        border: 2px dashed #475569 !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+    }
+    
+    /* SUCCESS/ERROR MESSAGES - PREMIUM */
+    .stSuccess {
+        background: linear-gradient(135deg, #065f46, #047857) !important;
+        color: #d1fae5 !important;
+        border-radius: 12px !important;
+        border-left: 4px solid #10b981 !important;
+    }
+    
+    .stError {
+        background: linear-gradient(135deg, #7f1d1d, #991b1b) !important;
+        color: #fecaca !important;
+        border-radius: 12px !important;
+        border-left: 4px solid #ef4444 !important;
+    }
+    
+    .stInfo {
+        background: linear-gradient(135deg, #1e3a8a, #1e40af) !important;
+        color: #dbeafe !important;
+        border-radius: 12px !important;
+        border-left: 4px solid #3b82f6 !important;
+    }
+    
+    /* SCROLLBAR - PREMIUM */
+    ::-webkit-scrollbar {
+        width: 12px;
+        height: 12px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: #0f172a;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        border-radius: 6px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #2563eb, #7c3aed);
+    }
+    
+    /* LOADING SPINNER */
+    .stSpinner > div {
+        border-top-color: #3b82f6 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -285,22 +368,12 @@ def get_connections():
         creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
         gc = gspread.authorize(creds)
         ss = gc.open("Somo_Users")
-        user_sheet = ss.sheet1
-        chat_sheet = ss.worksheet("ChatHistory")
-        
-        # Feedback sheet yaratish (agar mavjud bo'lmasa)
-        try:
-            feedback_sheet = ss.worksheet("Letters")
-        except:
-            feedback_sheet = ss.add_worksheet(title="Letters", rows="1000", cols="10")
-            feedback_sheet.append_row(["Timestamp", "Username", "Rating", "Category", "Message", "Email", "Status"])
-        
-        return user_sheet, chat_sheet, feedback_sheet
+        return ss.sheet1, ss.worksheet("ChatHistory")
     except Exception as e:
         st.error(f"❌ Baza xatosi: {str(e)}")
-        return None, None, None
+        return None, None
 
-user_db, chat_db, feedback_db = get_connections()
+user_db, chat_db = get_connections()
 
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -323,115 +396,11 @@ def process_doc(file):
             result = mammoth.extract_raw_text(file)
             return result.value
     except Exception as e:
-        st.warning(f"⚠️ Fayl o'qishda xatolik: {str(e)}")
+        st.error(f"❌ Fayl xatosi: {str(e)}")
         return ""
     return ""
 
-# --- 🎯 5. SHABLONLAR BAZASI ---
-TEMPLATES = {
-    "Biznes": [
-        {
-            "title": "📊 Biznes Reja",
-            "icon": "📊",
-            "prompt": "Menga [kompaniya nomi] uchun professional biznes reja tuzing. Quyidagilarni kiriting:\n- Ijroiya xulosasi\n- Bozor tahlili\n- Marketing strategiyasi\n- Moliyaviy rejalar\n- 5 yillik prognoz",
-            "description": "To'liq biznes reja yaratish"
-        },
-        {
-            "title": "📧 Email Shablon",
-            "icon": "📧",
-            "prompt": "Professional biznes email yozib ber. Mavzu: [mavzu]. Quyidagi formatda:\n- Murojaat\n- Maqsad\n- Asosiy xabar\n- Xulosa va harakatga chaqiruv\n- Imzo",
-            "description": "Professional email shablonlari"
-        },
-        {
-            "title": "📈 SWOT Tahlil",
-            "icon": "📈",
-            "prompt": "[kompaniya/loyiha] uchun to'liq SWOT tahlili qil:\n- Strengths (Kuchli tomonlar)\n- Weaknesses (Zaif tomonlar)\n- Opportunities (Imkoniyatlar)\n- Threats (Tahdidlar)\nHar birini batafsil tushuntir.",
-            "description": "Biznes tahlil vositasi"
-        }
-    ],
-    "Marketing": [
-        {
-            "title": "🎯 Marketing Strategiya",
-            "icon": "🎯",
-            "prompt": "[mahsulot/xizmat] uchun keng qamrovli marketing strategiyasi tuzing:\n- Target auditoriya\n- Unique Selling Proposition (USP)\n- Marketing kanallari\n- Kontent rejasi\n- Budget taqsimoti\n- KPI'lar",
-            "description": "To'liq marketing reja"
-        },
-        {
-            "title": "📱 Social Media Reja",
-            "icon": "📱",
-            "prompt": "[brend] uchun 30 kunlik social media kontent kalendari tuzing. Quyidagi platformalar uchun:\n- Instagram\n- Facebook\n- LinkedIn\n- TikTok\nHar bir post uchun: mavzu, matn, hashteglar va eng yaxshi vaqt",
-            "description": "Ijtimoiy tarmoq rejasi"
-        },
-        {
-            "title": "✍️ Copywriting",
-            "icon": "✍️",
-            "prompt": "[mahsulot/xizmat] uchun ta'sirchan reklama matni yoz:\n- Diqqatga sazovor sarlavha\n- Emotsional ta'sir\n- Foyda va afzalliklar\n- Ishonch uyg'otuvchi dalillar\n- Kuchli Call-to-Action",
-            "description": "Reklama matnlari generatori"
-        }
-    ],
-    "Dasturlash": [
-        {
-            "title": "💻 Kod Generator",
-            "icon": "💻",
-            "prompt": "[dasturlash tili]da [funksionallik] uchun kod yoz:\n- Clean code prinsiplari\n- Izohlar bilan\n- Error handling\n- Best practices\n- Test misollari",
-            "description": "Har qanday tildagi kod"
-        },
-        {
-            "title": "🐛 Debug Yordamchi",
-            "icon": "🐛",
-            "prompt": "Quyidagi kodda xatoliklarni top va tuzat:\n```\n[kod]\n```\nXatoliklarni tushuntir va optimallashtirilgan versiyasini ber.",
-            "description": "Kod xatolarini tuzatish"
-        },
-        {
-            "title": "📚 Kod Tushuntiruvchi",
-            "icon": "📚",
-            "prompt": "Quyidagi kodni batafsil tushuntir:\n```\n[kod]\n```\nHar bir qatorni, logikani va ishlatilgan texnologiyalarni izohla.",
-            "description": "Kodni o'rganish uchun"
-        }
-    ],
-    "Ta'lim": [
-        {
-            "title": "📖 Dars Rejasi",
-            "icon": "📖",
-            "prompt": "[mavzu] bo'yicha to'liq dars rejasi tuzing:\n- O'quv maqsadlari\n- Kirish (10 daqiqa)\n- Asosiy qism (30 daqiqa)\n- Amaliy mashqlar (15 daqiqa)\n- Yakun (5 daqiqa)\n- Uyga vazifa",
-            "description": "O'qituvchilar uchun"
-        },
-        {
-            "title": "❓ Quiz Generator",
-            "icon": "❓",
-            "prompt": "[mavzu] bo'yicha 20 ta test savoli tuzing:\n- 10 ta ko'p tanlovli\n- 5 ta to'g'ri/noto'g'ri\n- 5 ta ochiq savol\nHar biriga javob va tushuntirish bilan",
-            "description": "Test yaratish vositasi"
-        },
-        {
-            "title": "🎓 Ilmiy Maqola",
-            "icon": "🎓",
-            "prompt": "[mavzu] bo'yicha ilmiy maqola strukturasi tuzing:\n- Annotatsiya\n- Kirish\n- Adabiyotlar sharhi\n- Metodologiya\n- Natijalar\n- Muhokama\n- Xulosa\n- Manbalar",
-            "description": "Akademik yozuv yordamchisi"
-        }
-    ],
-    "Ijodkorlik": [
-        {
-            "title": "📝 Hikoya Yozish",
-            "icon": "📝",
-            "prompt": "[janr] janrida qisqa hikoya yoz. Quyidagi elementlar bilan:\n- Qiziqarli bosh qahramon\n- Noodatiy voqea\n- Dramatik to'qnashuv\n- Kutilmagan yakun\nHajmi: 500-700 so'z",
-            "description": "Badiiy asarlar yaratish"
-        },
-        {
-            "title": "🎨 Brend Nomi",
-            "icon": "🎨",
-            "prompt": "[soha/mahsulot] uchun 20 ta ijodiy brend nomi taklif qil:\n- Yodda qolarli\n- Talaffuz qilish oson\n- Ma'noli\n- Zamonaviy\nHar biri uchun qisqa izoh",
-            "description": "Kreativ nomlar generatori"
-        },
-        {
-            "title": "🎬 Video Skript",
-            "icon": "🎬",
-            "prompt": "[mavzu] bo'yicha YouTube video skripti yoz:\n- Hook (dastlabki 10 soniya)\n- Kirish\n- Asosiy kontent (bo'limlar)\n- Harakatga chaqiruv\n- Outro\nDavomiyligi: [vaqt]",
-            "description": "Video kontent rejasi"
-        }
-    ]
-}
-
-# --- 🔐 6. SESSION BOSHQARUVI ---
+# --- 🔐 5. SESSION BOSHQARUVI ---
 if 'logged_in' not in st.session_state:
     session_user = cookies.get("somo_user_session")
     if session_user and user_db:
@@ -450,7 +419,7 @@ if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
 
 def handle_logout():
-    """Tizimdan chiqish"""
+    """Chiqish"""
     try:
         cookies["somo_user_session"] = ""
         cookies.save()
@@ -461,38 +430,30 @@ def handle_logout():
     st.session_state.logged_in = False
     st.rerun()
 
-# --- 🔒 7. LOGIN SAHIFASI ---
+# --- 🔒 LOGIN SAHIFASI ---
 if not st.session_state.logged_in:
-    # Header animatsiya bilan
     st.markdown("""
-        <div style='text-align:center; margin-top:60px;'>
-            <h1 style='font-size: 56px; margin-bottom: 10px;'>
+        <div style='text-align:center; margin-top:80px;'>
+            <h1 class='main-title' style='font-size: 56px; margin-bottom: 15px; color: #f1f5f9;'>
                 🌌 Somo AI <span class='gradient-text'>Infinity</span>
             </h1>
-            <p style='color: #64748b; font-size: 20px; margin-bottom: 15px;'>
-                Kelajak texnologiyalari bilan tanishing
-            </p>
-            <p style='color: #94a3b8; font-size: 16px;'>
-                ⚡ 70B parametrli AI | 🚀 Real-time javoblar | 📄 Hujjat tahlili
+            <p class='subtitle' style='color: #94a3b8; font-size: 20px; margin-bottom: 60px; font-weight: 500;'>
+                Kelajak sun'iy intellekti bilan tanishing
             </p>
         </div>
     """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([0.25, 1, 0.25])
     with col2:
-        auth_tab1, auth_tab2, auth_tab3 = st.tabs(["🔒 Kirish", "✍️ Ro'yxatdan o'tish", "ℹ️ Ma'lumot"])
+        auth_tab1, auth_tab2 = st.tabs(["🔐 Kirish", "✨ Ro'yxatdan o'tish"])
         
         with auth_tab1:
+            st.markdown("<br>", unsafe_allow_html=True)
             with st.form("login_form"):
-                st.markdown("### 🔐 Hisobingizga kiring")
-                u_in = st.text_input("👤 Username", placeholder="Username kiriting", key="login_user")
-                p_in = st.text_input("🔑 Parol", type='password', placeholder="Parol kiriting", key="login_pass")
-                
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    submitted = st.form_submit_button("🚀 Kirish", use_container_width=True)
-                with col_b:
-                    remember = st.checkbox("✅ Eslab qolish", value=True)
+                u_in = st.text_input("👤 Username", placeholder="Username kiriting", label_visibility="collapsed")
+                p_in = st.text_input("🔑 Parol", type='password', placeholder="Parol kiriting", label_visibility="collapsed")
+                st.markdown("<br>", unsafe_allow_html=True)
+                submitted = st.form_submit_button("🚀 Kirish", use_container_width=True)
                 
                 if submitted and u_in and p_in:
                     if user_db:
@@ -508,11 +469,9 @@ if not st.session_state.logged_in:
                                     st.session_state.username = u_in
                                     st.session_state.logged_in = True
                                     st.session_state.login_time = datetime.now()
-                                    if remember:
-                                        cookies["somo_user_session"] = u_in
-                                        cookies.save()
+                                    cookies["somo_user_session"] = u_in
+                                    cookies.save()
                                     st.success("✅ Muvaffaqiyatli kirish!")
-                                    time.sleep(0.5)
                                     st.rerun()
                             else:
                                 st.error("❌ Login yoki parol xato!")
@@ -520,22 +479,17 @@ if not st.session_state.logged_in:
                             st.error(f"❌ Xatolik: {str(e)}")
         
         with auth_tab2:
+            st.markdown("<br>", unsafe_allow_html=True)
             with st.form("register_form"):
-                st.markdown("### ✨ Yangi hisob yaratish")
-                nu = st.text_input("👤 Username", placeholder="Username tanlang (kamida 3 ta belgi)", key="reg_user")
-                np = st.text_input("🔑 Parol", type='password', placeholder="Parol yarating (kamida 6 ta belgi)", key="reg_pass")
-                np_confirm = st.text_input("🔑 Parolni tasdiqlang", type='password', placeholder="Parolni qayta kiriting", key="reg_pass_confirm")
-                
-                agree = st.checkbox("Men foydalanish shartlariga roziman")
-                submitted = st.form_submit_button("✨ Hisob yaratish", use_container_width=True)
+                nu = st.text_input("👤 Username", placeholder="Yangi username tanlang", label_visibility="collapsed")
+                np = st.text_input("🔑 Parol", type='password', placeholder="Parol yarating (kamida 6 ta belgi)", label_visibility="collapsed")
+                np_confirm = st.text_input("🔑 Tasdiqlash", type='password', placeholder="Parolni qayta kiriting", label_visibility="collapsed")
+                st.markdown("<br>", unsafe_allow_html=True)
+                submitted = st.form_submit_button("✨ Ro'yxatdan o'tish", use_container_width=True)
                 
                 if submitted:
-                    if not agree:
-                        st.error("❌ Foydalanish shartlariga rozilik bering!")
-                    elif not nu or not np:
+                    if not nu or not np:
                         st.error("❌ Barcha maydonlarni to'ldiring!")
-                    elif len(nu) < 3:
-                        st.error("❌ Username kamida 3 ta belgidan iborat bo'lishi kerak!")
                     elif len(np) < 6:
                         st.error("❌ Parol kamida 6 ta belgidan iborat bo'lishi kerak!")
                     elif np != np_confirm:
@@ -544,520 +498,198 @@ if not st.session_state.logged_in:
                         try:
                             recs = user_db.get_all_records()
                             if any(r['username'] == nu for r in recs):
-                                st.error("❌ Bu username band! Boshqasini tanlang.")
+                                st.error("❌ Bu username allaqachon band!")
                             else:
                                 hp = hashlib.sha256(np.encode()).hexdigest()
                                 user_db.append_row([nu, hp, "active", str(datetime.now())])
-                                st.balloons()
-                                st.success("🎉 Muvaffaqiyatli ro'yxatdan o'tdingiz! Endi Kirish bo'limiga o'ting.")
+                                st.success("✅ Muvaffaqiyatli! Endi 'Kirish' bo'limiga o'ting.")
                         except Exception as e:
                             st.error(f"❌ Xatolik: {str(e)}")
-        
-        with auth_tab3:
-            st.markdown("""
-                ### 🌟 Somo AI Infinity haqida
-                
-                **Asosiy imkoniyatlar:**
-                
-                🧠 **Aqlli AI Yordamchi**
-                - 70B parametrli Llama 3.3 model
-                - Real-time javoblar
-                - Ko'p tilda muloqot
-                
-                📄 **Hujjat Tahlili**
-                - PDF va DOCX fayllarni tahlil qilish
-                - Matnni umumlashtirish
-                - Ma'lumot ajratib olish
-                
-                🎨 **Kreativlik Shablonlari**
-                - 15+ tayyor shablon
-                - Biznes, Marketing, Dasturlash
-                - Ta'lim va Ijodkorlik
-                
-                💬 **Chat Tarixi**
-                - Barcha suhbatlar saqlanadi
-                - Yuklab olish imkoniyati
-                - Qidirish funksiyasi
-                
-                ⚙️ **Moslashtirilgan**
-                - Ijodkorlik darajasi sozlamasi
-                - Shaxsiy profil
-                - Statistika
-                
-                ---
-                
-                📧 **Yordam:** support@somoai.uz  
-                👨‍💻 **Yaratuvchi:** Usmonov Sodiq  
-                📅 **Versiya:** 2.0 (2026)
-            """)
     
     st.markdown("""
-        <div style='text-align:center; margin-top:60px; color: #94a3b8;'>
-            <p style='font-size: 14px;'>🔒 Ma'lumotlaringiz xavfsiz | 🌐 24/7 Onlayn</p>
-            <p style='margin-top: 20px;'>© 2026 Somo AI | Barcha huquqlar himoyalangan</p>
+        <div style='text-align:center; margin-top:80px; color: #64748b;'>
+            <p style='font-size: 14px;'>© 2026 Somo AI Infinity • Yaratuvchi: Usmonov Sodiq</p>
         </div>
     """, unsafe_allow_html=True)
     st.stop()
 
-# --- 🚀 8. ASOSIY INTERFEYS ---
+# --- 🚀 6. ASOSIY INTERFEYS ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "total_messages" not in st.session_state:
     st.session_state.total_messages = 0
-if "current_page" not in st.session_state:
-    st.session_state.current_page = "chat"
 
-# --- 📊 9. SIDEBAR ---
+# --- 📊 SIDEBAR ---
 with st.sidebar:
-    # User profili - Premium dizayn
     st.markdown(f"""
-        <div style='text-align: center; padding: 20px; margin-bottom: 25px; background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(99, 102, 241, 0.1)); border-radius: 20px;'>
-            <div style='background: linear-gradient(135deg, #0ea5e9, #6366f1); width: 90px; height: 90px; border-radius: 50%; margin: 0 auto; line-height: 90px; font-size: 40px; color: white; font-weight: bold; border: 5px solid white; box-shadow: 0 8px 20px rgba(14, 165, 233, 0.3);'>
+        <div style='text-align: center; padding: 20px; margin-bottom: 25px;'>
+            <div style='background: linear-gradient(135deg, #3b82f6, #8b5cf6); width: 90px; height: 90px; border-radius: 50%; margin: 0 auto; line-height: 90px; font-size: 42px; color: white; font-weight: bold; border: 4px solid #1e293b; box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);'>
                 {st.session_state.username[0].upper()}
             </div>
-            <h3 style='margin-top: 15px; color: #0f172a; font-size: 20px;'>{st.session_state.username}</h3>
-            <p style='color: #10b981; font-size: 14px; font-weight: 600;'>🟢 Aktiv</p>
+            <h3 style='margin-top: 18px; color: #f1f5f9; font-size: 22px; font-weight: 700;'>{st.session_state.username}</h3>
+            <p style='color: #10b981; font-size: 14px; font-weight: 600; margin-top: 5px;'>● Onlayn</p>
         </div>
     """, unsafe_allow_html=True)
     
-    # Navigatsiya tugmalari
-    st.markdown("### 🧭 Navigatsiya")
-    
-    if st.button("💬 Chat", use_container_width=True, key="nav_chat"):
-        st.session_state.current_page = "chat"
-        st.rerun()
-    
-    if st.button("🎨 Shablonlar", use_container_width=True, key="nav_templates"):
-        st.session_state.current_page = "templates"
-        st.rerun()
-    
-    if st.button("💌 Fikr bildirish", use_container_width=True, key="nav_feedback"):
-        st.session_state.current_page = "feedback"
-        st.rerun()
-    
-    st.markdown("---")
-    
-    # Statistika
-    st.markdown("### 📊 Statistika")
-    
-    # Metric cards
+    st.markdown("<h4 style='color: #cbd5e1; font-weight: 700; margin-bottom: 15px;'>📊 Statistika</h4>", unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("""
-            <div class='metric-card'>
-                <h4 style='color: #0284c7; margin: 0;'>💬</h4>
-                <h2 style='margin: 5px 0; color: #0f172a;'>{}</h2>
-                <p style='color: #64748b; margin: 0; font-size: 12px;'>Xabarlar</p>
-            </div>
-        """.format(len(st.session_state.messages)), unsafe_allow_html=True)
-    
+        st.metric("💬 Xabarlar", len(st.session_state.messages))
     with col2:
         if 'login_time' in st.session_state:
             session_duration = (datetime.now() - st.session_state.login_time).seconds // 60
-            st.markdown("""
-                <div class='metric-card'>
-                    <h4 style='color: #6366f1; margin: 0;'>⏱</h4>
-                    <h2 style='margin: 5px 0; color: #0f172a;'>{}</h2>
-                    <p style='color: #64748b; margin: 0; font-size: 12px;'>Daqiqa</p>
-                </div>
-            """.format(session_duration), unsafe_allow_html=True)
+            st.metric("⏱ Sessiya", f"{session_duration} daq")
     
-    st.markdown("---")
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #cbd5e1; font-weight: 700; margin-bottom: 15px;'>🎛 Boshqaruv</h4>", unsafe_allow_html=True)
     
-    # Chat boshqaruvi (faqat chat sahifasida)
-    if st.session_state.current_page == "chat":
-        st.markdown("### 🎛 Boshqaruv")
-        
-        if st.button("🗑 Chatni tozalash", use_container_width=True, key="clear_chat"):
-            st.session_state.messages = []
-            st.success("✅ Chat tozalandi!")
-            st.rerun()
-        
+    if st.button("🗑 Chatni tozalash", use_container_width=True, key="clear_chat"):
+        st.session_state.messages = []
+        st.success("✅ Chat tozalandi!")
+        st.rerun()
+    
+    if st.button("📥 Yuklab olish", use_container_width=True, key="download_chat"):
         if st.session_state.messages:
-            if st.button("📥 Yuklab olish", use_container_width=True, key="download_chat"):
-                chat_export = json.dumps(st.session_state.messages, ensure_ascii=False, indent=2)
-                st.download_button(
-                    label="💾 JSON formatda",
-                    data=chat_export,
-                    file_name=f"somo_chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                    mime="application/json",
-                    use_container_width=True,
-                    key="download_json"
-                )
+            chat_export = json.dumps(st.session_state.messages, ensure_ascii=False, indent=2)
+            st.download_button(
+                label="💾 JSON formatda",
+                data=chat_export,
+                file_name=f"somo_chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json",
+                use_container_width=True,
+                key="download_json"
+            )
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #cbd5e1; font-weight: 700; margin-bottom: 15px;'>📂 Hujjatlar</h4>", unsafe_allow_html=True)
+    f_up = st.file_uploader("PDF yoki DOCX yuklang", type=["pdf", "docx"], label_visibility="collapsed", key="file_uploader")
+    f_txt = process_doc(f_up) if f_up else ""
+    if f_up:
+        st.success(f"✅ {f_up.name} yuklandi")
+        st.info(f"📄 Hajmi: {len(f_txt):,} belgi")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("<h4 style='color: #cbd5e1; font-weight: 700; margin-bottom: 15px;'>⚙️ Sozlamalar</h4>", unsafe_allow_html=True)
+    temperature = st.slider("🌡 Ijodkorlik darajasi", 0.0, 1.0, 0.6, 0.1, key="temp_slider", help="Pastroq - aniqroq javoblar, Yuqoriroq - ijodiyroq javoblar")
     
-        st.markdown("---")
-        
-        # Fayl yuklash
-        st.markdown("### 📂 Hujjatlar")
-        f_up = st.file_uploader(
-            "PDF yoki DOCX", 
-            type=["pdf", "docx"], 
-            label_visibility="collapsed", 
-            key="file_uploader",
-            help="PDF yoki Word hujjatlarini tahlil qilish uchun yuklang"
-        )
-        
-        if 'uploaded_file_text' not in st.session_state:
-            st.session_state.uploaded_file_text = ""
-        
-        if f_up:
-            with st.spinner("📄 Fayl tahlil qilinmoqda..."):
-                f_txt = process_doc(f_up)
-                st.session_state.uploaded_file_text = f_txt
-            
-            if f_txt:
-                st.success(f"✅ {f_up.name}")
-                st.info(f"📊 {len(f_txt):,} belgi tahlil qilindi")
-            else:
-                st.warning("⚠️ Fayl o'qilmadi")
-        
-        st.markdown("---")
-        
-        # Model sozlamalari
-        st.markdown("### ⚙️ Sozlamalar")
-        temperature = st.slider(
-            "🌡 Ijodkorlik darajasi", 
-            0.0, 1.0, 0.6, 0.1, 
-            key="temp_slider",
-            help="Past qiymat - aniqroq javoblar, yuqori qiymat - ijodiyroq javoblar"
-        )
-        
-        if temperature < 0.3:
-            st.caption("🎯 Aniq va faktlarga asoslangan")
-        elif temperature < 0.7:
-            st.caption("⚖️ Muvozanatli")
-        else:
-            st.caption("🎨 Ijodiy va noodatiy")
+    st.markdown("<br>"*6, unsafe_allow_html=True)
     
-    st.markdown("<br>"*3, unsafe_allow_html=True)
-    
-    # Logout tugmasi
     if st.button("🚪 Tizimdan chiqish", use_container_width=True, key="logout_btn", type="primary"):
         handle_logout()
 
-# --- 📄 10. SAHIFALAR ---
-
-# CHAT SAHIFASI
-if st.session_state.current_page == "chat":
-    # Dashboard (xabarlar bo'lmasa)
-    if not st.session_state.messages:
-        st.markdown(f"""
-            <div style='text-align: center; margin: 40px 0;'>
-                <h1 style='font-size: 42px; margin-bottom: 15px;'>
-                    Salom, <span class='gradient-text'>{st.session_state.username}</span>! 👋
-                </h1>
-                <p style='color: #64748b; font-size: 20px; margin-bottom: 40px;'>
-                    Bugun sizga qanday yordam bera olaman?
-                </p>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        # Premium dashboard cards
-        st.markdown("""
-            <div class='dashboard-container'>
-                <div class='card-box'>
-                    <h1 style='font-size: 48px; margin-bottom: 15px;'>🧠</h1>
-                    <h3 style='color: #0f172a; margin-bottom: 10px;'>Aqlli Tahlil</h3>
-                    <p style='color: #64748b; line-height: 1.6;'>Murakkab mantiq, matematika va muammolarni professional darajada yechish</p>
-                </div>
-                <div class='card-box'>
-                    <h1 style='font-size: 48px; margin-bottom: 15px;'>📄</h1>
-                    <h3 style='color: #0f172a; margin-bottom: 10px;'>Hujjatlar Tahlili</h3>
-                    <p style='color: #64748b; line-height: 1.6;'>PDF va Word fayllarni tahlil qilish, umumlashtirish va xulosalar chiqarish</p>
-                </div>
-                <div class='card-box'>
-                    <h1 style='font-size: 48px; margin-bottom: 15px;'>🎨</h1>
-                    <h3 style='color: #0f172a; margin-bottom: 10px;'>Ijodkorlik</h3>
-                    <p style='color: #64748b; line-height: 1.6;'>G'oyalar generatsiyasi, kod yozish va kreativ yechimlar ishlab chiqish</p>
-                </div>
-                <div class='card-box'>
-                    <h1 style='font-size: 48px; margin-bottom: 15px;'>🌐</h1>
-                    <h3 style='color: #0f172a; margin-bottom: 10px;'>Ko'p Tillar</h3>
-                    <p style='color: #64748b; line-height: 1.6;'>O'zbek, Ingliz, Rus va boshqa 50+ tilda professional muloqot</p>
-                </div>
-                <div class='card-box'>
-                    <h1 style='font-size: 48px; margin-bottom: 15px;'>💡</h1>
-                    <h3 style='color: #0f172a; margin-bottom: 10px;'>Maslahatlar</h3>
-                    <p style='color: #64748b; line-height: 1.6;'>Biznes, ta'lim, texnologiya va hayot borasida ekspert maslahatlari</p>
-                </div>
-                <div class='card-box'>
-                    <h1 style='font-size: 48px; margin-bottom: 15px;'>📚</h1>
-                    <h3 style='color: #0f172a; margin-bottom: 10px;'>Ta'lim</h3>
-                    <p style='color: #64748b; line-height: 1.6;'>Har qanday mavzuni tushuntirish, o'qitish va bilim berish</p>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        
-        # Quick tips
-        st.markdown("""
-            <div style='text-align: center; background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(99, 102, 241, 0.1)); padding: 30px; border-radius: 20px; margin: 20px 0;'>
-                <h3 style='color: #0f172a; margin-bottom: 20px;'>💡 Tezkor Maslahatlar</h3>
-                <div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; text-align: left;'>
-                    <div>
-                        <strong style='color: #0284c7;'>🎯 Aniq savol bering</strong>
-                        <p style='color: #64748b; margin: 5px 0;'>Nima xohlayotganingizni batafsil yozing</p>
-                    </div>
-                    <div>
-                        <strong style='color: #6366f1;'>📎 Fayl yuklang</strong>
-                        <p style='color: #64748b; margin: 5px 0;'>PDF yoki DOCX tahlil qilish uchun</p>
-                    </div>
-                    <div>
-                        <strong style='color: #8b5cf6;'>🎨 Shablonlardan foydalaning</strong>
-                        <p style='color: #64748b; margin: 5px 0;'>Tayyor formatlar mavjud</p>
-                    </div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-    
-    # Chat tarixi
-    for m in st.session_state.messages:
-        with st.chat_message(m["role"]):
-            st.markdown(m["content"])
-    
-    # Chat input
-    if pr := st.chat_input("💭 Somo AI ga xabar yuboring...", key="chat_input"):
-        time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        # User xabarini qo'shish
-        st.session_state.messages.append({"role": "user", "content": pr})
-        with st.chat_message("user"):
-            st.markdown(pr)
-        
-        # Bazaga saqlash
-        if chat_db:
-            try:
-                chat_db.append_row([time_stamp, st.session_state.username, "User", pr])
-            except:
-                pass
-        
-        # AI javobi
-        with st.chat_message("assistant"):
-            with st.spinner("🤔 O'ylayapman..."):
-                try:
-                    # System instruction
-                    sys_instr = """Sening isming Somo AI. Seni Usmonov Sodiq yaratgan. 
-                    Sen professional, samimiy va foydali yordamchi sun'iy intellektsан. 
-                    Har doim aniq, tushunarli va to'liq javoblar berasan.
-                    Matematika formulalarini LaTeX formatida ($...$) yoz.
-                    Kod yozishda eng yaxshi amaliyotlardan foydalangan va izohlar qo'sh.
-                    Foydalanuvchi bilan samimiy va do'stona muloqot qil.
-                    Javoblaringni strukturalashtirilgan va o'qishga qulay qil."""
-                    
-                    # Xabarlar tarixini tayyorlash
-                    msgs = [{"role": "system", "content": sys_instr}]
-                    
-                    # Fayl mazmuni qo'shish
-                    if st.session_state.uploaded_file_text:
-                        msgs.append({
-                            "role": "system", 
-                            "content": f"Yuklangan hujjat mazmuni (birinchi 4500 ta belgi):\n\n{st.session_state.uploaded_file_text[:4500]}"
-                        })
-                    
-                    # Oxirgi 20 ta xabarni qo'shish
-                    for old in st.session_state.messages[-20:]:
-                        msgs.append(old)
-                    
-                    # AI javobini olish
-                    if client:
-                        response = client.chat.completions.create(
-                            messages=msgs,
-                            model="llama-3.3-70b-versatile",
-                            temperature=temperature,
-                            max_tokens=3000
-                        )
-                        
-                        res = response.choices[0].message.content
-                        st.markdown(res)
-                        
-                        # Sessiyaga saqlash
-                        st.session_state.messages.append({"role": "assistant", "content": res})
-                        st.session_state.total_messages += 1
-                        
-                        # Bazaga saqlash
-                        if chat_db:
-                            try:
-                                chat_db.append_row([time_stamp, "Somo AI", "Assistant", res])
-                            except:
-                                pass
-                    else:
-                        st.error("❌ AI xizmati mavjud emas. Iltimos, keyinroq urinib ko'ring.")
-                        
-                except Exception as e:
-                    error_msg = f"❌ Xatolik yuz berdi: {str(e)}"
-                    st.error(error_msg)
-                    st.session_state.messages.append({"role": "assistant", "content": error_msg})
-
-# SHABLONLAR SAHIFASI
-elif st.session_state.current_page == "templates":
-    st.markdown("""
-        <div style='text-align: center; margin: 30px 0;'>
-            <h1 style='font-size: 42px; margin-bottom: 15px;'>
-                🎨 <span class='gradient-text'>Shablonlar Markazi</span>
+# --- 🎨 DASHBOARD (3TA PREMIUM KARTALAR) ---
+if not st.session_state.messages:
+    st.markdown(f"""
+        <div style='text-align: center; margin: 60px 0 40px 0;'>
+            <h1 style='font-size: 48px; margin-bottom: 15px; color: #f1f5f9;'>
+                Salom, <span class='gradient-text'>{st.session_state.username}</span>! 👋
             </h1>
-            <p style='color: #64748b; font-size: 18px;'>
-                15+ professional shablon bilan ishni tezlashtiring
+            <p style='color: #94a3b8; font-size: 20px; font-weight: 500;'>
+                Bugun sizga qanday yordam bera olaman?
             </p>
         </div>
     """, unsafe_allow_html=True)
     
-    # Kategoriya tanlash
-    selected_category = st.selectbox(
-        "📁 Kategoriya tanlang:",
-        options=list(TEMPLATES.keys()),
-        key="template_category"
-    )
-    
-    st.markdown(f"### {selected_category} shablonlari")
-    st.markdown("---")
-    
-    # Shablonlarni ko'rsatish
-    templates_in_category = TEMPLATES[selected_category]
-    
-    # Har bir shablon uchun karta
-    for idx, template in enumerate(templates_in_category):
-        with st.expander(f"{template['icon']} {template['title']}", expanded=(idx == 0)):
-            st.markdown(f"**📝 Tavsif:** {template['description']}")
-            st.markdown(f"**💡 Shablon:**")
-            st.code(template['prompt'], language="text")
-            
-            col1, col2 = st.columns([3, 1])
-            with col1:
-                if st.button(f"📋 Nusxalash", key=f"copy_{selected_category}_{idx}", use_container_width=True):
-                    st.code(template['prompt'], language="text")
-                    st.success("✅ Shablonni nusxalang va chatga joylashtiring!")
-            with col2:
-                if st.button(f"🚀 Ishlatish", key=f"use_{selected_category}_{idx}", use_container_width=True):
-                    st.session_state.current_page = "chat"
-                    st.session_state.messages.append({"role": "user", "content": template['prompt']})
-                    st.rerun()
-    
-    # Qo'shimcha ma'lumot
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.info("💡 **Maslahat:** Shablonni o'zingizga moslashtiring va aniqroq natijalar uchun [qavs ichidagi]larni to'ldiring!")
-
-# FEEDBACK SAHIFASI
-elif st.session_state.current_page == "feedback":
     st.markdown("""
-        <div style='text-align: center; margin: 30px 0;'>
-            <h1 style='font-size: 42px; margin-bottom: 15px;'>
-                💌 <span class='gradient-text'>Fikr-Mulohazalar</span>
-            </h1>
-            <p style='color: #64748b; font-size: 18px;'>
-                Sizning fikringiz biz uchun muhim!
-            </p>
+        <div class='dashboard-container'>
+            <div class='premium-card'>
+                <div class='card-icon'>🧠</div>
+                <h2>Aqlli Tahlil</h2>
+                <p>Murakkab mantiqiy masalalar, matematika va chuqur tahlillar. Professional darajada yechimlar.</p>
+            </div>
+            <div class='premium-card'>
+                <div class='card-icon'>📄</div>
+                <h2>Hujjatlar Tahlili</h2>
+                <p>PDF va Word fayllarni tahlil qilish, xulosalar chiqarish va professional hisobotlar.</p>
+            </div>
+            <div class='premium-card'>
+                <div class='card-icon'>💡</div>
+                <h2>Kreativ Yechimlar</h2>
+                <p>Kod yozish, dizayn g'oyalari, ijodiy loyihalar va innovatsion yondashuvlar.</p>
+            </div>
         </div>
     """, unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([0.1, 1, 0.1])
-    with col2:
-        with st.form("feedback_form"):
-            st.markdown("### ⭐ Baholang")
-            
-            # Rating yulduzlar
-            rating = st.select_slider(
-                "Somo AI xizmatini qanday baholaysiz?",
-                options=[1, 2, 3, 4, 5],
-                value=5,
-                format_func=lambda x: "⭐" * x,
-                label_visibility="collapsed"
-            )
-            
-            st.markdown(f"<p style='text-align: center; font-size: 48px; margin: 20px 0;'>{'⭐' * rating}</p>", unsafe_allow_html=True)
-            
-            # Kategoriya
-            category = st.selectbox(
-                "📂 Kategoriya",
-                ["Umumiy fikr", "Xato haqida xabar", "Yangi funksiya taklifi", "Savol", "Boshqa"],
-                key="feedback_category"
-            )
-            
-            # Xabar
-            message = st.text_area(
-                "✍️ Xabaringiz",
-                placeholder="Sizning fikr-mulohazalaringiz...",
-                height=150,
-                key="feedback_message"
-            )
-            
-            # Email (ixtiyoriy)
-            email = st.text_input(
-                "📧 Email (ixtiyoriy)",
-                placeholder="email@example.com",
-                key="feedback_email"
-            )
-            
-            # Submit tugmasi
-            submitted = st.form_submit_button("📤 Yuborish", use_container_width=True, type="primary")
-            
-            if submitted:
-                if not message:
-                    st.error("❌ Iltimos, xabar yozing!")
-                elif len(message) < 10:
-                    st.error("❌ Xabar kamida 10 ta belgidan iborat bo'lishi kerak!")
-                elif feedback_db:
-                    try:
-                        time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        feedback_db.append_row([
-                            time_stamp,
-                            st.session_state.username,
-                            rating,
-                            category,
-                            message,
-                            email if email else "N/A",
-                            "Yangi"
-                        ])
-                        
-                        st.balloons()
-                        st.markdown("""
-                            <div class='success-message'>
-                                ✅ Rahmat! Sizning fikr-mulohazangiz muvaffaqiyatli yuborildi.
-                            </div>
-                        """, unsafe_allow_html=True)
-                        time.sleep(2)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ Xatolik: {str(e)}")
-                else:
-                    st.error("❌ Ma'lumotlar bazasi mavjud emas!")
-    
-    # Statistika
     st.markdown("<br><br>", unsafe_allow_html=True)
-    st.markdown("---")
-    st.markdown("### 📊 Umumiy Statistika")
-    
-    if feedback_db:
-        try:
-            all_feedback = feedback_db.get_all_records()
-            
-            if len(all_feedback) > 1:  # Header qatorini hisobga olmaslik
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    st.metric("📨 Jami Fikrlar", len(all_feedback) - 1)
-                
-                with col2:
-                    ratings = [int(f.get('Rating', 0)) for f in all_feedback[1:] if f.get('Rating')]
-                    avg_rating = sum(ratings) / len(ratings) if ratings else 0
-                    st.metric("⭐ O'rtacha Baho", f"{avg_rating:.1f}")
-                
-                with col3:
-                    recent = len([f for f in all_feedback[-10:] if f.get('Status') == 'Yangi'])
-                    st.metric("🆕 Yangilar", recent)
-            else:
-                st.info("💬 Hali fikr-mulohazalar yo'q. Birinchi bo'lib yozing!")
-        except:
-            st.warning("⚠️ Statistika yuklanmadi")
+    st.markdown("""
+        <div style='text-align: center; color: #64748b; font-size: 16px;'>
+            <p>💡 <strong>Maslahat:</strong> Pastdagi chat oynasiga savolingizni yozing yoki hujjat yuklang</p>
+        </div>
+    """, unsafe_allow_html=True)
 
-# --- 📌 11. FOOTER ---
+# --- 💬 CHAT TARIXI ---
+for m in st.session_state.messages:
+    with st.chat_message(m["role"]):
+        st.markdown(m["content"])
+
+# --- ✍️ YANGI XABAR INPUT ---
+if pr := st.chat_input("💭 Somo AI ga xabar yuboring..."):
+    time_stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    st.session_state.messages.append({"role": "user", "content": pr})
+    with st.chat_message("user"):
+        st.markdown(pr)
+    
+    if chat_db:
+        try:
+            chat_db.append_row([time_stamp, st.session_state.username, "User", pr])
+        except:
+            pass
+    
+    with st.chat_message("assistant"):
+        with st.spinner("🤔 Tahlil qilyapman..."):
+            try:
+                sys_instr = """Sening isming Somo AI. Seni Usmonov Sodiq yaratgan. 
+                Sen professional, samimiy va foydali yordamchi sun'iy intellektsан. 
+                Har doim aniq, tushunarli va to'liq javoblar berasan.
+                Matematika formulalarini LaTeX formatida ($...$) yoz.
+                Kod yozishda eng yaxshi amaliyotlardan foydalangan.
+                Foydalanuvchi bilan samimiy va professional muloqot qil.
+                Javoblarni tartibli, strukturali va tushunish oson qilib ber."""
+                
+                msgs = [{"role": "system", "content": sys_instr}]
+                
+                if f_txt:
+                    msgs.append({
+                        "role": "system", 
+                        "content": f"Yuklangan hujjat mazmuni (birinchi 4500 ta belgi):\n\n{f_txt[:4500]}"
+                    })
+                
+                for old in st.session_state.messages[-15:]:
+                    msgs.append(old)
+                
+                if client:
+                    response = client.chat.completions.create(
+                        messages=msgs,
+                        model="llama-3.3-70b-versatile",
+                        temperature=temperature,
+                        max_tokens=2500
+                    )
+                    
+                    res = response.choices[0].message.content
+                    st.markdown(res)
+                    st.session_state.messages.append({"role": "assistant", "content": res})
+                    st.session_state.total_messages += 1
+                    
+                    if chat_db:
+                        try:
+                            chat_db.append_row([time_stamp, "Somo AI", "Assistant", res])
+                        except:
+                            pass
+                else:
+                    st.error("❌ AI xizmati hozirda mavjud emas. Iltimos, keyinroq qayta urinib ko'ring.")
+                    
+            except Exception as e:
+                error_msg = f"❌ Xatolik yuz berdi: {str(e)}"
+                st.error(error_msg)
+                st.session_state.messages.append({"role": "assistant", "content": error_msg})
+
+# --- 📌 FOOTER ---
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown("""
-    <div style='text-align:center; color: #94a3b8; padding: 30px; border-top: 2px solid #e2e8f0; background: linear-gradient(180deg, transparent, rgba(14, 165, 233, 0.05));'>
-        <p style='margin: 8px 0; font-size: 18px; font-weight: 600;'>🌌 <strong>Somo AI Infinity</strong></p>
-        <p style='margin: 8px 0; color: #64748b;'>Powered by Groq & Llama 3.3 (70B Parameters)</p>
-        <p style='margin: 8px 0;'>👨‍💻 Yaratuvchi: <strong>Usmonov Sodiq</strong></p>
-        <p style='margin: 8px 0; font-size: 13px;'>📧 support@somoai.uz | 🌐 www.somoai.uz</p>
-        <p style='margin: 15px 0 0 0; font-size: 12px; color: #94a3b8;'>© 2026 Barcha huquqlar himoyalangan | Versiya 2.0</p>
+    <div style='text-align:center; color: #64748b; padding: 30px; border-top: 2px solid #334155; margin-top: 40px;'>
+        <p style='margin: 8px 0; font-size: 16px; font-weight: 600;'>🌌 <strong style='color: #94a3b8;'>Somo AI Infinity</strong> | Powered by Groq & Llama 3.3</p>
+        <p style='margin: 8px 0; font-size: 15px;'>👨‍💻 Yaratuvchi: <strong style='color: #94a3b8;'>Usmonov Sodiq</strong></p>
+        <p style='margin: 8px 0; font-size: 13px;'>© 2026 Barcha huquqlar himoyalangan</p>
     </div>
 """, unsafe_allow_html=True)
