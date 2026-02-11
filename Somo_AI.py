@@ -327,7 +327,7 @@ def process_doc(file):
         return ""
     return ""
 
-# --- 🎯 5. SHABLONLAR BAZASI ---
+# --- 🎯 5. SHABLONLAR BAZASI (3 TA KATEGORIYA) ---
 TEMPLATES = {
     "Biznes": [
         {
@@ -335,38 +335,6 @@ TEMPLATES = {
             "icon": "📊",
             "prompt": "Menga [kompaniya nomi] uchun professional biznes reja tuzing. Quyidagilarni kiriting:\n- Ijroiya xulosasi\n- Bozor tahlili\n- Marketing strategiyasi\n- Moliyaviy rejalar\n- 5 yillik prognoz",
             "description": "To'liq biznes reja yaratish"
-        },
-        {
-            "title": "📧 Email Shablon",
-            "icon": "📧",
-            "prompt": "Professional biznes email yozib ber. Mavzu: [mavzu]. Quyidagi formatda:\n- Murojaat\n- Maqsad\n- Asosiy xabar\n- Xulosa va harakatga chaqiruv\n- Imzo",
-            "description": "Professional email shablonlari"
-        },
-        {
-            "title": "📈 SWOT Tahlil",
-            "icon": "📈",
-            "prompt": "[kompaniya/loyiha] uchun to'liq SWOT tahlili qil:\n- Strengths (Kuchli tomonlar)\n- Weaknesses (Zaif tomonlar)\n- Opportunities (Imkoniyatlar)\n- Threats (Tahdidlar)\nHar birini batafsil tushuntir.",
-            "description": "Biznes tahlil vositasi"
-        }
-    ],
-    "Marketing": [
-        {
-            "title": "🎯 Marketing Strategiya",
-            "icon": "🎯",
-            "prompt": "[mahsulot/xizmat] uchun keng qamrovli marketing strategiyasi tuzing:\n- Target auditoriya\n- Unique Selling Proposition (USP)\n- Marketing kanallari\n- Kontent rejasi\n- Budget taqsimoti\n- KPI'lar",
-            "description": "To'liq marketing reja"
-        },
-        {
-            "title": "📱 Social Media Reja",
-            "icon": "📱",
-            "prompt": "[brend] uchun 30 kunlik social media kontent kalendari tuzing. Quyidagi platformalar uchun:\n- Instagram\n- Facebook\n- LinkedIn\n- TikTok\nHar bir post uchun: mavzu, matn, hashteglar va eng yaxshi vaqt",
-            "description": "Ijtimoiy tarmoq rejasi"
-        },
-        {
-            "title": "✍️ Copywriting",
-            "icon": "✍️",
-            "prompt": "[mahsulot/xizmat] uchun ta'sirchan reklama matni yoz:\n- Diqqatga sazovor sarlavha\n- Emotsional ta'sir\n- Foyda va afzalliklar\n- Ishonch uyg'otuvchi dalillar\n- Kuchli Call-to-Action",
-            "description": "Reklama matnlari generatori"
         }
     ],
     "Dasturlash": [
@@ -375,18 +343,6 @@ TEMPLATES = {
             "icon": "💻",
             "prompt": "[dasturlash tili]da [funksionallik] uchun kod yoz:\n- Clean code prinsiplari\n- Izohlar bilan\n- Error handling\n- Best practices\n- Test misollari",
             "description": "Har qanday tildagi kod"
-        },
-        {
-            "title": "🐛 Debug Yordamchi",
-            "icon": "🐛",
-            "prompt": "Quyidagi kodda xatoliklarni top va tuzat:\n```\n[kod]\n```\nXatoliklarni tushuntir va optimallashtirilgan versiyasini ber.",
-            "description": "Kod xatolarini tuzatish"
-        },
-        {
-            "title": "📚 Kod Tushuntiruvchi",
-            "icon": "📚",
-            "prompt": "Quyidagi kodni batafsil tushuntir:\n```\n[kod]\n```\nHar bir qatorni, logikani va ishlatilgan texnologiyalarni izohla.",
-            "description": "Kodni o'rganish uchun"
         }
     ],
     "Ta'lim": [
@@ -395,38 +351,6 @@ TEMPLATES = {
             "icon": "📖",
             "prompt": "[mavzu] bo'yicha to'liq dars rejasi tuzing:\n- O'quv maqsadlari\n- Kirish (10 daqiqa)\n- Asosiy qism (30 daqiqa)\n- Amaliy mashqlar (15 daqiqa)\n- Yakun (5 daqiqa)\n- Uyga vazifa",
             "description": "O'qituvchilar uchun"
-        },
-        {
-            "title": "❓ Quiz Generator",
-            "icon": "❓",
-            "prompt": "[mavzu] bo'yicha 20 ta test savoli tuzing:\n- 10 ta ko'p tanlovli\n- 5 ta to'g'ri/noto'g'ri\n- 5 ta ochiq savol\nHar biriga javob va tushuntirish bilan",
-            "description": "Test yaratish vositasi"
-        },
-        {
-            "title": "🎓 Ilmiy Maqola",
-            "icon": "🎓",
-            "prompt": "[mavzu] bo'yicha ilmiy maqola strukturasi tuzing:\n- Annotatsiya\n- Kirish\n- Adabiyotlar sharhi\n- Metodologiya\n- Natijalar\n- Muhokama\n- Xulosa\n- Manbalar",
-            "description": "Akademik yozuv yordamchisi"
-        }
-    ],
-    "Ijodkorlik": [
-        {
-            "title": "📝 Hikoya Yozish",
-            "icon": "📝",
-            "prompt": "[janr] janrida qisqa hikoya yoz. Quyidagi elementlar bilan:\n- Qiziqarli bosh qahramon\n- Noodatiy voqea\n- Dramatik to'qnashuv\n- Kutilmagan yakun\nHajmi: 500-700 so'z",
-            "description": "Badiiy asarlar yaratish"
-        },
-        {
-            "title": "🎨 Brend Nomi",
-            "icon": "🎨",
-            "prompt": "[soha/mahsulot] uchun 20 ta ijodiy brend nomi taklif qil:\n- Yodda qolarli\n- Talaffuz qilish oson\n- Ma'noli\n- Zamonaviy\nHar biri uchun qisqa izoh",
-            "description": "Kreativ nomlar generatori"
-        },
-        {
-            "title": "🎬 Video Skript",
-            "icon": "🎬",
-            "prompt": "[mavzu] bo'yicha YouTube video skripti yoz:\n- Hook (dastlabki 10 soniya)\n- Kirish\n- Asosiy kontent (bo'limlar)\n- Harakatga chaqiruv\n- Outro\nDavomiyligi: [vaqt]",
-            "description": "Video kontent rejasi"
         }
     ]
 }
@@ -570,9 +494,18 @@ if not st.session_state.logged_in:
                 - Ma'lumot ajratib olish
                 
                 🎨 **Kreativlik Shablonlari**
-                - 15+ tayyor shablon
-                - Biznes, Marketing, Dasturlash
-                - Ta'lim va Ijodkorlik
+                - 3 tayyor shablon
+                - Biznes, Dasturlash, Ta'lim
+                
+                💬 **Chat Tarixi**
+                - Barcha suhbatlar saqlanadi
+                - Yuklab olish imkoniyati
+                - Qidirish funksiyasi
+                
+                ⚙️ **Moslashtirilgan**
+                - Ijodkorlik darajasi sozlamasi
+                - Shaxsiy profil
+                - Statistika
                 
                 ---
                 
@@ -742,7 +675,7 @@ if st.session_state.current_page == "chat":
             </div>
         """, unsafe_allow_html=True)
         
-        # Premium dashboard cards
+        # Premium dashboard cards - 3 ta
         st.markdown("""
             <div class='dashboard-container'>
                 <div class='card-box'>
@@ -759,21 +692,6 @@ if st.session_state.current_page == "chat":
                     <h1 style='font-size: 48px; margin-bottom: 15px;'>🎨</h1>
                     <h3 style='color: #0f172a; margin-bottom: 10px;'>Ijodkorlik</h3>
                     <p style='color: #64748b; line-height: 1.6;'>G'oyalar generatsiyasi, kod yozish va kreativ yechimlar ishlab chiqish</p>
-                </div>
-                <div class='card-box'>
-                    <h1 style='font-size: 48px; margin-bottom: 15px;'>🌐</h1>
-                    <h3 style='color: #0f172a; margin-bottom: 10px;'>Ko'p Tillar</h3>
-                    <p style='color: #64748b; line-height: 1.6;'>O'zbek, Ingliz, Rus va boshqa 50+ tilda professional muloqot</p>
-                </div>
-                <div class='card-box'>
-                    <h1 style='font-size: 48px; margin-bottom: 15px;'>💡</h1>
-                    <h3 style='color: #0f172a; margin-bottom: 10px;'>Maslahatlar</h3>
-                    <p style='color: #64748b; line-height: 1.6;'>Biznes, ta'lim, texnologiya va hayot borasida ekspert maslahatlari</p>
-                </div>
-                <div class='card-box'>
-                    <h1 style='font-size: 48px; margin-bottom: 15px;'>📚</h1>
-                    <h3 style='color: #0f172a; margin-bottom: 10px;'>Ta'lim</h3>
-                    <p style='color: #64748b; line-height: 1.6;'>Har qanday mavzuni tushuntirish, o'qitish va bilim berish</p>
                 </div>
             </div>
         """, unsafe_allow_html=True)
@@ -887,7 +805,7 @@ elif st.session_state.current_page == "templates":
                 🎨 <span class='gradient-text'>Shablonlar Markazi</span>
             </h1>
             <p style='color: #64748b; font-size: 18px;'>
-                15+ professional shablon bilan ishni tezlashtiring
+                3 professional shablon bilan ishni tezlashtiring
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -1051,4 +969,3 @@ st.markdown("""
         <p style='margin: 15px 0 0 0; font-size: 12px; color: #94a3b8;'>© 2026 Barcha huquqlar himoyalangan | Versiya 2.0</p>
     </div>
 """, unsafe_allow_html=True)
-
