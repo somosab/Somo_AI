@@ -963,10 +963,11 @@ st.markdown("""
         <p style='margin: 8px 0; font-size: 18px; font-weight: 600;'>🌌 <strong>Somo AI Infinity</strong></p>
         <p style='margin: 8px 0; color: #64748b;'>Powered by Groq & Llama 3.3 (70B Parameters)</p>
         <p style='margin: 8px 0;'>👨‍💻 Yaratuvchi: <strong>Usmonov Sodiq</strong></p>
-        <p style='margin: 8px 0;'>👨‍💻 Yordamchi: <strong>Davlatov Miron</strong></p>
+        <p style='margin: 8px 0;'>👨‍💻 Yordamchi: <strong>Davlatov Mironshoh</strong></p>
         <p style='margin: 8px 0; font-size: 13px;'>📧 support@somoai.uz | 🌐 www.somoai.uz</p>
         <p style='margin: 15px 0 0 0; font-size: 12px; color: #94a3b8;'>© 2026 Barcha huquqlar himoyalangan | Versiya 2.0</p>
     </div>
 """, unsafe_allow_html=True)
+
 
 
