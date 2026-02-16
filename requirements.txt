@@ -7,4 +7,6 @@ mammoth
 pandas
 openpyxl
 python-pptx
+python-docx
 streamlit-cookies-manager
+Pillow
