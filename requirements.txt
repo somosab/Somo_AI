@@ -4,9 +4,8 @@ oauth2client
 groq
 pypdf
 mammoth
-pandas
 openpyxl
 python-pptx
 python-docx
 streamlit-cookies-manager
-Pillow
+google-generativeai
