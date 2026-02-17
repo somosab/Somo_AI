@@ -366,41 +366,133 @@ def is_file_request(prompt):
     return any(k in low for k in kw)
 
 def is_image_request(prompt):
-    """Rasm yaratishni so'ragan bo'lsa True"""
-    kw = [
-        "rasm yarat","rasm chiz","rasm tayyorla","rasm qil","rasmini yarat",
-        "rasm yozib ber","logo yarat","banner yarat","poster yarat",
-        "svg yarat","svg qil","generate image","create image","draw",
-    ]
+    """
+    Rasm yaratish so'rovini aniqlash.
+    'chizib ber', 'yaratib ber rasm', 'ko'rsat' kabi
+    har xil uslubdagi so'rovlarni qo'llab-quvvatlaydi.
+    """
     low = prompt.lower()
-    return any(k in low for k in kw)
+
+    # Aniq rasm so'zlari
+    rasm_words = [
+        "rasm","surat","portret","logo","banner","poster",
+        "chizma","grafika","illüstrasiya","thumbnail","avatar",
+        "cover","background","wallpaper","icon","image","picture",
+        "photo","art","design","svg","vektor","grafik",
+    ]
+
+    # Harakat so'zlari (yaratish)
+    action_words = [
+        "yarat","chiz","tayyorla","qil","ber","ko'rsat","chiqar",
+        "yoz","jasur","ifodalab","ishlat","generate","create",
+        "draw","make","show","design","paint","render",
+    ]
+
+    # To'g'ridan-to'g'ri trigger jumlalar
+    direct = [
+        "rasm yarat","rasm chiz","rasm tayyorla","rasm qil",
+        "rasmini yarat","rasm yozib ber","rasm ko'rsat",
+        "chizib ber","chizib ko'rsat","chizma yarat","chizma qil",
+        "surat yarat","surat chiz","portret yarat","portret chiz",
+        "logo yarat","logo qil","banner yarat","poster yarat",
+        "svg yarat","svg qil","svg chiz","vektor yarat",
+        "grafika yarat","dizayn yarat","generate image",
+        "create image","draw","paint","render",
+        "ko'rinishini chiz","ko'rinishini ko'rsat",
+        "rasmini chiz","rasmini ko'rsat","rasmini tayyorla",
+        "tasvirini yarat","tasvirini chiz","rasmin chiz",
+        "rasmin ko'rsat","rasmin yarat",
+    ]
+
+    # 1. To'g'ridan-to'g'ri jumlalar
+    if any(d in low for d in direct):
+        return True
+
+    # 2. Rasm so'zi + harakat so'zi birgalikda
+    has_rasm   = any(r in low for r in rasm_words)
+    has_action = any(a in low for a in action_words)
+    if has_rasm and has_action:
+        return True
+
+    # 3. "[ism/narsa] + chiz/yarat/ko'rsat" pattern
+    # masalan: "ronaldoni chizib ber", "itni yarat"
+    create_patterns = [
+        r"\w+ni chiz",
+        r"\w+ni yarat",
+        r"\w+ni ko[''`]rsat",
+        r"\w+ni tasvirla",
+        r"chizib ber",
+        r"chizib ko[''`]rsat",
+        r"yaratib ber",
+        r"rasmini ber",
+    ]
+    import re as _re
+    for pat in create_patterns:
+        if _re.search(pat, low):
+            return True
+
+    return False
 
 # ═══════════════════════════════════════════════════════
 # 6. RASM YARATISH — GEMINI IMAGEN
 # ═══════════════════════════════════════════════════════
-def generate_image_gemini(prompt_text):
-    """Gemini Imagen 3 bilan haqiqiy rasm yaratish"""
+def translate_to_english_for_image(text):
+    """O'zbek/Rus promptni inglizchaga tarjima (rasm yaratish uchun)"""
+    if not groq_client:
+        return text
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model  = genai.ImageGenerationModel("imagen-3.0-generate-002")
-        result = model.generate_images(
-            prompt=prompt_text,
-            number_of_images=1,
-            safety_filter_level="block_only_high",
-            person_generation="allow_adult",
-            aspect_ratio="1:1",
+        r = groq_client.chat.completions.create(
+            messages=[
+                {"role":"system","content":(
+                    "You are a translator. Translate the user text to English "
+                    "as a vivid image generation prompt. "
+                    "Output ONLY the English translation, nothing else."
+                )},
+                {"role":"user","content":text}
+            ],
+            model="llama-3.1-8b-instant",
+            temperature=0.2, max_tokens=150
         )
-        if result.images:
-            return result.images[0]._image_bytes, None
-        return None, "Rasm yaratilmadi"
+        return r.choices[0].message.content.strip()
+    except Exception:
+        return text
+
+def generate_image_pollinations(prompt_text):
+    """
+    Pollinations.ai — 100% BEPUL, hech qanday API key kerak emas!
+    Haqiqiy PNG rasm qaytaradi.
+    Returns: (bytes, error, eng_prompt)
+    """
+    import urllib.request
+    import urllib.parse
+
+    # O'zbek → Inglizcha tarjima
+    eng = translate_to_english_for_image(prompt_text)
+    enhanced = f"{eng}, high quality, detailed, 4k, sharp focus, professional"
+
+    try:
+        encoded = urllib.parse.quote(enhanced)
+        url     = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&nologo=true&enhance=true"
+
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            img_bytes = resp.read()
+
+        # Minimal tekshirish — PNG/JPEG header
+        if img_bytes[:4] in (b'\x89PNG', b'\xff\xd8\xff') or img_bytes[:4] == b'RIFF':
+            return img_bytes, None, eng
+        return None, "Noto'g'ri rasm formati", eng
     except Exception as e:
-        err = str(e)
-        if "key" in err.lower() or "api" in err.lower():
-            return None, "❌ GEMINI_API_KEY noto'g'ri"
-        if "quota" in err.lower() or "billing" in err.lower():
-            return None, "❌ Gemini quota tugagan"
-        return None, f"❌ {err}"
+        return None, f"❌ Pollinations xatosi: {e}", eng
+
+def generate_image_gemini(prompt_text):
+    """
+    Gemini Flash bilan rasm tahlili + SVG generatsiya.
+    Gemini Imagen pullik — shuning uchun Pollinations.ai ishlatiladi.
+    Returns: (bytes, error, eng_prompt)
+    """
+    # Pollinations.ai — bepul, karta kerak emas
+    return generate_image_pollinations(prompt_text)
 
 def generate_svg_fallback(prompt_text):
     """Groq orqali SVG rasm yaratish (Gemini yo'q bo'lsa)"""
@@ -1018,7 +1110,7 @@ if not st.session_state.logged_in:
                         gap:8px;flex-wrap:wrap;margin-bottom:8px;'>
                 <span class='badge badge-groq'>⚡ Groq — Bepul</span>
                 <span class='badge badge-gemini'>🌟 Gemini — Bepul</span>
-                <span class='badge badge-purple'>🎨 Rasm Yaratish</span>
+                <span class='badge badge-purple'>🎨 Pollinations.ai</span>
                 <span class='badge badge-purple'>🖼 Vision</span>
                 <span class='badge badge-groq'>📊 PPTX/Excel</span>
                 <span class='badge badge-gemini'>📝 Word</span>
@@ -1249,21 +1341,21 @@ with st.sidebar:
 
         # GEMINI STATUS
         st.markdown("<br>", unsafe_allow_html=True)
+        # Rasm yaratish holati (Pollinations.ai — bepul)
+        st.markdown(
+            "<div style='background:#f0fdf4;border:1px solid #86efac;"
+            "border-radius:10px;padding:10px;text-align:center;'>"
+            "🎨 <strong>Rasm yaratish</strong><br>"
+            "<small style='color:#065f46;'>✅ Pollinations.ai — Bepul!</small>"
+            "</div>",
+            unsafe_allow_html=True
+        )
         if gemini_client:
             st.markdown(
-                "<div style='background:#f0fdf4;border:1px solid #86efac;"
-                "border-radius:10px;padding:10px;text-align:center;'>"
-                "✅ <strong>Gemini ulangan</strong><br>"
-                "<small style='color:#64748b;'>Rasm yaratish tayyor</small>"
-                "</div>",
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown(
-                "<div style='background:#fff7ed;border:1px solid #fed7aa;"
-                "border-radius:10px;padding:10px;text-align:center;'>"
-                "⚠️ <strong>Gemini yo'q</strong><br>"
-                "<small style='color:#64748b;'>SVG fallback ishlatiladi</small>"
+                "<div style='background:#eff6ff;border:1px solid #bfdbfe;"
+                "border-radius:8px;padding:8px;text-align:center;margin-top:6px;'>"
+                "🌟 <strong>Gemini Vision</strong><br>"
+                "<small style='color:#1e40af;'>Rasm tahlili tayyor</small>"
                 "</div>",
                 unsafe_allow_html=True
             )
@@ -1546,8 +1638,8 @@ if st.session_state.current_page == "chat":
 
                 if gemini_client:
                     # Gemini Imagen 3 bilan haqiqiy rasm
-                    with st.spinner("🎨 Gemini Imagen 3 rasm yaratyapti..."):
-                        img_data, err = generate_image_gemini(prompt)
+                    with st.spinner("🎨 Pollinations.ai rasm yaratyapti (10-30 sek)..."):
+                        img_data, err, eng_prompt = generate_image_gemini(prompt)
 
                     if img_data:
                         st.markdown("""
@@ -1560,25 +1652,38 @@ if st.session_state.current_page == "chat":
                         st.image(img_data,
                                  caption=f"✅ {prompt[:60]}",
                                  use_container_width=True)
-                        st.download_button(
-                            "⬇️ 🖼 PNG yuklab olish",
-                            data=img_data,
-                            file_name=f"somo_rasm_{ts_s}.png",
-                            mime="image/png",
-                            key=f"dl_img_{ts_s}",
-                            use_container_width=True
-                        )
-                        st.caption("🌟 Powered by Gemini Imagen 3")
-                        res = f"✅ Rasm yaratildi: {prompt}"
+                        if eng_prompt and eng_prompt.lower() != prompt.lower():
+                            st.caption(f"🔤 Inglizcha prompt: *{eng_prompt[:80]}*")
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            st.download_button(
+                                "⬇️ 🖼 PNG yuklab olish",
+                                data=img_data,
+                                file_name=f"somo_rasm_{ts_s}.png",
+                                mime="image/png",
+                                key=f"dl_img_{ts_s}",
+                                use_container_width=True
+                            )
+                        with c2:
+                            st.download_button(
+                                "⬇️ WebP yuklab olish",
+                                data=img_data,
+                                file_name=f"somo_rasm_{ts_s}.webp",
+                                mime="image/webp",
+                                key=f"dl_img_webp_{ts_s}",
+                                use_container_width=True
+                            )
+                        st.caption("🎨 Powered by Pollinations.ai (BEPUL)")
+                        res = f"✅ Rasm muvaffaqiyatli yaratildi!"
                     else:
-                        st.warning(f"{err} — SVG bilan davom etilmoqda...")
+                        st.warning(f"{err}\n\n🔄 SVG bilan almashtirilmoqda...")
                         with st.spinner("🎨 SVG rasm yaratilmoqda..."):
                             svg = generate_svg_fallback(prompt)
                         if svg:
                             st.markdown("""
                                 <div class='image-card'>
                                     <h4 style='color:#7c3aed;margin:0 0 8px;'>
-                                        🎨 SVG Rasm
+                                        🎨 SVG Vektor Rasm
                                     </h4>
                                 </div>
                             """, unsafe_allow_html=True)
@@ -1903,8 +2008,8 @@ st.markdown("""
             <span class='badge badge-gemini'>🌟 Gemini</span>
         </p>
         <p style='margin:6px 0;font-size:13px;color:#64748b;'>
-            Llama 3.3 70B · LLaMA 4 Scout Vision ·
-            Mixtral 8x7B · Gemini Imagen 3
+            Llama 3.3 70B · LLaMA 4 Scout Vision · Mixtral 8x7B
+            🎨 Pollinations.ai (bepul rasm yaratish)
         </p>
         <p style='margin:6px 0;'>
             👨‍💻 <strong>Usmonov Sodiq</strong> &nbsp;|&nbsp;
