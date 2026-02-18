@@ -15,9 +15,9 @@ from groq import Groq
 from datetime import datetime
 from streamlit_cookies_manager import EncryptedCookieManager
 
-# ───────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════
 # 1. SAHIFA SOZLAMALARI
-# ───────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════
 st.set_page_config(
     page_title="Somo AI | Universal Infinity",
     page_icon="🌌",
@@ -26,183 +26,201 @@ st.set_page_config(
 )
 
 cookies = EncryptedCookieManager(
-    password=st.secrets.get("COOKIE_PASSWORD", "Somo_AI_Secret_Key_2026_Final_PRO")
+    password=st.secrets.get("COOKIE_PASSWORD", "Somo_AI_Secret_Key_2026")
 )
 if not cookies.ready():
     st.stop()
 
-# ───────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════
 # 2. CSS DIZAYN
-# ───────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════
 st.markdown("""
 <style>
 .stApp {
     background: linear-gradient(135deg,#f8fafc 0%,#e0f2fe 50%,#ddd6fe 100%) !important;
 }
 [data-testid="stSidebarNav"] { display:none !important; }
-.st-emotion-cache-1vt458p,.st-emotion-cache-k77z8z,.st-emotion-cache-12fmjuu {
-    font-size:0px !important; color:transparent !important;
-}
+.st-emotion-cache-1vt458p,
+.st-emotion-cache-k77z8z,
+.st-emotion-cache-12fmjuu { font-size:0 !important; color:transparent !important; }
+
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg,#e0f2fe 0%,#bae6fd 50%,#c7d2fe 100%) !important;
     border-right: 3px solid #7dd3fc;
 }
 [data-testid="stSidebar"] section,
 [data-testid="stSidebar"] .stVerticalBlock { background:transparent !important; }
+
 div[data-testid="stSidebar"] button {
-    background: linear-gradient(135deg,#fff 0%,#f8fafc 100%) !important;
+    background: linear-gradient(135deg,#fff,#f8fafc) !important;
     color: #0284c7 !important;
     border: 2px solid #0ea5e9 !important;
     border-radius: 12px !important;
     font-weight: 700 !important;
-    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    transition: all 0.3s cubic-bezier(.4,0,.2,1);
     width: 100% !important;
     padding: 12px !important;
     margin: 5px 0 !important;
-    box-shadow: 0 2px 8px rgba(14,165,233,0.15);
+    box-shadow: 0 2px 8px rgba(14,165,233,.15);
 }
 div[data-testid="stSidebar"] button:hover {
     background: linear-gradient(135deg,#0ea5e9,#6366f1) !important;
     color: white !important;
     transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(14,165,233,0.4);
+    box-shadow: 0 8px 20px rgba(14,165,233,.4);
 }
+
+/* DASHBOARD KARTALAR */
 .dashboard-container {
-    display:flex; flex-wrap:wrap; gap:25px;
-    justify-content:center; margin-top:30px; padding:20px;
+    display:flex; flex-wrap:wrap; gap:22px;
+    justify-content:center; margin-top:25px; padding:15px;
 }
 .card-box {
     background: linear-gradient(145deg,#fff,#f1f5f9);
-    border-radius: 20px; padding: 35px; text-align: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.08),0 1px 8px rgba(0,0,0,0.05);
+    border-radius: 20px; padding: 30px; text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,.08);
     border: 2px solid #e2e8f0;
-    transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
-    flex:1; min-width:280px; max-width:380px;
+    transition: all .4s cubic-bezier(.4,0,.2,1);
+    flex:1; min-width:240px; max-width:320px;
     cursor:pointer; position:relative; overflow:hidden;
 }
 .card-box::before {
     content:''; position:absolute; top:0; left:-100%;
     width:100%; height:100%;
-    background:linear-gradient(90deg,transparent,rgba(14,165,233,0.1),transparent);
-    transition:0.5s;
+    background:linear-gradient(90deg,transparent,rgba(14,165,233,.1),transparent);
+    transition:.5s;
 }
 .card-box:hover::before { left:100%; }
 .card-box:hover {
     transform: translateY(-12px) scale(1.02);
-    box-shadow: 0 20px 40px rgba(14,165,233,0.25);
+    box-shadow: 0 20px 40px rgba(14,165,233,.25);
     border-color: #0ea5e9;
 }
-@media (max-width:768px) {
-    .card-box { min-width:150px !important; padding:20px !important; }
-    .card-box h1 { font-size:28px !important; }
-    .card-box h3 { font-size:17px !important; }
-    .card-box p  { font-size:13px !important; }
-    h1 { font-size:26px !important; }
+@media(max-width:768px){
+    .card-box{min-width:150px !important;padding:18px !important;}
+    h1{font-size:26px !important;}
 }
+
+/* GRADIENT MATN */
 .gradient-text {
     background: linear-gradient(90deg,#0284c7,#6366f1,#8b5cf6,#ec4899);
     background-size: 300% 300%;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-weight: 800;
-    animation: gradient-shift 4s ease infinite;
+    animation: gshift 4s ease infinite;
 }
-@keyframes gradient-shift {
-    0%,100% { background-position:0% 50%; }
-    50%      { background-position:100% 50%; }
+@keyframes gshift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+
+/* TABLAR */
+.stTabs [data-baseweb="tab-list"]{gap:15px;background:transparent;}
+.stTabs [data-baseweb="tab"]{
+    height:52px;background:linear-gradient(145deg,#fff,#f8fafc);
+    border-radius:12px 12px 0 0;padding:0 22px;
+    border:2px solid #e2e8f0;transition:all .3s;
 }
-.stTabs [data-baseweb="tab-list"] { gap:20px; background:transparent; }
-.stTabs [data-baseweb="tab"] {
-    height:55px; background:linear-gradient(145deg,#fff,#f8fafc);
-    border-radius:12px 12px 0 0; padding:0 25px;
-    border:2px solid #e2e8f0; transition:all 0.3s;
-    box-shadow:0 2px 8px rgba(0,0,0,0.05);
+.stTabs [data-baseweb="tab"]:hover{
+    border-color:#0ea5e9;transform:translateY(-2px);
 }
-.stTabs [data-baseweb="tab"]:hover {
-    background:linear-gradient(145deg,#f1f5f9,#e2e8f0);
-    border-color:#0ea5e9; transform:translateY(-2px);
-}
-.stChatMessage {
-    background: linear-gradient(145deg,#fff,#fafafa);
-    border-radius:15px; padding:15px; margin:10px 0;
-    box-shadow:0 4px 15px rgba(0,0,0,0.06);
+
+/* CHAT */
+.stChatMessage{
+    background:linear-gradient(145deg,#fff,#fafafa);
+    border-radius:15px;padding:15px;margin:10px 0;
+    box-shadow:0 4px 15px rgba(0,0,0,.06);
     border:1px solid #e2e8f0;
 }
-.stChatInputContainer {
-    border-top:2px solid #e2e8f0;
-    background:linear-gradient(180deg,#fff,#f8fafc);
-    padding:15px; box-shadow:0 -4px 15px rgba(0,0,0,0.05);
-}
-.metric-card {
+
+/* METRIK KARTA */
+.metric-card{
     background:linear-gradient(135deg,#fff,#f0f9ff);
-    border-radius:12px; padding:15px; text-align:center;
-    border:2px solid #bae6fd; transition:0.3s;
+    border-radius:12px;padding:14px;text-align:center;
+    border:2px solid #bae6fd;transition:.3s;
 }
-.metric-card:hover {
-    transform:translateY(-5px);
-    box-shadow:0 10px 25px rgba(14,165,233,0.2);
+.metric-card:hover{
+    transform:translateY(-4px);
+    box-shadow:0 10px 25px rgba(14,165,233,.2);
 }
-.upload-zone {
-    border:2px dashed #0ea5e9; border-radius:16px;
-    padding:20px; text-align:center;
-    background:linear-gradient(135deg,rgba(14,165,233,0.05),rgba(99,102,241,0.05));
-    margin-bottom:15px; transition:all 0.3s;
+
+/* UPLOAD ZONA */
+.upload-zone{
+    border:2px dashed #0ea5e9;border-radius:16px;
+    padding:18px;text-align:center;
+    background:linear-gradient(135deg,rgba(14,165,233,.05),rgba(99,102,241,.05));
+    margin-bottom:12px;transition:all .3s;
 }
-.upload-zone:hover {
+.upload-zone:hover{
     border-color:#6366f1;
-    background:linear-gradient(135deg,rgba(14,165,233,0.1),rgba(99,102,241,0.1));
+    background:linear-gradient(135deg,rgba(14,165,233,.1),rgba(99,102,241,.1));
     transform:translateY(-2px);
 }
-.file-badge {
-    display:inline-flex; align-items:center; gap:8px;
+
+/* FAYL BADGE */
+.file-badge{
+    display:inline-flex;align-items:center;gap:6px;
     background:linear-gradient(135deg,#e0f2fe,#ddd6fe);
-    border:1px solid #7dd3fc; border-radius:20px;
-    padding:6px 14px; font-size:13px; font-weight:600;
-    color:#0284c7; margin:4px;
+    border:1px solid #7dd3fc;border-radius:18px;
+    padding:5px 12px;font-size:12px;font-weight:600;
+    color:#0284c7;margin:3px;
 }
-.success-message {
-    background:linear-gradient(135deg,#10b981,#059669);
-    color:white; padding:15px 25px; border-radius:12px;
-    text-align:center; font-weight:600;
-    animation:slideIn 0.5s ease;
-}
-@keyframes slideIn {
-    from { transform:translateY(-20px); opacity:0; }
-    to   { transform:translateY(0);     opacity:1; }
-}
-.download-card {
+
+/* DOWNLOAD KARTA */
+.download-card{
     background:linear-gradient(135deg,#f0fdf4,#dcfce7);
-    border:2px solid #86efac; border-radius:15px;
-    padding:20px; margin:10px 0;
-    box-shadow:0 4px 15px rgba(16,185,129,0.15);
+    border:2px solid #86efac;border-radius:15px;
+    padding:18px;margin:10px 0;
+    box-shadow:0 4px 15px rgba(16,185,129,.15);
 }
-.template-card {
-    background:white; border-radius:15px; padding:25px;
-    border:2px solid #e2e8f0; transition:0.3s; cursor:pointer;
+
+/* RASM KARTA */
+.image-card{
+    background:linear-gradient(135deg,#fdf4ff,#f3e8ff);
+    border:2px solid #d8b4fe;border-radius:15px;
+    padding:18px;margin:10px 0;
+    box-shadow:0 4px 15px rgba(139,92,246,.15);
 }
-.template-card:hover {
-    transform:translateY(-8px);
-    box-shadow:0 15px 35px rgba(99,102,241,0.2);
-    border-color:#6366f1;
+
+/* SUCCESS */
+.success-message{
+    background:linear-gradient(135deg,#10b981,#059669);
+    color:white;padding:14px 22px;border-radius:12px;
+    text-align:center;font-weight:600;
+    animation:slideIn .5s ease;
 }
-.feedback-box {
+@keyframes slideIn{
+    from{transform:translateY(-20px);opacity:0}
+    to{transform:translateY(0);opacity:1}
+}
+
+/* BADGE */
+.badge{
+    color:white;padding:3px 10px;border-radius:14px;
+    font-size:11px;font-weight:700;display:inline-block;margin:2px;
+}
+.badge-groq{background:linear-gradient(135deg,#f97316,#ef4444);}
+.badge-gemini{background:linear-gradient(135deg,#1d4ed8,#0ea5e9);}
+.badge-purple{background:linear-gradient(135deg,#8b5cf6,#6366f1);}
+
+/* INFO BOX */
+.info-box{
+    background:linear-gradient(135deg,rgba(14,165,233,.07),rgba(99,102,241,.07));
+    border:1px solid #7dd3fc;border-radius:15px;
+    padding:18px;margin:12px 0;
+}
+
+/* FEEDBACK */
+.feedback-box{
     background:linear-gradient(145deg,#fff,#f8fafc);
-    border-radius:20px; padding:30px; margin:20px 0;
-    box-shadow:0 10px 30px rgba(0,0,0,0.08);
+    border-radius:20px;padding:28px;margin:18px 0;
+    box-shadow:0 10px 30px rgba(0,0,0,.07);
     border:2px solid #e2e8f0;
-}
-.vision-badge {
-    background:linear-gradient(135deg,#8b5cf6,#6366f1);
-    color:white; padding:4px 12px; border-radius:20px;
-    font-size:12px; font-weight:700;
-    display:inline-block; margin-bottom:10px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ───────────────────────────────────────────────
-# 3. BAZA VA AI ALOQASI
-# ───────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════
+# 3. BAZA VA AI KLIENTLAR
+# ═══════════════════════════════════════════════════════
 @st.cache_resource
 def get_connections():
     try:
@@ -215,45 +233,91 @@ def get_connections():
         )
         gc = gspread.authorize(creds)
         ss = gc.open("Somo_Users")
-        user_sheet = ss.sheet1
-        chat_sheet = ss.worksheet("ChatHistory")
+        u  = ss.sheet1
+        c  = ss.worksheet("ChatHistory")
         try:
-            fb_sheet = ss.worksheet("Letters")
+            f = ss.worksheet("Letters")
         except Exception:
-            fb_sheet = ss.add_worksheet(title="Letters", rows="1000", cols="10")
-            fb_sheet.append_row(
-                ["Timestamp","Username","Rating","Category","Message","Email","Status"]
-            )
-        return user_sheet, chat_sheet, fb_sheet
+            f = ss.add_worksheet("Letters", rows="1000", cols="10")
+            f.append_row(["Timestamp","Username","Rating","Category","Message","Email","Status"])
+        return u, c, f
     except Exception as e:
-        st.error(f"❌ Baza xatosi: {e}")
+        st.error(f"❌ Baza: {e}")
         return None, None, None
 
 user_db, chat_db, feedback_db = get_connections()
 
-try:
-    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-except Exception:
-    client = None
+@st.cache_resource
+def get_groq():
+    try:
+        return Groq(api_key=st.secrets["GROQ_API_KEY"])
+    except Exception:
+        return None
 
-# ───────────────────────────────────────────────
-# 4. YORDAMCHI FUNKSIYALAR
-# ───────────────────────────────────────────────
-def get_file_emoji(filename):
-    ext = filename.lower().split(".")[-1] if "." in filename else ""
+@st.cache_resource
+def get_gemini():
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+        return genai
+    except Exception:
+        return None
+
+groq_client   = get_groq()
+gemini_client = get_gemini()
+
+# ═══════════════════════════════════════════════════════
+# 4. GROQ MODELLARI
+# ═══════════════════════════════════════════════════════
+MODELS = {
+    "llama-3.3-70b-versatile": {
+        "label": "🧠 Llama 3.3 70B — Eng Kuchli",
+        "vision": False,
+        "desc": "Chuqur tahlil, murakkab savollar"
+    },
+    "meta-llama/llama-4-scout-17b-16e-instruct": {
+        "label": "🖼 LLaMA 4 Scout — Vision",
+        "vision": True,
+        "desc": "Rasm yuklang — AI ko'radi va tahlil qiladi"
+    },
+    "mixtral-8x7b-32768": {
+        "label": "⚡ Mixtral 8x7B — Tez",
+        "vision": False,
+        "desc": "Tez va kuchli — kundalik savollar"
+    },
+    "gemma2-9b-it": {
+        "label": "💡 Gemma 2 9B — Yengil",
+        "vision": False,
+        "desc": "Google'ning yengil va tez modeli"
+    },
+    "llama-3.1-8b-instant": {
+        "label": "🚀 Llama 3.1 8B — Instant",
+        "vision": False,
+        "desc": "Eng tez javob — oddiy savollar"
+    }
+}
+DEFAULT_MODEL = "llama-3.3-70b-versatile"
+
+# ═══════════════════════════════════════════════════════
+# 5. YORDAMCHI FUNKSIYALAR
+# ═══════════════════════════════════════════════════════
+def sha256(t):
+    return hashlib.sha256(t.encode()).hexdigest()
+
+def get_file_emoji(name):
+    e = name.lower().split(".")[-1] if "." in name else ""
     return {
         "pdf":"📄","docx":"📝","doc":"📝","txt":"📃","csv":"📊",
         "xlsx":"📊","xls":"📊","json":"🔧","py":"🐍","js":"🟨",
         "html":"🌐","css":"🎨","ts":"🔷","jsx":"⚛️","tsx":"⚛️",
-        "java":"☕","cpp":"⚙️","c":"⚙️","mp3":"🎵","wav":"🎵",
-        "png":"🖼","jpg":"🖼","jpeg":"🖼","webp":"🖼","gif":"🎞",
-        "zip":"📦","rar":"📦","svg":"🎨","md":"📋",
+        "java":"☕","cpp":"⚙️","c":"⚙️","png":"🖼","jpg":"🖼",
+        "jpeg":"🖼","webp":"🖼","gif":"🎞","svg":"🎨","md":"📋",
         "yaml":"🔧","xml":"🔧","sh":"💻","go":"🐹","rs":"🦀",
-        "pptx":"📊","xlsx":"📊","docx":"📝",
-    }.get(ext, "📎")
+        "pptx":"📊","rb":"💎","php":"🐘","zip":"📦","mp3":"🎵",
+    }.get(e, "📎")
 
-def is_image_file(file):
-    return file.type in ["image/jpeg","image/jpg","image/png","image/webp","image/gif"]
+def is_image_file(f):
+    return f.type in ["image/jpeg","image/jpg","image/png","image/webp","image/gif"]
 
 def encode_image(f):
     f.seek(0)
@@ -263,27 +327,23 @@ def get_image_media_type(f):
     return {
         "image/jpeg":"image/jpeg","image/jpg":"image/jpeg",
         "image/png":"image/png","image/webp":"image/webp","image/gif":"image/gif",
-    }.get(f.type,"image/jpeg")
+    }.get(f.type, "image/jpeg")
 
 def process_doc(file):
     try:
         if file.type == "application/pdf":
-            reader = PdfReader(file)
-            return "\n".join([p.extract_text() for p in reader.pages if p.extract_text()])
+            r = PdfReader(file)
+            return "\n".join([p.extract_text() for p in r.pages if p.extract_text()])
         elif "wordprocessingml" in file.type:
             return mammoth.extract_raw_text(file).value
-        elif file.type in ["text/plain"] or file.name.endswith(".txt"):
+        elif file.name.endswith((".txt",".md",".py",".js",".ts",".jsx",".tsx",
+                                  ".html",".css",".java",".cpp",".c",".go",
+                                  ".rs",".sh",".yaml",".xml",".sql",".rb",".php")):
             return file.read().decode("utf-8", errors="ignore")
-        elif file.type == "text/csv" or file.name.endswith(".csv"):
+        elif file.name.endswith(".csv"):
             return "CSV:\n" + file.read().decode("utf-8", errors="ignore")[:5000]
         elif file.name.endswith(".json"):
             return "JSON:\n" + file.read().decode("utf-8", errors="ignore")[:5000]
-        elif file.name.endswith((".py",".js",".ts",".jsx",".tsx",".html",".css",
-                                  ".java",".cpp",".c",".go",".rs",".sh",".md",
-                                  ".yaml",".xml",".sql",".kt",".rb",".php")):
-            return file.read().decode("utf-8", errors="ignore")
-        elif file.name.endswith((".xlsx",".xls")):
-            return f"Excel fayl: {file.name}"
     except Exception as e:
         st.warning(f"⚠️ {file.name}: {e}")
     return ""
@@ -291,90 +351,238 @@ def process_doc(file):
 def extract_code_blocks(text):
     return re.findall(r"```(\w*)\n?(.*?)```", text, re.DOTALL)
 
-# ───────────────────────────────────────────────
-# 5. FAYL YARATISH — ASOSIY ENGINE
-# ───────────────────────────────────────────────
+def is_file_request(prompt):
+    """Foydalanuvchi aniq fayl so'ragan bo'lsa True"""
+    kw = [
+        "fayl yarat","fayl qil","fayl ber","tayyorlab ber","yaratib ber",
+        "qilib ber","taqdimot yarat","prezentatsiya yarat","slayd yarat",
+        "excel yarat","jadval yarat","jadval qil","word yarat","hujjat yarat",
+        "rezyume yarat","rezyume yoz","xat yaz","shartnoma yaz","yozib ber",
+        "taqdimot tayyorla","pptx","xlsx","docx","html yarat","html yoz",
+        "kod yaz","kod yozib ber","script yoz","ariza yoz","maqola yaz",
+        "insho yaz","referat yaz","hisobot yaz","hisobot yarat",
+    ]
+    low = prompt.lower()
+    return any(k in low for k in kw)
 
-def make_excel_from_response(ai_response, ts_safe):
-    """AI javobidagi jadval/CSV dan Excel (.xlsx) yaratish"""
+def is_image_request(prompt):
+    """
+    Rasm yaratish so'rovini aniqlash.
+    'chizib ber', 'yaratib ber rasm', 'ko'rsat' kabi
+    har xil uslubdagi so'rovlarni qo'llab-quvvatlaydi.
+    """
+    low = prompt.lower()
+
+    # Aniq rasm so'zlari
+    rasm_words = [
+        "rasm","surat","portret","logo","banner","poster",
+        "chizma","grafika","illüstrasiya","thumbnail","avatar",
+        "cover","background","wallpaper","icon","image","picture",
+        "photo","art","design","svg","vektor","grafik",
+    ]
+
+    # Harakat so'zlari (yaratish)
+    action_words = [
+        "yarat","chiz","tayyorla","qil","ber","ko'rsat","chiqar",
+        "yoz","jasur","ifodalab","ishlat","generate","create",
+        "draw","make","show","design","paint","render",
+    ]
+
+    # To'g'ridan-to'g'ri trigger jumlalar
+    direct = [
+        "rasm yarat","rasm chiz","rasm tayyorla","rasm qil",
+        "rasmini yarat","rasm yozib ber","rasm ko'rsat",
+        "chizib ber","chizib ko'rsat","chizma yarat","chizma qil",
+        "surat yarat","surat chiz","portret yarat","portret chiz",
+        "logo yarat","logo qil","banner yarat","poster yarat",
+        "svg yarat","svg qil","svg chiz","vektor yarat",
+        "grafika yarat","dizayn yarat","generate image",
+        "create image","draw","paint","render",
+        "ko'rinishini chiz","ko'rinishini ko'rsat",
+        "rasmini chiz","rasmini ko'rsat","rasmini tayyorla",
+        "tasvirini yarat","tasvirini chiz","rasmin chiz",
+        "rasmin ko'rsat","rasmin yarat",
+    ]
+
+    # 1. To'g'ridan-to'g'ri jumlalar
+    if any(d in low for d in direct):
+        return True
+
+    # 2. Rasm so'zi + harakat so'zi birgalikda
+    has_rasm   = any(r in low for r in rasm_words)
+    has_action = any(a in low for a in action_words)
+    if has_rasm and has_action:
+        return True
+
+    # 3. "[ism/narsa] + chiz/yarat/ko'rsat" pattern
+    # masalan: "ronaldoni chizib ber", "itni yarat"
+    create_patterns = [
+        r"\w+ni chiz",
+        r"\w+ni yarat",
+        r"\w+ni ko[''`]rsat",
+        r"\w+ni tasvirla",
+        r"chizib ber",
+        r"chizib ko[''`]rsat",
+        r"yaratib ber",
+        r"rasmini ber",
+    ]
+    import re as _re
+    for pat in create_patterns:
+        if _re.search(pat, low):
+            return True
+
+    return False
+
+# ═══════════════════════════════════════════════════════
+# 6. RASM YARATISH — GEMINI IMAGEN
+# ═══════════════════════════════════════════════════════
+def translate_to_english_for_image(text):
+    """O'zbek/Rus promptni inglizchaga tarjima (rasm yaratish uchun)"""
+    if not groq_client:
+        return text
+    try:
+        r = groq_client.chat.completions.create(
+            messages=[
+                {"role":"system","content":(
+                    "You are a translator. Translate the user text to English "
+                    "as a vivid image generation prompt. "
+                    "Output ONLY the English translation, nothing else."
+                )},
+                {"role":"user","content":text}
+            ],
+            model="llama-3.1-8b-instant",
+            temperature=0.2, max_tokens=150
+        )
+        return r.choices[0].message.content.strip()
+    except Exception:
+        return text
+
+def generate_image_pollinations(prompt_text):
+    """
+    Pollinations.ai — 100% BEPUL, hech qanday API key kerak emas!
+    Haqiqiy PNG rasm qaytaradi.
+    Returns: (bytes, error, eng_prompt)
+    """
+    import urllib.request
+    import urllib.parse
+
+    # O'zbek → Inglizcha tarjima
+    eng = translate_to_english_for_image(prompt_text)
+    enhanced = f"{eng}, high quality, detailed, 4k, sharp focus, professional"
+
+    try:
+        encoded = urllib.parse.quote(enhanced)
+        url     = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024&nologo=true&enhance=true"
+
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            img_bytes = resp.read()
+
+        # Minimal tekshirish — PNG/JPEG header
+        if img_bytes[:4] in (b'\x89PNG', b'\xff\xd8\xff') or img_bytes[:4] == b'RIFF':
+            return img_bytes, None, eng
+        return None, "Noto'g'ri rasm formati", eng
+    except Exception as e:
+        return None, f"❌ Pollinations xatosi: {e}", eng
+
+def generate_image_gemini(prompt_text):
+    """
+    Gemini Flash bilan rasm tahlili + SVG generatsiya.
+    Gemini Imagen pullik — shuning uchun Pollinations.ai ishlatiladi.
+    Returns: (bytes, error, eng_prompt)
+    """
+    # Pollinations.ai — bepul, karta kerak emas
+    return generate_image_pollinations(prompt_text)
+
+def generate_svg_fallback(prompt_text):
+    """Groq orqali SVG rasm yaratish (Gemini yo'q bo'lsa)"""
+    if not groq_client:
+        return None
+    try:
+        sys_p = (
+            "Faqat ```svg ... ``` blok ichida to'liq SVG rasm yoz. "
+            "Boshqa hech narsa yozma. "
+            "viewBox='0 0 500 500', chiroyli ranglar, gradientlar, shakllar ishlat."
+        )
+        r = groq_client.chat.completions.create(
+            messages=[
+                {"role":"system","content":sys_p},
+                {"role":"user","content":f"SVG: {prompt_text}"}
+            ],
+            model="llama-3.3-70b-versatile",
+            temperature=0.8, max_tokens=3000
+        )
+        res  = r.choices[0].message.content
+        svgs = [c for l,c in extract_code_blocks(res)
+                if l.lower()=="svg" or c.strip().startswith("<svg")]
+        return svgs[0] if svgs else None
+    except Exception:
+        return None
+
+# ═══════════════════════════════════════════════════════
+# 7. EXCEL YARATISH
+# ═══════════════════════════════════════════════════════
+def make_excel(ai_text, ts):
     try:
         import openpyxl
-        from openpyxl.styles import (
-            PatternFill, Font, Alignment, Border, Side
-        )
+        from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
 
         wb = openpyxl.Workbook()
         ws = wb.active
-        ws.title = "Somo AI Jadval"
+        ws.title = "Somo AI"
 
-        # CSV blok
-        csv_match = re.search(r"```csv\n?(.*?)```", ai_response, re.DOTALL)
-        # Markdown jadval
-        table_match = re.search(
-            r"\|(.+\|)+\n(\|[-:| ]+\|)+\n((\|.+\|\n?)+)", ai_response
-        )
-
+        cm = re.search(r"```csv\n?(.*?)```", ai_text, re.DOTALL)
+        tm = re.search(r"\|(.+\|)+\n(\|[-:| ]+\|)+\n((\|.+\|\n?)+)", ai_text)
         rows = []
-        if csv_match:
-            reader = csv.reader(io.StringIO(csv_match.group(1).strip()))
-            rows   = list(reader)
-        elif table_match:
-            for line in table_match.group(0).strip().split("\n"):
+        if cm:
+            rows = list(csv.reader(io.StringIO(cm.group(1).strip())))
+        elif tm:
+            for line in tm.group(0).strip().split("\n"):
                 if "---" not in line:
                     cells = [c.strip() for c in line.strip("|").split("|")]
                     if any(c for c in cells):
                         rows.append(cells)
-
         if not rows:
             return None
 
-        # Rang sozlamalari
-        header_fill  = PatternFill("solid", fgColor="1E40AF")
-        header_font  = Font(bold=True, color="FFFFFF", size=12)
-        alt_fill     = PatternFill("solid", fgColor="EFF6FF")
-        border_side  = Side(style="thin", color="93C5FD")
-        cell_border  = Border(
-            left=border_side, right=border_side,
-            top=border_side, bottom=border_side
-        )
-        center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        hf = PatternFill("solid", fgColor="1E40AF")
+        hft= Font(bold=True, color="FFFFFF", size=12)
+        af = PatternFill("solid", fgColor="EFF6FF")
+        bd = Side(style="thin", color="93C5FD")
+        br = Border(left=bd,right=bd,top=bd,bottom=bd)
+        al = Alignment(horizontal="center",vertical="center",wrap_text=True)
 
-        for r_idx, row in enumerate(rows, 1):
-            for c_idx, val in enumerate(row, 1):
-                cell = ws.cell(row=r_idx, column=c_idx, value=val)
-                cell.border    = cell_border
-                cell.alignment = center_align
-                if r_idx == 1:
-                    cell.fill = header_fill
-                    cell.font = header_font
-                elif r_idx % 2 == 0:
-                    cell.fill = alt_fill
-                    cell.font = Font(size=11)
+        for ri, row in enumerate(rows, 1):
+            for ci, val in enumerate(row, 1):
+                cell = ws.cell(row=ri, column=ci, value=val)
+                cell.border    = br
+                cell.alignment = al
+                if ri == 1:
+                    cell.fill = hf; cell.font = hft
+                elif ri % 2 == 0:
+                    cell.fill = af; cell.font = Font(size=11)
                 else:
                     cell.font = Font(size=11)
 
-        # Ustun kengligi
         for col in ws.columns:
-            max_len = max((len(str(c.value or "")) for c in col), default=10)
-            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
-
-        # Satr balandligi
+            ml = max((len(str(c.value or "")) for c in col), default=8)
+            ws.column_dimensions[col[0].column_letter].width = min(ml + 4, 45)
         for row in ws.iter_rows():
             ws.row_dimensions[row[0].row].height = 25
 
         buf = io.BytesIO()
-        wb.save(buf)
-        buf.seek(0)
+        wb.save(buf); buf.seek(0)
         return buf.read()
-    except Exception as e:
+    except Exception:
         return None
 
-
-def make_pptx_from_response(ai_response, ts_safe):
-    """AI javobidan PowerPoint (.pptx) yaratish"""
+# ═══════════════════════════════════════════════════════
+# 8. POWERPOINT YARATISH
+# ═══════════════════════════════════════════════════════
+def make_pptx(ai_text, ts):
     try:
         from pptx import Presentation
-        from pptx.util import Inches, Pt, Emu
+        from pptx.util import Inches, Pt
         from pptx.dml.color import RGBColor
         from pptx.enum.text import PP_ALIGN
 
@@ -382,670 +590,490 @@ def make_pptx_from_response(ai_response, ts_safe):
         prs.slide_width  = Inches(13.33)
         prs.slide_height = Inches(7.5)
 
-        # Ranglar
-        PRIMARY   = RGBColor(0x02, 0x84, 0xC7)
-        SECONDARY = RGBColor(0x63, 0x66, 0xF1)
-        WHITE     = RGBColor(0xFF, 0xFF, 0xFF)
-        DARK      = RGBColor(0x0F, 0x17, 0x2A)
-        LIGHT_BG  = RGBColor(0xF0, 0xF9, 0xFF)
-        ACCENT    = RGBColor(0x8B, 0x5C, 0xF6)
+        CP = RGBColor(0x02,0x84,0xC7)
+        CS = RGBColor(0x63,0x66,0xF1)
+        CA = RGBColor(0x8B,0x5C,0xF6)
+        CK = RGBColor(0xEC,0x48,0x99)
+        CG = RGBColor(0x10,0xB9,0x81)
+        CW = RGBColor(0xFF,0xFF,0xFF)
+        CD = RGBColor(0x0F,0x17,0x2A)
+        CL = RGBColor(0xF0,0xF9,0xFF)
+        CY = RGBColor(0x94,0xA3,0xB8)
+        CC = [CP,CS,CA,CK,CG]
+        BL = prs.slide_layouts[6]
 
-        def add_rect(slide, l, t, w, h, color, alpha=None):
-            shape = slide.shapes.add_shape(1, Inches(l), Inches(t), Inches(w), Inches(h))
-            shape.fill.solid()
-            shape.fill.fore_color.rgb = color
-            shape.line.fill.background()
-            return shape
+        def rect(sl,l,t,w,h,col):
+            s = sl.shapes.add_shape(1,Inches(l),Inches(t),Inches(w),Inches(h))
+            s.fill.solid(); s.fill.fore_color.rgb = col
+            s.line.fill.background(); return s
 
-        def add_textbox(slide, text, l, t, w, h,
-                        size=24, bold=False, color=None,
-                        align=PP_ALIGN.LEFT, italic=False):
-            txb = slide.shapes.add_textbox(Inches(l), Inches(t), Inches(w), Inches(h))
-            tf  = txb.text_frame
-            tf.word_wrap = True
-            p   = tf.paragraphs[0]
-            p.alignment = align
-            run = p.add_run()
-            run.text = text
-            run.font.size  = Pt(size)
-            run.font.bold  = bold
-            run.font.italic = italic
-            run.font.color.rgb = color or DARK
-            return txb
+        def tb(sl,txt,l,t,w,h,sz=20,bold=False,col=None,
+               align=PP_ALIGN.LEFT,italic=False):
+            b  = sl.shapes.add_textbox(Inches(l),Inches(t),Inches(w),Inches(h))
+            tf = b.text_frame; tf.word_wrap = True
+            p  = tf.paragraphs[0]; p.alignment = align
+            r  = p.add_run(); r.text = txt
+            r.font.size   = Pt(sz); r.font.bold   = bold
+            r.font.italic = italic
+            r.font.color.rgb = col or CD
+            return b
 
-        # Slaydlarni ajratib olish
-        # Qator bo'yicha tahlil
-        lines = ai_response.strip().split("\n")
+        # Slayd tuzilmasini tahlil qilish
+        lines = ai_text.strip().split("\n")
         slides_data = []
-        current = {"title": "", "bullets": [], "type": "content"}
+        cur = {"title":"","bullets":[]}
 
         for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            # Asosiy sarlavha (# yoki ## yoki ###)
-            if re.match(r"^#{1,3}\s+", line):
-                if current["title"] or current["bullets"]:
-                    slides_data.append(current)
-                title_text = re.sub(r"^#{1,3}\s+", "", line).strip()
-                current = {"title": title_text, "bullets": [], "type": "content"}
-            # Raqamlangan yoki bullet list
-            elif re.match(r"^(\d+\.|[-*•►▸])\s+", line):
-                bullet = re.sub(r"^(\d+\.|[-*•►▸])\s+", "", line).strip()
-                current["bullets"].append(bullet)
-            # Bold sarlavha (** **)
-            elif re.match(r"^\*\*(.+)\*\*$", line):
-                bold_text = re.sub(r"\*\*", "", line).strip()
-                if current["title"] or current["bullets"]:
-                    slides_data.append(current)
-                current = {"title": bold_text, "bullets": [], "type": "content"}
-            else:
-                if line and not line.startswith("```"):
-                    current["bullets"].append(line)
+            s = line.strip()
+            if not s: continue
+            if re.match(r"^#{1,3}\s+", s):
+                if cur["title"] or cur["bullets"]:
+                    slides_data.append(cur)
+                cur = {"title":re.sub(r"^#{1,3}\s+","",s),"bullets":[]}
+            elif re.match(r"^\*\*(.+)\*\*$", s):
+                if cur["title"] or cur["bullets"]:
+                    slides_data.append(cur)
+                cur = {"title":re.sub(r"\*\*","",s),"bullets":[]}
+            elif re.match(r"^(\d+\.|[-*•►▸])\s+", s):
+                cur["bullets"].append(re.sub(r"^(\d+\.|[-*•►▸])\s+","",s))
+            elif not s.startswith("```"):
+                cur["bullets"].append(s)
 
-        if current["title"] or current["bullets"]:
-            slides_data.append(current)
+        if cur["title"] or cur["bullets"]:
+            slides_data.append(cur)
 
-        # Agar slayd topilmasa — oddiy bo'lib bo'lib chiqarish
+        # Fallback
         if len(slides_data) < 2:
             slides_data = []
             chunks = [l.strip() for l in lines if l.strip() and not l.startswith("```")]
-            title  = chunks[0] if chunks else "Somo AI"
-            rest   = chunks[1:]
-            slides_data.append({"title": title, "bullets": rest[:3], "type": "title"})
-            # Har 4 satrdan 1 slayd
-            for i in range(0, len(rest), 4):
-                block = rest[i:i+4]
-                if block:
-                    slides_data.append({
-                        "title": f"Qism {i//4+1}",
-                        "bullets": block,
-                        "type": "content"
-                    })
+            if chunks:
+                slides_data.append({"title":chunks[0],"bullets":chunks[1:3]})
+                for i in range(0, len(chunks[1:]), 4):
+                    blk = chunks[1:][i:i+4]
+                    if blk:
+                        slides_data.append({"title":f"Qism {i//4+1}","bullets":blk})
 
-        # ── TITLE SLAYD ──────────────────────────────
-        first = slides_data[0]
-        blank = prs.slide_layouts[6]
+        # ── TITLE SLAYD ─────────────────────────────────
+        sl = prs.slides.add_slide(BL)
+        rect(sl,0,0,13.33,7.5,CD)
+        rect(sl,0,0,13.33,3.8,CP)
+        rect(sl,0,3.5,13.33,4.0,CS)
+        rect(sl,0,3.28,13.33,.1,CW)
+        rect(sl,10.5,.3,2.5,2.5,CA)
+        rect(sl,.3,5.5,2.0,1.5,CK)
+        tt = slides_data[0]["title"] if slides_data else "Somo AI"
+        tb(sl,tt,.8,.9,12.0,2.2,44,True,CW,PP_ALIGN.CENTER)
+        sub = (slides_data[0]["bullets"][0]
+               if (slides_data and slides_data[0]["bullets"])
+               else "Powered by Somo AI")
+        tb(sl,sub,.8,3.8,12.0,1.2,24,False,RGBColor(0xBA,0xE6,0xFD),PP_ALIGN.CENTER,True)
+        tb(sl,"🌌 Somo AI Infinity",.5,6.82,6.0,.5,13,False,CY,PP_ALIGN.LEFT)
+        tb(sl,datetime.now().strftime("%Y"),11.5,6.82,1.5,.5,13,False,CY,PP_ALIGN.RIGHT)
 
-        slide = prs.slides.add_slide(blank)
+        # ── KONTENT SLAYDLAR ────────────────────────────
+        for si, sd in enumerate(slides_data[1:], 1):
+            sl  = prs.slides.add_slide(BL)
+            acc = CC[si % len(CC)]
+            rect(sl,0,0,13.33,7.5,RGBColor(0xF8,0xFA,0xFC))
+            rect(sl,0,0,.12,7.5,acc)
+            rect(sl,.12,0,13.21,1.45,CL)
+            rect(sl,.12,1.38,13.21,.07,acc)
+            rect(sl,11.8,.15,1.05,1.05,acc)
+            tb(sl,str(si),11.83,.18,.95,.95,28,True,CW,PP_ALIGN.CENTER)
+            tb(sl,sd["title"] or f"Slayd {si}",.4,.18,11.2,1.1,30,True,CD)
 
-        # Gradient background (ikki to'rtburchak bilan taqlid)
-        add_rect(slide, 0, 0, 13.33, 7.5,  RGBColor(0x0F,0x17,0x2A))
-        add_rect(slide, 0, 0, 13.33, 3.8,  PRIMARY)
-        add_rect(slide, 0, 3.5, 13.33, 4.0, SECONDARY)
+            buls = sd["bullets"][:7]
+            if buls:
+                y0   = 1.6
+                step = min(.78, 5.5/max(len(buls),1))
+                for bi,bl in enumerate(buls):
+                    rect(sl,.35,y0+bi*step+.18,.1,.3,acc)
+                    clean = re.sub(r"^\*\*(.+)\*\*$",r"\1",bl)
+                    ib    = bl.startswith("**") and bl.endswith("**")
+                    tb(sl,clean,.62,y0+bi*step,12.4,step*.9,19,ib,CD)
 
-        # Dekorativ elementlar
-        add_rect(slide, 0, 3.3, 13.33, 0.1, WHITE)
-        add_rect(slide, 10.5, 0.3, 2.5, 2.5, ACCENT)
-        add_rect(slide, 0.3, 5.5, 2.0, 1.5, RGBColor(0xEC,0x48,0x99))
+            rect(sl,0,7.18,13.33,.32,CL)
+            tb(sl,"🌌 Somo AI",.3,7.2,5.0,.25,11,False,CY)
+            tb(sl,f"{si}/{len(slides_data)-1}",12.0,7.2,1.0,.25,11,False,CY,PP_ALIGN.RIGHT)
 
-        # Asosiy sarlavha
-        add_textbox(
-            slide, first["title"] or "Somo AI Taqdimot",
-            0.8, 1.0, 12.0, 2.0,
-            size=44, bold=True, color=WHITE, align=PP_ALIGN.CENTER
-        )
+        # ── YAKUNIY SLAYD ────────────────────────────────
+        sl = prs.slides.add_slide(BL)
+        rect(sl,0,0,13.33,7.5,CD)
+        rect(sl,0,2.5,13.33,2.5,CP)
+        rect(sl,0,2.38,13.33,.1,CW)
+        rect(sl,0,4.9,13.33,.1,CW)
+        tb(sl,"✅ Taqdimot Yakunlandi!",.8,2.65,12.0,1.3,40,True,CW,PP_ALIGN.CENTER)
+        tb(sl,"🌌 Somo AI  |  Groq & Gemini",
+           .8,5.3,12.0,.8,17,False,CY,PP_ALIGN.CENTER)
 
-        # Taggi matn
-        subtitle = first["bullets"][0] if first["bullets"] else "Powered by Somo AI"
-        add_textbox(
-            slide, subtitle,
-            0.8, 3.8, 12.0, 1.2,
-            size=24, color=RGBColor(0xBA,0xE6,0xFD),
-            align=PP_ALIGN.CENTER, italic=True
-        )
-
-        # Brand
-        add_textbox(
-            slide, "🌌 Somo AI Infinity",
-            0.5, 6.8, 5.0, 0.5,
-            size=14, color=RGBColor(0x94,0xA3,0xB8),
-            align=PP_ALIGN.LEFT
-        )
-        add_textbox(
-            slide, datetime.now().strftime("%Y"),
-            11.0, 6.8, 2.0, 0.5,
-            size=14, color=RGBColor(0x94,0xA3,0xB8),
-            align=PP_ALIGN.RIGHT
-        )
-
-        # ── KONTENT SLAYDLAR ─────────────────────────
-        colors_cycle = [PRIMARY, SECONDARY, ACCENT,
-                        RGBColor(0xEC,0x48,0x99), RGBColor(0x10,0xB9,0x81)]
-
-        for s_idx, sdata in enumerate(slides_data[1:], 1):
-            slide = prs.slides.add_slide(blank)
-            accent_color = colors_cycle[s_idx % len(colors_cycle)]
-
-            # Fon
-            add_rect(slide, 0, 0, 13.33, 7.5, RGBColor(0xF8,0xFA,0xFC))
-            # Sol chiziq
-            add_rect(slide, 0, 0, 0.12, 7.5, accent_color)
-            # Sarlavha fon
-            add_rect(slide, 0.12, 0, 13.21, 1.4, LIGHT_BG)
-            # Sarlavha pastki chiziq
-            add_rect(slide, 0.12, 1.3, 13.21, 0.07, accent_color)
-
-            # Raqam
-            add_rect(slide, 11.8, 0.15, 1.0, 1.0, accent_color)
-            add_textbox(
-                slide, str(s_idx),
-                11.85, 0.18, 0.9, 0.9,
-                size=28, bold=True, color=WHITE, align=PP_ALIGN.CENTER
-            )
-
-            # Sarlavha
-            add_textbox(
-                slide, sdata["title"] or f"Slayd {s_idx}",
-                0.4, 0.15, 11.2, 1.1,
-                size=32, bold=True, color=DARK, align=PP_ALIGN.LEFT
-            )
-
-            # Bulletlar
-            bullets = sdata["bullets"][:7]
-            if bullets:
-                y_start  = 1.6
-                y_step   = min(0.78, (5.5 / max(len(bullets), 1)))
-                box_h    = y_step * 0.85
-
-                for b_idx, bullet in enumerate(bullets):
-                    # Bullet marker
-                    add_rect(slide, 0.35, y_start + b_idx*y_step + 0.15,
-                             0.1, 0.35, accent_color)
-
-                    # Bullet matn
-                    bullet_clean = re.sub(r"^\*\*(.+)\*\*", r"\1", bullet).strip()
-                    is_bold      = bullet.startswith("**") and bullet.endswith("**")
-
-                    add_textbox(
-                        slide, bullet_clean,
-                        0.6, y_start + b_idx*y_step,
-                        12.4, box_h,
-                        size=20, bold=is_bold, color=DARK, align=PP_ALIGN.LEFT
-                    )
-
-            # Footer
-            add_rect(slide, 0, 7.15, 13.33, 0.35, LIGHT_BG)
-            add_textbox(
-                slide, "🌌 Somo AI Infinity",
-                0.3, 7.18, 4.0, 0.25,
-                size=11, color=RGBColor(0x94,0xA3,0xB8), align=PP_ALIGN.LEFT
-            )
-            add_textbox(
-                slide, f"{s_idx}/{len(slides_data)-1}",
-                12.0, 7.18, 1.0, 0.25,
-                size=11, color=RGBColor(0x94,0xA3,0xB8), align=PP_ALIGN.RIGHT
-            )
-
-        # ── YAKUNIY SLAYD ─────────────────────────────
-        slide = prs.slides.add_slide(blank)
-        add_rect(slide, 0, 0, 13.33, 7.5, RGBColor(0x0F,0x17,0x2A))
-        add_rect(slide, 0, 2.5, 13.33, 2.5, PRIMARY)
-        add_rect(slide, 0, 2.4, 13.33, 0.08, WHITE)
-        add_rect(slide, 0, 4.9, 13.33, 0.08, WHITE)
-
-        add_textbox(
-            slide, "✅ Taqdimot Yakunlandi!",
-            0.8, 2.7, 12.0, 1.2,
-            size=42, bold=True, color=WHITE, align=PP_ALIGN.CENTER
-        )
-        add_textbox(
-            slide, "🌌 Somo AI Infinity | Powered by Groq & Llama",
-            0.8, 5.3, 12.0, 0.8,
-            size=18, color=RGBColor(0x94,0xA3,0xB8), align=PP_ALIGN.CENTER
-        )
-
-        buf = io.BytesIO()
-        prs.save(buf)
-        buf.seek(0)
+        buf = io.BytesIO(); prs.save(buf); buf.seek(0)
         return buf.read()
-    except Exception as e:
+    except Exception:
         return None
 
-
-def make_word_from_response(ai_response, ts_safe):
-    """AI javobidan Word (.docx) yaratish"""
+# ═══════════════════════════════════════════════════════
+# 9. WORD YARATISH
+# ═══════════════════════════════════════════════════════
+def make_word(ai_text, ts):
     try:
         from docx import Document
         from docx.shared import Pt, RGBColor, Inches
-        from docx.enum.text import WD_ALIGN_PARAGRAPH
 
         doc = Document()
-
-        # Sahifa margins
         for sec in doc.sections:
             sec.top_margin    = Inches(1)
             sec.bottom_margin = Inches(1)
             sec.left_margin   = Inches(1.2)
             sec.right_margin  = Inches(1.2)
 
-        lines = ai_response.strip().split("\n")
-        in_code_block = False
-        code_buffer   = []
-        code_lang     = ""
+        def fmt(para, text):
+            parts = re.split(r"(\*\*.*?\*\*|\*.*?\*|`.*?`)", text)
+            for pt in parts:
+                if pt.startswith("**") and pt.endswith("**"):
+                    r = para.add_run(pt[2:-2]); r.bold = True
+                    r.font.color.rgb = RGBColor(0x0F,0x17,0x2A)
+                elif pt.startswith("*") and pt.endswith("*"):
+                    r = para.add_run(pt[1:-1]); r.italic = True
+                elif pt.startswith("`") and pt.endswith("`"):
+                    r = para.add_run(pt[1:-1])
+                    r.font.name = "Courier New"
+                    r.font.color.rgb = RGBColor(0x1E,0x40,0xAF)
+                else:
+                    para.add_run(pt)
+
+        lines    = ai_text.strip().split("\n")
+        in_code  = False
+        code_buf = []
 
         for line in lines:
-            stripped = line.strip()
-
-            # Kod blok
-            if stripped.startswith("```"):
-                if not in_code_block:
-                    in_code_block = True
-                    code_lang     = stripped[3:].strip()
-                    code_buffer   = []
+            s = line.strip()
+            if s.startswith("```"):
+                if not in_code:
+                    in_code = True; code_buf = []
                 else:
-                    in_code_block = False
+                    in_code = False
                     p = doc.add_paragraph()
-                    p.style = "Normal"
-                    p.paragraph_format.left_indent  = Inches(0.4)
-                    p.paragraph_format.space_before = Pt(6)
-                    p.paragraph_format.space_after  = Pt(6)
-                    run = p.add_run("\n".join(code_buffer))
-                    run.font.name  = "Courier New"
-                    run.font.size  = Pt(10)
-                    run.font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
-                    p.paragraph_format.first_line_indent = None
+                    p.paragraph_format.left_indent = Inches(.4)
+                    r = p.add_run("\n".join(code_buf))
+                    r.font.name = "Courier New"; r.font.size = Pt(10)
+                    r.font.color.rgb = RGBColor(0x1E,0x40,0xAF)
                 continue
-
-            if in_code_block:
-                code_buffer.append(line)
-                continue
-
-            if not stripped:
-                doc.add_paragraph()
-                continue
-
-            # # Sarlavha
-            if re.match(r"^# ", stripped):
-                h = doc.add_heading(stripped[2:], level=1)
+            if in_code:
+                code_buf.append(line); continue
+            if not s:
+                doc.add_paragraph(); continue
+            if re.match(r"^# ", s):
+                h = doc.add_heading(s[2:], level=1)
                 h.runs[0].font.color.rgb = RGBColor(0x02,0x84,0xC7)
-            elif re.match(r"^## ", stripped):
-                h = doc.add_heading(stripped[3:], level=2)
+            elif re.match(r"^## ", s):
+                h = doc.add_heading(s[3:], level=2)
                 h.runs[0].font.color.rgb = RGBColor(0x63,0x66,0xF1)
-            elif re.match(r"^### ", stripped):
-                h = doc.add_heading(stripped[4:], level=3)
+            elif re.match(r"^### ", s):
+                h = doc.add_heading(s[4:], level=3)
                 h.runs[0].font.color.rgb = RGBColor(0x8B,0x5C,0xF6)
-            # Bullet
-            elif re.match(r"^[-*•►▸]\s+", stripped):
-                text = re.sub(r"^[-*•►▸]\s+", "", stripped)
+            elif re.match(r"^[-*•►▸]\s+", s):
                 p = doc.add_paragraph(style="List Bullet")
-                self._add_formatted_run(p, text)
-            # Raqamlangan
-            elif re.match(r"^\d+\.\s+", stripped):
-                text = re.sub(r"^\d+\.\s+", "", stripped)
+                fmt(p, re.sub(r"^[-*•►▸]\s+","",s))
+            elif re.match(r"^\d+\.\s+", s):
                 p = doc.add_paragraph(style="List Number")
-                self._add_formatted_run(p, text)
-            # Oddiy matn
+                fmt(p, re.sub(r"^\d+\.\s+","",s))
             else:
-                p = doc.add_paragraph()
-                _add_formatted_run_doc(p, stripped)
+                p = doc.add_paragraph(); fmt(p, s)
 
-        buf = io.BytesIO()
-        doc.save(buf)
-        buf.seek(0)
+        buf = io.BytesIO(); doc.save(buf); buf.seek(0)
         return buf.read()
-    except Exception as e:
+    except Exception:
         return None
 
-
-def _add_formatted_run_doc(paragraph, text):
-    """Bold va italic matnni qayta ishlash"""
-    from docx.shared import Pt, RGBColor
-    parts = re.split(r"(\*\*.*?\*\*|\*.*?\*)", text)
-    for part in parts:
-        if part.startswith("**") and part.endswith("**"):
-            run = paragraph.add_run(part[2:-2])
-            run.bold = True
-            run.font.color.rgb = RGBColor(0x0F,0x17,0x2A)
-        elif part.startswith("*") and part.endswith("*"):
-            run = paragraph.add_run(part[1:-1])
-            run.italic = True
-        else:
-            paragraph.add_run(part)
-
-
-def make_image_from_response(ai_response, ts_safe):
+# ═══════════════════════════════════════════════════════
+# 10. FAYL YARATIB YUKLAB BERISH ENGINE
+# ═══════════════════════════════════════════════════════
+def create_and_offer_files(ai_text, ts, original_prompt):
     """
-    AI javobidagi PIL kodni bajarib PNG yaratish.
-    Faqat xavfsiz funksiyalar ruxsat etilgan.
+    MUHIM: Faqat foydalanuvchi fayl so'ragan bo'lsa ishga tushadi.
+    is_file_request() = True bo'lsa fayl yaratadi, aks holda skip.
     """
-    try:
-        from PIL import Image, ImageDraw, ImageFont
+    ts_s   = ts.replace(":","-").replace(" ","_")
+    blocks = extract_code_blocks(ai_text)
+    low    = original_prompt.lower()
 
-        pil_blocks = [
-            (l, c) for l, c in extract_code_blocks(ai_response)
-            if l.lower() in ("python","py","") and
-            ("Image.new" in c or "ImageDraw" in c or "PIL" in c or "img" in c.lower())
-        ]
-        if not pil_blocks:
-            return {}
+    ext_map = {
+        "python":"py","py":"py","javascript":"js","js":"js",
+        "typescript":"ts","css":"css","json":"json","sql":"sql",
+        "bash":"sh","shell":"sh","sh":"sh","yaml":"yaml",
+        "xml":"xml","markdown":"md","md":"md","jsx":"jsx",
+        "tsx":"tsx","java":"java","cpp":"cpp","c":"c",
+        "rust":"rs","go":"go","php":"php","ruby":"rb",
+        "swift":"swift","kotlin":"kt","r":"r","txt":"txt","text":"txt",
+    }
 
-        saved = {}
-        orig_save = Image.Image.save
-
-        def fake_save(self_img, fp, *args, **kwargs):
-            buf = io.BytesIO()
-            fmt = kwargs.get("format","PNG")
-            try: orig_save(self_img, buf, format=fmt)
-            except Exception: orig_save(self_img, buf, format="PNG")
-            buf.seek(0)
-            key = fp if isinstance(fp, str) else f"rasm_{len(saved)}.png"
-            saved[key] = buf.read()
-
-        Image.Image.save = fake_save
-
-        ns = {
-            "Image": Image, "ImageDraw": ImageDraw,
-            "ImageFont": ImageFont, "io": io, "os": os
-        }
-
-        for _, code in pil_blocks:
-            clean = re.sub(r"img\.save\(['\"](.+?)['\"]\)", r"img.save('\1')", code)
-            try: exec(clean.strip(), ns)
-            except Exception: pass
-
-        Image.Image.save = orig_save
-        return saved
-    except Exception:
-        return {}
-
-
-def create_and_offer_files(ai_response, ts):
-    """
-    AI javobini tahlil qilib tegishli faylni yaratadi:
-    - PPTX (taqdimot)
-    - XLSX (Excel jadval)
-    - DOCX (Word hujjat)
-    - PNG  (PIL rasm)
-    - SVG  (vektor rasm)
-    - HTML (sahifa)
-    - Kod fayllar (py, js, html...)
-    """
-    ts_safe  = ts.replace(":","-").replace(" ","_")
-    blocks   = extract_code_blocks(ai_response)
-    response_lower = ai_response.lower()
-
-    shown = False
-
-    # ── 1. PPTX TAQDIMOT ─────────────────────────
-    pptx_triggers = [
-        "slayd","taqdimot","prezentatsiya","slide","presentation",
-        "powerpoint","pptx","###","##"
-    ]
-    has_headings = len(re.findall(r"^#{1,3}\s+", ai_response, re.MULTILINE)) >= 2
-    wants_pptx   = any(t in response_lower for t in pptx_triggers) or has_headings
-
-    if wants_pptx:
-        pptx_data = make_pptx_from_response(ai_response, ts_safe)
-        if pptx_data:
-            shown = True
+    # ── PPTX ─────────────────────────────────────────
+    pptx_kw = ["slayd","taqdimot","prezentatsiya","slide","presentation","pptx"]
+    has_h   = len(re.findall(r"^#{1,3}\s+", ai_text, re.MULTILINE)) >= 2
+    if any(k in low for k in pptx_kw) or (has_h and is_file_request(original_prompt)):
+        data = make_pptx(ai_text, ts_s)
+        if data:
             st.markdown("""
                 <div class='download-card'>
-                    <h4 style='color:#059669;margin:0 0 12px;'>
+                    <h4 style='color:#059669;margin:0 0 8px;'>
                         📊 Tayyor PowerPoint Taqdimot
                     </h4>
-                    <p style='color:#065f46;font-size:14px;margin:0 0 12px;'>
-                        Professional dizaynli slaydlar yaratildi — yuklab oling!
+                    <p style='color:#065f46;font-size:13px;margin:0;'>
+                        Professional slaydlar yaratildi!
                     </p>
                 </div>
             """, unsafe_allow_html=True)
             st.download_button(
-                label="⬇️ 📊 PPTX Taqdimot yuklab olish",
-                data=pptx_data,
-                file_name=f"somo_taqdimot_{ts_safe}.pptx",
-                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                key=f"dl_pptx_{ts_safe}",
-                use_container_width=True
+                "⬇️ 📊 PPTX yuklab olish", data,
+                file_name=f"somo_taqdimot_{ts_s}.pptx",
+                mime="application/vnd.openxmlformats-officedocument"
+                     ".presentationml.presentation",
+                key=f"dl_pptx_{ts_s}", use_container_width=True
             )
 
-    # ── 2. EXCEL JADVAL ──────────────────────────
-    xlsx_triggers = [
-        "jadval","excel","xlsx","table","csv","ma'lumot jadvali",
-        "hisobot","statistika", "ro'yxat", "список"
-    ]
-    has_table  = bool(re.search(r"\|(.+\|)+\n(\|[-:| ]+\|)+", ai_response))
-    has_csv_bl = bool(re.search(r"```csv", ai_response))
-    wants_xlsx = (any(t in response_lower for t in xlsx_triggers) or has_table or has_csv_bl)
-
-    if wants_xlsx:
-        xlsx_data = make_excel_from_response(ai_response, ts_safe)
-        if xlsx_data:
-            shown = True
+    # ── EXCEL ─────────────────────────────────────────
+    xlsx_kw = ["jadval","excel","xlsx","hisobot","statistika","ro'yxat"]
+    has_tbl = bool(re.search(r"\|(.+\|)+\n(\|[-:| ]+\|)+", ai_text))
+    has_csv = "```csv" in ai_text
+    if any(k in low for k in xlsx_kw) or (has_tbl and is_file_request(original_prompt)) or has_csv:
+        data = make_excel(ai_text, ts_s)
+        if data:
             st.markdown("""
                 <div class='download-card'>
-                    <h4 style='color:#059669;margin:0 0 12px;'>
+                    <h4 style='color:#059669;margin:0 0 8px;'>
                         📊 Tayyor Excel Jadval
                     </h4>
-                    <p style='color:#065f46;font-size:14px;margin:0 0 12px;'>
-                        Rang-barang formatlanган Excel fayl yaratildi!
+                    <p style='color:#065f46;font-size:13px;margin:0;'>
+                        Rangli formatlangan Excel + CSV!
                     </p>
                 </div>
             """, unsafe_allow_html=True)
             c1, c2 = st.columns(2)
             with c1:
                 st.download_button(
-                    label="⬇️ 📊 Excel (.xlsx) yuklab olish",
-                    data=xlsx_data,
-                    file_name=f"somo_jadval_{ts_safe}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key=f"dl_xlsx_{ts_safe}",
-                    use_container_width=True
+                    "⬇️ 📊 Excel (.xlsx)", data,
+                    file_name=f"somo_jadval_{ts_s}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument"
+                         ".spreadsheetml.sheet",
+                    key=f"dl_xlsx_{ts_s}", use_container_width=True
                 )
-            # CSV ham
-            csv_buf = io.StringIO()
-            csv_match = re.search(r"```csv\n?(.*?)```", ai_response, re.DOTALL)
-            table_match = re.search(
-                r"\|(.+\|)+\n(\|[-:| ]+\|)+\n((\|.+\|\n?)+)", ai_response
-            )
+            # CSV ham taklif qil
             rows = []
-            if csv_match:
-                rows = list(csv.reader(io.StringIO(csv_match.group(1).strip())))
-            elif table_match:
-                for line in table_match.group(0).strip().split("\n"):
+            cm   = re.search(r"```csv\n?(.*?)```", ai_text, re.DOTALL)
+            tm   = re.search(r"\|(.+\|)+\n(\|[-:| ]+\|)+\n((\|.+\|\n?)+)", ai_text)
+            if cm:
+                rows = list(csv.reader(io.StringIO(cm.group(1).strip())))
+            elif tm:
+                for line in tm.group(0).strip().split("\n"):
                     if "---" not in line:
                         cells = [c.strip() for c in line.strip("|").split("|")]
-                        if any(c for c in cells):
-                            rows.append(cells)
+                        if any(c for c in cells): rows.append(cells)
             if rows:
-                csv.writer(csv_buf).writerows(rows)
+                buf = io.StringIO()
+                csv.writer(buf).writerows(rows)
                 with c2:
                     st.download_button(
-                        label="⬇️ 📋 CSV yuklab olish",
-                        data=csv_buf.getvalue().encode("utf-8"),
-                        file_name=f"somo_jadval_{ts_safe}.csv",
+                        "⬇️ 📋 CSV", buf.getvalue().encode("utf-8"),
+                        file_name=f"somo_jadval_{ts_s}.csv",
                         mime="text/csv",
-                        key=f"dl_csv_{ts_safe}",
-                        use_container_width=True
+                        key=f"dl_csv_{ts_s}", use_container_width=True
                     )
 
-    # ── 3. WORD HUJJAT ───────────────────────────
-    docx_triggers = [
-        "hujjat","word","docx","maqola","xat","rezyume","resume",
-        "shartnoma","hisobot","tavsif","insho","referat"
-    ]
-    wants_docx = any(t in response_lower for t in docx_triggers)
-
-    if wants_docx and not wants_pptx:
-        docx_data = make_word_from_response(ai_response, ts_safe)
-        if docx_data:
-            shown = True
+    # ── WORD ──────────────────────────────────────────
+    word_kw = ["hujjat","word","docx","maqola","xat","rezyume","resume",
+               "shartnoma","referat","insho","ariza","tavsif","biografiya"]
+    pptx_tr = any(k in low for k in pptx_kw)
+    if any(k in low for k in word_kw) and not pptx_tr:
+        data = make_word(ai_text, ts_s)
+        if data:
             st.markdown("""
                 <div class='download-card'>
-                    <h4 style='color:#059669;margin:0 0 12px;'>
+                    <h4 style='color:#059669;margin:0 0 8px;'>
                         📝 Tayyor Word Hujjat
                     </h4>
-                    <p style='color:#065f46;font-size:14px;margin:0 0 12px;'>
-                        Formatlangan Word fayl yaratildi!
+                    <p style='color:#065f46;font-size:13px;margin:0;'>
+                        Formatlangan Word (.docx) fayl!
                     </p>
                 </div>
             """, unsafe_allow_html=True)
             st.download_button(
-                label="⬇️ 📝 Word (.docx) yuklab olish",
-                data=docx_data,
-                file_name=f"somo_hujjat_{ts_safe}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                key=f"dl_docx_{ts_safe}",
-                use_container_width=True
+                "⬇️ 📝 Word (.docx) yuklab olish", data,
+                file_name=f"somo_hujjat_{ts_s}.docx",
+                mime="application/vnd.openxmlformats-officedocument"
+                     ".wordprocessingml.document",
+                key=f"dl_docx_{ts_s}", use_container_width=True
             )
 
-    # ── 4. PIL RASM ──────────────────────────────
-    img_triggers = [
-        "rasm","image","draw","chiz","paint","logo","banner",
-        "poster","thumbnail","grafik"
-    ]
-    has_pil = any("Image.new" in c or "ImageDraw" in c for _,c in blocks)
-    if has_pil or any(t in response_lower for t in img_triggers):
-        saved_imgs = make_image_from_response(ai_response, ts_safe)
-        if saved_imgs:
-            shown = True
-            st.markdown("""
-                <div class='download-card'>
-                    <h4 style='color:#059669;margin:0 0 12px;'>🖼 Yaratilgan Rasm</h4>
-                </div>
-            """, unsafe_allow_html=True)
-            for fname, data in saved_imgs.items():
-                clean = os.path.basename(fname)
-                if not clean.lower().endswith((".png",".jpg",".jpeg")):
-                    clean += ".png"
-                st.image(data, caption=f"✅ {clean}", use_container_width=True)
-                st.download_button(
-                    label=f"⬇️ {clean} yuklab olish",
-                    data=data, file_name=clean, mime="image/png",
-                    key=f"dl_img_{ts_safe}_{clean}",
-                    use_container_width=True
-                )
-
-    # ── 5. SVG ───────────────────────────────────
-    svg_blocks = [
-        (l, c) for l, c in blocks
-        if l.lower()=="svg" or c.strip().startswith("<svg")
-    ]
-    if svg_blocks:
-        shown = True
+    # ── SVG ───────────────────────────────────────────
+    svg_bl = [(l,c) for l,c in blocks
+              if l.lower()=="svg" or c.strip().startswith("<svg")]
+    if svg_bl:
         st.markdown("""
-            <div class='download-card'>
-                <h4 style='color:#059669;margin:0 0 12px;'>🎨 SVG Vektor Rasm</h4>
+            <div class='image-card'>
+                <h4 style='color:#7c3aed;margin:0 0 8px;'>🎨 SVG Rasm</h4>
             </div>
         """, unsafe_allow_html=True)
-        for i,(_, svg) in enumerate(svg_blocks):
-            st.markdown(svg.strip(), unsafe_allow_html=True)
+        for i,(_,sv) in enumerate(svg_bl):
+            st.markdown(sv.strip(), unsafe_allow_html=True)
             st.download_button(
-                label=f"⬇️ rasm_{i}.svg yuklab olish",
-                data=svg.strip().encode("utf-8"),
-                file_name=f"somo_rasm_{ts_safe}_{i}.svg",
+                f"⬇️ rasm_{i}.svg", sv.strip().encode("utf-8"),
+                file_name=f"somo_rasm_{ts_s}_{i}.svg",
                 mime="image/svg+xml",
-                key=f"dl_svg_{ts_safe}_{i}",
-                use_container_width=True
+                key=f"dl_svg_{ts_s}_{i}", use_container_width=True
             )
 
-    # ── 6. HTML SAHIFA ───────────────────────────
-    html_blocks = [(l,c) for l,c in blocks if l.lower()=="html"]
-    if html_blocks:
-        shown = True
+    # ── HTML ──────────────────────────────────────────
+    html_bl = [(l,c) for l,c in blocks if l.lower()=="html"]
+    if html_bl:
         st.markdown("""
             <div class='download-card'>
-                <h4 style='color:#059669;margin:0 0 12px;'>🌐 HTML Sahifa</h4>
+                <h4 style='color:#059669;margin:0 0 8px;'>🌐 HTML Sahifa</h4>
             </div>
         """, unsafe_allow_html=True)
-        for i,(_, code) in enumerate(html_blocks):
+        for i,(_,code) in enumerate(html_bl):
             with st.expander(f"👁 HTML Preview #{i+1}", expanded=True):
-                st.components.v1.html(code.strip(), height=400, scrolling=True)
+                st.components.v1.html(code.strip(), height=380, scrolling=True)
             st.download_button(
-                label=f"⬇️ sahifa_{i}.html yuklab olish",
-                data=code.strip().encode("utf-8"),
-                file_name=f"somo_page_{ts_safe}_{i}.html",
+                f"⬇️ sahifa_{i}.html", code.strip().encode("utf-8"),
+                file_name=f"somo_page_{ts_s}_{i}.html",
                 mime="text/html",
-                key=f"dl_html_{ts_safe}_{i}",
-                use_container_width=True
+                key=f"dl_html_{ts_s}_{i}", use_container_width=True
             )
 
-    # ── 7. BOSHQA KOD FAYLLAR ────────────────────
-    ext_map = {
-        "python":"py","py":"py","javascript":"js","js":"js",
-        "typescript":"ts","ts":"ts","css":"css","json":"json",
-        "sql":"sql","bash":"sh","shell":"sh","sh":"sh",
-        "yaml":"yaml","xml":"xml","markdown":"md","md":"md",
-        "jsx":"jsx","tsx":"tsx","java":"java","cpp":"cpp",
-        "c":"c","rust":"rs","go":"go","php":"php","ruby":"rb",
-        "swift":"swift","kotlin":"kt","r":"r","txt":"txt","text":"txt",
-    }
+    # ── KOD FAYLLAR ────────────────────────────────────
     skip = {"html","svg","csv",""}
-    code_blocks_other = [
-        (l,c) for l,c in blocks
-        if l.lower() not in skip
-        and "PIL" not in c and "ImageDraw" not in c
-        and "Image.new" not in c
-    ]
-    if code_blocks_other:
-        shown = True
+    code_other = [(l,c) for l,c in blocks if l.lower() not in skip]
+    if code_other and is_file_request(original_prompt):
         st.markdown("""
             <div class='download-card'>
-                <h4 style='color:#059669;margin:0 0 12px;'>💾 Tayyor Kod Fayllar</h4>
+                <h4 style='color:#059669;margin:0 0 8px;'>💾 Tayyor Kod Fayllar</h4>
             </div>
         """, unsafe_allow_html=True)
-        cols = st.columns(min(len(code_blocks_other), 3))
-        for i,(lang, code) in enumerate(code_blocks_other):
-            ext   = ext_map.get(lang.strip().lower(),"txt")
-            fname = f"somo_{ts_safe}_{i}.{ext}"
+        cols = st.columns(min(len(code_other), 3))
+        for i,(lang,code) in enumerate(code_other):
+            ext   = ext_map.get(lang.strip().lower(), "txt")
+            fname = f"somo_{ts_s}_{i}.{ext}"
             with cols[i % len(cols)]:
                 st.download_button(
-                    label=f"{get_file_emoji(fname)} .{ext} yuklab olish",
-                    data=code.strip().encode("utf-8"),
+                    f"{get_file_emoji(fname)} .{ext}",
+                    code.strip().encode("utf-8"),
                     file_name=fname, mime="text/plain",
-                    key=f"dl_code_{ts_safe}_{i}",
-                    use_container_width=True
+                    key=f"dl_code_{ts_s}_{i}", use_container_width=True
                 )
 
-# ───────────────────────────────────────────────
-# 6. SHABLONLAR
-# ───────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════
+# 11. SHABLONLAR
+# ═══════════════════════════════════════════════════════
 TEMPLATES = {
-    "Biznes": [
+    "📊 Biznes": [
         {
-            "icon":"📊","title":"📊 Biznes Reja",
-            "description":"To'liq biznes reja yaratish",
+            "icon":"📊","title":"Biznes Reja",
+            "desc":"To'liq professional biznes reja",
             "prompt":(
-                "Menga [kompaniya nomi] uchun professional biznes reja tuzing.\n"
-                "- Ijroiya xulosasi\n- Bozor tahlili\n"
-                "- Marketing strategiyasi\n- Moliyaviy rejalar\n- 5 yillik prognoz"
+                "[kompaniya nomi] uchun to'liq biznes reja yaratib bering:\n"
+                "## Ijroiya Xulosasi\n## Bozor Tahlili\n"
+                "## Marketing Strategiyasi\n## Moliyaviy Rejalar\n"
+                "## 5 Yillik Prognoz\n## Xulosa"
+            )
+        },
+        {
+            "icon":"📈","title":"SWOT Tahlil",
+            "desc":"Kompaniya SWOT tahlili jadval bilan",
+            "prompt":(
+                "[kompaniya] uchun SWOT tahlil yaratib bering:\n"
+                "## Kuchli Tomonlar\n## Zaif Tomonlar\n"
+                "## Imkoniyatlar\n## Tahdidlar\n## Strategiyalar\n\n"
+                "Jadval shaklida ham ko'rsating"
             )
         }
     ],
-    "Dasturlash": [
+    "💻 Dasturlash": [
         {
-            "icon":"💻","title":"💻 Kod Generator",
-            "description":"Har qanday tildagi kod",
+            "icon":"💻","title":"Kod Generator",
+            "desc":"Har qanday tildagi to'liq kod",
             "prompt":(
-                "[dasturlash tili]da [funksionallik] uchun kod yoz:\n"
-                "- Clean code prinsiplari\n- Izohlar bilan\n"
-                "- Error handling\n- Best practices\n- Test misollari"
+                "[til]da [funksionallik] uchun to'liq kod yozib bering:\n"
+                "- To'liq ishlaydigan kod\n- Izohlar bilan\n"
+                "- Error handling\n- Best practices"
+            )
+        },
+        {
+            "icon":"🔍","title":"Kod Review",
+            "desc":"Kodni tahlil va yaxshilash",
+            "prompt":(
+                "Quyidagi kodni tahlil qilib, yaxshilashlar taklif eting:\n"
+                "```\n[KODNI BU YERGA YOZING]\n```\n"
+                "- Xatolar\n- Yaxshilash tavsiyalari\n- Optimallashtirish"
             )
         }
     ],
-    "Ta'lim": [
+    "📚 Ta'lim": [
         {
-            "icon":"📖","title":"📖 Dars Rejasi",
-            "description":"O'qituvchilar uchun",
+            "icon":"📖","title":"Dars Rejasi",
+            "desc":"O'qituvchilar uchun to'liq dars",
             "prompt":(
-                "[mavzu] bo'yicha to'liq dars rejasi tuzing:\n"
-                "- O'quv maqsadlari\n- Kirish (10 daqiqa)\n"
-                "- Asosiy qism (30 daqiqa)\n- Amaliy mashqlar (15 daqiqa)\n"
-                "- Yakun (5 daqiqa)\n- Uyga vazifa"
+                "[mavzu] bo'yicha to'liq dars rejasi yaratib bering:\n"
+                "## O'quv Maqsadlari\n## Kirish (10 daqiqa)\n"
+                "## Asosiy Qism (30 daqiqa)\n## Amaliy Mashq (15 daqiqa)\n"
+                "## Yakun (5 daqiqa)\n## Uyga Vazifa"
             )
+        },
+        {
+            "icon":"📝","title":"Test Savollar",
+            "desc":"10 ta test savoli yaratish",
+            "prompt":(
+                "[mavzu] bo'yicha 10 ta test savoli yaratib bering:\n"
+                "- Har savolda 4 variant (A,B,C,D)\n"
+                "- To'g'ri javob ko'rsatilgan\n"
+                "- 3 oson, 4 o'rta, 3 qiyin"
+            )
+        }
+    ],
+    "✍️ Ijod": [
+        {
+            "icon":"✍️","title":"Maqola",
+            "desc":"Professional maqola yozish",
+            "prompt":(
+                "[mavzu] haqida professional maqola yozib bering:\n"
+                "## Kirish\n## Asosiy Qism (3 bo'lim)\n## Xulosa\n"
+                "O'zbek tilida, 500-700 so'z."
+            )
+        },
+        {
+            "icon":"📧","title":"Rasmiy Xat",
+            "desc":"Biznes yozishmalar",
+            "prompt":(
+                "[maqsad] uchun rasmiy xat yozib bering:\n"
+                "- Kimdan: [ism/lavozim]\n- Kimga: [ism/tashkilot]\n"
+                "- Mavzu: [mavzu]\n"
+                "Rasmiy va hurmatli uslubda"
+            )
+        }
+    ],
+    "🎨 Rasm": [
+        {
+            "icon":"🎨","title":"Haqiqiy Rasm",
+            "desc":"Gemini Imagen bilan PNG rasm",
+            "prompt":"[narsa/manzara/mavzu] haqida chiroyli rasm yaratib ber"
+        },
+        {
+            "icon":"🖼","title":"SVG Grafika",
+            "desc":"Vektor SVG rasm",
+            "prompt":"[mavzu] uchun chiroyli SVG vektor grafika yaratib ber"
         }
     ]
 }
 
-# ───────────────────────────────────────────────
-# 7. SESSION BOSHQARUVI
-# ───────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════
+# 12. SESSION BOSHQARUVI
+# ═══════════════════════════════════════════════════════
 if "logged_in" not in st.session_state:
     su = cookies.get("somo_user_session")
     if su and user_db:
         try:
             recs = user_db.get_all_records()
-            ud   = next((r for r in recs if str(r["username"])==su), None)
-            if ud and str(ud.get("status")).lower()=="active":
+            ud   = next((r for r in recs if str(r["username"]) == su), None)
+            if ud and str(ud.get("status","")).lower() == "active":
                 st.session_state.update({
                     "username":su,"logged_in":True,"login_time":datetime.now()
                 })
@@ -1059,57 +1087,74 @@ if "logged_in" not in st.session_state:
 def handle_logout():
     try:
         cookies["somo_user_session"] = ""; cookies.save()
-    except Exception: pass
-    for k in list(st.session_state.keys()): del st.session_state[k]
+    except Exception:
+        pass
+    for k in list(st.session_state.keys()):
+        del st.session_state[k]
     st.session_state.logged_in = False
     st.rerun()
 
-# ───────────────────────────────────────────────
-# 8. LOGIN SAHIFASI
-# ───────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════
+# 13. LOGIN SAHIFASI
+# ═══════════════════════════════════════════════════════
 if not st.session_state.logged_in:
     st.markdown("""
-        <div style='text-align:center;margin-top:60px;'>
-            <h1 style='font-size:56px;margin-bottom:10px;'>
+        <div style='text-align:center;margin-top:50px;'>
+            <h1 style='font-size:54px;margin-bottom:10px;'>
                 🌌 Somo AI <span class='gradient-text'>Infinity</span>
             </h1>
-            <p style='color:#64748b;font-size:20px;margin-bottom:15px;'>
+            <p style='color:#64748b;font-size:19px;margin-bottom:12px;'>
                 Kelajak texnologiyalari bilan tanishing
             </p>
-            <p style='color:#94a3b8;font-size:16px;'>
-                ⚡ 70B AI &nbsp;|&nbsp; 🖼 Vision &nbsp;|&nbsp;
-                📊 PPTX/Excel &nbsp;|&nbsp; 📝 Word &nbsp;|&nbsp; 💾 Fayl yaratish
-            </p>
+            <div style='display:flex;justify-content:center;
+                        gap:8px;flex-wrap:wrap;margin-bottom:8px;'>
+                <span class='badge badge-groq'>⚡ Groq — Bepul</span>
+                <span class='badge badge-gemini'>🌟 Gemini — Bepul</span>
+                <span class='badge badge-purple'>🎨 Pollinations.ai</span>
+                <span class='badge badge-purple'>🖼 Vision</span>
+                <span class='badge badge-groq'>📊 PPTX/Excel</span>
+                <span class='badge badge-gemini'>📝 Word</span>
+            </div>
         </div>
     """, unsafe_allow_html=True)
 
-    _, c2, _ = st.columns([0.25,1,0.25])
+    _, c2, _ = st.columns([.2, 1, .2])
     with c2:
-        t1,t2,t3 = st.tabs(["🔒 Kirish","✍️ Ro'yxatdan o'tish","ℹ️ Ma'lumot"])
+        t1, t2, t3 = st.tabs(["🔒 Kirish","✍️ Ro'yxatdan o'tish","ℹ️ Ma'lumot"])
 
         with t1:
             with st.form("login_form"):
                 st.markdown("### 🔐 Hisobingizga kiring")
                 u_in = st.text_input("👤 Username", placeholder="Username kiriting", key="lu")
-                p_in = st.text_input("🔑 Parol", type="password", placeholder="Parol kiriting", key="lp")
-                ca,cb = st.columns(2)
-                with ca: sub = st.form_submit_button("🚀 Kirish", use_container_width=True)
-                with cb: rem = st.checkbox("✅ Eslab qolish", value=True)
+                p_in = st.text_input("🔑 Parol", type="password",
+                                     placeholder="Parol kiriting", key="lp")
+                ca, cb = st.columns(2)
+                with ca:
+                    sub = st.form_submit_button("🚀 Kirish", use_container_width=True)
+                with cb:
+                    rem = st.checkbox("✅ Eslab qolish", value=True)
                 if sub and u_in and p_in and user_db:
                     try:
                         recs = user_db.get_all_records()
-                        hp   = hashlib.sha256(p_in.encode()).hexdigest()
-                        usr  = next((r for r in recs if str(r["username"])==u_in and str(r["password"])==hp), None)
+                        hp   = sha256(p_in)
+                        usr  = next(
+                            (r for r in recs
+                             if str(r["username"]) == u_in
+                             and str(r["password"]) == hp), None
+                        )
                         if usr:
-                            if str(usr.get("status")).lower()=="blocked":
+                            if str(usr.get("status","")).lower() == "blocked":
                                 st.error("🚫 Hisobingiz bloklangan!")
                             else:
                                 st.session_state.update({
-                                    "username":u_in,"logged_in":True,"login_time":datetime.now()
+                                    "username":u_in,"logged_in":True,
+                                    "login_time":datetime.now()
                                 })
                                 if rem:
-                                    cookies["somo_user_session"]=u_in; cookies.save()
-                                st.success("✅ Muvaffaqiyatli!"); time.sleep(0.5); st.rerun()
+                                    cookies["somo_user_session"] = u_in
+                                    cookies.save()
+                                st.success("✅ Muvaffaqiyatli!")
+                                time.sleep(.5); st.rerun()
                         else:
                             st.error("❌ Login yoki parol xato!")
                     except Exception as e:
@@ -1118,176 +1163,241 @@ if not st.session_state.logged_in:
         with t2:
             with st.form("reg_form"):
                 st.markdown("### ✨ Yangi hisob yaratish")
-                nu  = st.text_input("👤 Username", placeholder="Kamida 3 ta belgi", key="ru")
-                np  = st.text_input("🔑 Parol", type="password", placeholder="Kamida 6 ta belgi", key="rp")
-                npc = st.text_input("🔑 Tasdiqlang", type="password", placeholder="Qayta kiriting", key="rc")
+                nu  = st.text_input("👤 Username", placeholder="Kamida 3 belgi", key="ru")
+                np  = st.text_input("🔑 Parol", type="password",
+                                    placeholder="Kamida 6 belgi", key="rp")
+                npc = st.text_input("🔑 Tasdiqlang", type="password",
+                                    placeholder="Qayta kiriting", key="rc")
                 ag  = st.checkbox("Foydalanish shartlariga roziman")
-                sub2 = st.form_submit_button("✨ Hisob yaratish", use_container_width=True)
+                sub2 = st.form_submit_button("✨ Yaratish", use_container_width=True)
                 if sub2:
-                    if not ag:           st.error("❌ Shartlarga rozilik!")
-                    elif not nu or not np: st.error("❌ Barcha maydonlar!")
-                    elif len(nu)<3:      st.error("❌ Username ≥ 3 belgi!")
-                    elif len(np)<6:      st.error("❌ Parol ≥ 6 belgi!")
-                    elif np!=npc:        st.error("❌ Parollar mos emas!")
+                    if not ag:               st.error("❌ Shartlarga rozilik!")
+                    elif not nu or not np:   st.error("❌ Barcha maydonlar!")
+                    elif len(nu) < 3:        st.error("❌ Username ≥ 3 belgi!")
+                    elif len(np) < 6:        st.error("❌ Parol ≥ 6 belgi!")
+                    elif np != npc:          st.error("❌ Parollar mos emas!")
                     elif user_db:
                         try:
                             recs = user_db.get_all_records()
-                            if any(r["username"]==nu for r in recs):
+                            if any(r["username"] == nu for r in recs):
                                 st.error("❌ Username band!")
                             else:
-                                user_db.append_row([nu, hashlib.sha256(np.encode()).hexdigest(),
-                                                   "active", str(datetime.now())])
-                                st.balloons(); st.success("🎉 Muvaffaqiyatli!")
-                        except Exception as e: st.error(f"❌ {e}")
+                                user_db.append_row(
+                                    [nu, sha256(np), "active", str(datetime.now())]
+                                )
+                                st.balloons()
+                                st.success("🎉 Muvaffaqiyatli ro'yxatdan o'tdingiz!")
+                        except Exception as e:
+                            st.error(f"❌ {e}")
 
         with t3:
             st.markdown("""
-                ### 🌟 Somo AI Infinity — v2.3 Pro
+                ### 🌟 Somo AI Infinity — v3.1 Pro
 
                 | Funksiya | Tavsif |
                 |---------|--------|
-                | 🧠 **70B AI** | Llama 3.3 — kuchli, aniq javoblar |
-                | 🖼 **Vision** | Rasm yuklang — AI ko'radi |
-                | 📊 **PPTX** | Professional slaydlar yaratish |
-                | 📊 **Excel** | Rangli formatланган jadvallar |
+                | ⚡ **Groq** | 5 ta model — BEPUL, juda tez |
+                | 🌟 **Gemini** | Rasm yaratish + Vision — BEPUL |
+                | 🎨 **Imagen 3** | Gemini bilan haqiqiy PNG rasm |
+                | 🖼 **Vision** | Rasm tahlili — LLaMA 4 Scout |
+                | 📊 **PPTX** | Professional taqdimotlar |
+                | 📊 **Excel** | Rangli formatlangan jadvallar |
                 | 📝 **Word** | To'liq formatlangan hujjatlar |
                 | 🌐 **HTML** | Preview + yuklab olish |
-                | 🐍 **Kod** | 20+ tilda fayl yaratish |
-                | 🤖 **4 model** | Llama, Vision, Mixtral, Gemma |
+                | 🐍 **20+ til** | Kod fayllar yaratish |
 
                 ---
+                > **Muhim:** Faqat "fayl yarat/yaratib ber" deb so'rasangiz
+                > fayl yaratiladi. Aks holda faqat matn javob beriladi.
+
                 📧 support@somoai.uz
-                👨‍💻 Yaratuvchi: Usmonov Sodiq | v2.3
+                👨‍💻 **Usmonov Sodiq** | 🤝 **Davlatov Mironshoh**
+                📅 Versiya 3.1 Pro — 2026
             """)
 
     st.markdown("""
-        <div style='text-align:center;margin-top:60px;color:#94a3b8;'>
+        <div style='text-align:center;margin-top:50px;color:#94a3b8;'>
             <p>🔒 Xavfsiz | 🌐 24/7 Onlayn</p>
             <p>© 2026 Somo AI | Barcha huquqlar himoyalangan</p>
         </div>
     """, unsafe_allow_html=True)
     st.stop()
 
-# ───────────────────────────────────────────────
-# 9. SESSION STATE
-# ───────────────────────────────────────────────
-defaults = {
-    "messages":[],"total_messages":0,"current_page":"chat",
-    "uploaded_file_text":"","uploaded_image":None,
-    "uploaded_image_type":None,"attached_files":[]
+# ═══════════════════════════════════════════════════════
+# 14. SESSION STATE INICIALIZATSIYA
+# ═══════════════════════════════════════════════════════
+DEFAULTS = {
+    "messages":[], "total_messages":0, "current_page":"chat",
+    "uploaded_file_text":"", "uploaded_image":None,
+    "uploaded_image_type":None, "attached_files":[]
 }
-for k,v in defaults.items():
-    if k not in st.session_state: st.session_state[k]=v
+for k, v in DEFAULTS.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 uname = st.session_state.username
 
-# ───────────────────────────────────────────────
-# 10. SIDEBAR
-# ───────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════
+# 15. SIDEBAR
+# ═══════════════════════════════════════════════════════
 with st.sidebar:
     st.markdown(f"""
-        <div style='text-align:center;padding:20px;margin-bottom:25px;
-                    background:linear-gradient(135deg,rgba(14,165,233,.1),rgba(99,102,241,.1));
-                    border-radius:20px;'>
+        <div style='text-align:center;padding:18px;margin-bottom:18px;
+                    background:linear-gradient(135deg,
+                    rgba(14,165,233,.1),rgba(99,102,241,.1));
+                    border-radius:18px;'>
             <div style='background:linear-gradient(135deg,#0ea5e9,#6366f1);
-                        width:90px;height:90px;border-radius:50%;margin:0 auto;
-                        line-height:90px;font-size:40px;color:white;font-weight:bold;
-                        border:5px solid white;box-shadow:0 8px 20px rgba(14,165,233,.3);'>
+                        width:82px;height:82px;border-radius:50%;margin:0 auto;
+                        line-height:82px;font-size:36px;color:white;font-weight:bold;
+                        border:4px solid white;
+                        box-shadow:0 8px 20px rgba(14,165,233,.3);'>
                 {uname[0].upper()}
             </div>
-            <h3 style='margin-top:15px;color:#0f172a;font-size:20px;'>{uname}</h3>
-            <p style='color:#10b981;font-size:14px;font-weight:600;'>🟢 Aktiv</p>
+            <h3 style='margin-top:12px;color:#0f172a;font-size:18px;'>
+                {uname}
+            </h3>
+            <p style='color:#10b981;font-size:13px;font-weight:600;margin:4px 0;'>
+                🟢 Aktiv
+            </p>
+            <span class='badge badge-groq'>⚡ Groq</span>
+            <span class='badge badge-gemini'>🌟 Gemini</span>
         </div>
     """, unsafe_allow_html=True)
 
+    # NAVIGATSIYA
     st.markdown("### 🧭 Navigatsiya")
-    for lbl,pg in [("💬 Chat","chat"),("🎨 Shablonlar","templates"),("💌 Fikr bildirish","feedback")]:
+    for lbl, pg in [
+        ("💬 Chat",           "chat"),
+        ("🎨 Shablonlar",     "templates"),
+        ("💌 Fikr bildirish", "feedback"),
+    ]:
         if st.button(lbl, use_container_width=True, key=f"nav_{pg}"):
-            st.session_state.current_page=pg; st.rerun()
+            st.session_state.current_page = pg; st.rerun()
 
     st.markdown("---")
+
+    # STATISTIKA
     st.markdown("### 📊 Statistika")
-    c1,c2 = st.columns(2)
+    c1, c2 = st.columns(2)
     with c1:
         st.markdown(f"""
             <div class='metric-card'>
                 <h4 style='color:#0284c7;margin:0;'>💬</h4>
-                <h2 style='margin:5px 0;color:#0f172a;'>{len(st.session_state.messages)}</h2>
-                <p style='color:#64748b;margin:0;font-size:12px;'>Xabarlar</p>
+                <h2 style='margin:5px 0;color:#0f172a;'>
+                    {len(st.session_state.messages)}
+                </h2>
+                <p style='color:#64748b;margin:0;font-size:11px;'>Xabarlar</p>
             </div>
         """, unsafe_allow_html=True)
     with c2:
         if "login_time" in st.session_state:
-            dur = (datetime.now()-st.session_state.login_time).seconds//60
+            dur = (datetime.now() - st.session_state.login_time).seconds // 60
             st.markdown(f"""
                 <div class='metric-card'>
                     <h4 style='color:#6366f1;margin:0;'>⏱</h4>
                     <h2 style='margin:5px 0;color:#0f172a;'>{dur}</h2>
-                    <p style='color:#64748b;margin:0;font-size:12px;'>Daqiqa</p>
+                    <p style='color:#64748b;margin:0;font-size:11px;'>Daqiqa</p>
                 </div>
             """, unsafe_allow_html=True)
 
     st.markdown("---")
 
-    if st.session_state.current_page=="chat":
+    if st.session_state.current_page == "chat":
+        # BOSHQARUV
         st.markdown("### 🎛 Boshqaruv")
         if st.button("🗑 Chatni tozalash", use_container_width=True, key="clr"):
-            for k,v in defaults.items(): st.session_state[k]=v
+            for k, v in DEFAULTS.items():
+                st.session_state[k] = v
             st.success("✅ Tozalandi!"); st.rerun()
 
         if st.session_state.messages:
-            if st.button("📥 Yuklab olish", use_container_width=True, key="dl_ch"):
-                data = json.dumps(st.session_state.messages, ensure_ascii=False, indent=2)
+            if st.button("📥 Chat tarixini saqlash", use_container_width=True, key="dlch"):
+                data = json.dumps(
+                    st.session_state.messages, ensure_ascii=False, indent=2
+                )
                 st.download_button(
-                    "💾 JSON", data,
+                    "💾 JSON formatda", data,
                     file_name=f"somo_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                    mime="application/json", use_container_width=True, key="dl_j"
+                    mime="application/json",
+                    use_container_width=True, key="dlj"
                 )
 
         st.markdown("---")
-        st.markdown("### ⚙️ Sozlamalar")
-        temperature = st.slider("🌡 Ijodkorlik", 0.0, 1.0, 0.6, 0.1, key="temp")
-        st.caption(
-            "🎯 Aniq" if temperature<0.3 else
-            "⚖️ Muvozanatli" if temperature<0.7 else "🎨 Ijodiy"
+
+        # MODEL
+        st.markdown("### 🤖 Groq Modeli")
+        model_key = st.selectbox(
+            "Model", key="mdl",
+            label_visibility="collapsed",
+            options=list(MODELS.keys()),
+            format_func=lambda x: MODELS[x]["label"]
         )
+        st.caption(f"💡 {MODELS[model_key]['desc']}")
+        if MODELS[model_key]["vision"]:
+            st.markdown(
+                "<span class='badge badge-gemini'>🖼 Vision</span>",
+                unsafe_allow_html=True
+            )
+
+        # GEMINI STATUS
+        st.markdown("<br>", unsafe_allow_html=True)
+        # Rasm yaratish holati (Pollinations.ai — bepul)
+        st.markdown(
+            "<div style='background:#f0fdf4;border:1px solid #86efac;"
+            "border-radius:10px;padding:10px;text-align:center;'>"
+            "🎨 <strong>Rasm yaratish</strong><br>"
+            "<small style='color:#065f46;'>✅ Pollinations.ai — Bepul!</small>"
+            "</div>",
+            unsafe_allow_html=True
+        )
+        if gemini_client:
+            st.markdown(
+                "<div style='background:#eff6ff;border:1px solid #bfdbfe;"
+                "border-radius:8px;padding:8px;text-align:center;margin-top:6px;'>"
+                "🌟 <strong>Gemini Vision</strong><br>"
+                "<small style='color:#1e40af;'>Rasm tahlili tayyor</small>"
+                "</div>",
+                unsafe_allow_html=True
+            )
 
         st.markdown("---")
-        st.markdown("### 🤖 Model")
-        model_choice = st.selectbox(
-            "Model", key="mdl", label_visibility="collapsed",
-            options=[
-                "llama-3.3-70b-versatile",
-                "meta-llama/llama-4-scout-17b-16e-instruct",
-                "mixtral-8x7b-32768",
-                "gemma2-9b-it"
-            ],
-            format_func=lambda x:{
-                "llama-3.3-70b-versatile":                   "🧠 Llama 3.3 70B (Kuchli)",
-                "meta-llama/llama-4-scout-17b-16e-instruct": "🖼 LLaMA 4 Scout (Vision)",
-                "mixtral-8x7b-32768":                        "⚡ Mixtral 8x7B (Tez)",
-                "gemma2-9b-it":                              "💡 Gemma 2 9B (Yengil)"
-            }.get(x,x)
+
+        # SOZLAMALAR
+        st.markdown("### ⚙️ Sozlamalar")
+        temperature = st.slider(
+            "🌡 Ijodkorlik", 0.0, 1.0, 0.7, 0.05, key="temp"
+        )
+        st.caption(
+            "🎯 Aniq"      if temperature < 0.3  else
+            "⚖️ Balans"    if temperature < 0.65 else
+            "🎨 Ijodiy"
         )
 
-    st.markdown("<br>"*3, unsafe_allow_html=True)
-    if st.button("🚪 Chiqish", use_container_width=True, key="logout", type="primary"):
+        max_tok = st.select_slider(
+            "📏 Javob uzunligi", key="maxtok",
+            options=[1024, 2048, 4096, 6000, 8000],
+            value=4096
+        )
+        st.caption(f"~{max_tok//4} so'z")
+
+    st.markdown("<br>" * 2, unsafe_allow_html=True)
+    if st.button("🚪 Tizimdan chiqish", use_container_width=True,
+                 key="logout", type="primary"):
         handle_logout()
 
-# ───────────────────────────────────────────────
-# 11. SAHIFALAR
-# ───────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════
+# 16. CHAT SAHIFASI
+# ═══════════════════════════════════════════════════════
+if st.session_state.current_page == "chat":
 
-# ════════════ CHAT ════════════
-if st.session_state.current_page=="chat":
-
+    # DASHBOARD
     if not st.session_state.messages:
         st.markdown(f"""
-            <div style='text-align:center;margin:40px 0;'>
-                <h1 style='font-size:42px;margin-bottom:15px;'>
+            <div style='text-align:center;margin:28px 0;'>
+                <h1 style='font-size:40px;margin-bottom:12px;'>
                     Salom, <span class='gradient-text'>{uname}</span>! 👋
                 </h1>
-                <p style='color:#64748b;font-size:20px;margin-bottom:40px;'>
+                <p style='color:#64748b;font-size:18px;margin-bottom:28px;'>
                     Bugun sizga qanday yordam bera olaman?
                 </p>
             </div>
@@ -1296,27 +1406,43 @@ if st.session_state.current_page=="chat":
         st.markdown("""
             <div class='dashboard-container'>
                 <div class='card-box'>
-                    <h1 style='font-size:48px;margin-bottom:15px;'>📊</h1>
-                    <h3 style='color:#0f172a;margin-bottom:10px;'>PPTX Taqdimot</h3>
-                    <p style='color:#64748b;line-height:1.6;'>
-                        "Sun'iy intellekt haqida taqdimot yarat" — 
-                        professional slaydlar darhol yuklab olish
+                    <h1 style='font-size:40px;margin-bottom:10px;'>🎨</h1>
+                    <h3 style='color:#0f172a;margin-bottom:8px;font-size:17px;'>
+                        Rasm Yaratish
+                    </h3>
+                    <p style='color:#64748b;line-height:1.6;font-size:13px;'>
+                        <b>"Ko'k ot rasmini yaratib ber"</b>
+                        → Gemini Imagen bilan haqiqiy PNG rasm
                     </p>
                 </div>
                 <div class='card-box'>
-                    <h1 style='font-size:48px;margin-bottom:15px;'>📊</h1>
-                    <h3 style='color:#0f172a;margin-bottom:10px;'>Excel Jadval</h3>
-                    <p style='color:#64748b;line-height:1.6;'>
-                        "Oylik xarajatlar jadvali" — 
-                        rangli formatlanган Excel fayl yaratish
+                    <h1 style='font-size:40px;margin-bottom:10px;'>📊</h1>
+                    <h3 style='color:#0f172a;margin-bottom:8px;font-size:17px;'>
+                        Fayl Yaratish
+                    </h3>
+                    <p style='color:#64748b;line-height:1.6;font-size:13px;'>
+                        <b>"Taqdimot yaratib ber"</b> → PPTX<br>
+                        <b>"Jadval yaratib ber"</b> → Excel
                     </p>
                 </div>
                 <div class='card-box'>
-                    <h1 style='font-size:48px;margin-bottom:15px;'>📝</h1>
-                    <h3 style='color:#0f172a;margin-bottom:10px;'>Word Hujjat</h3>
-                    <p style='color:#64748b;line-height:1.6;'>
-                        "Rezyume yarat" yoki "Shartnoma yoz" — 
-                        tayyor Word fayl yuklab olish
+                    <h1 style='font-size:40px;margin-bottom:10px;'>🖼</h1>
+                    <h3 style='color:#0f172a;margin-bottom:8px;font-size:17px;'>
+                        Rasm Tahlili
+                    </h3>
+                    <p style='color:#64748b;line-height:1.6;font-size:13px;'>
+                        Rasm yuklang → LLaMA 4 Vision
+                        bilan tahlil qiladi
+                    </p>
+                </div>
+                <div class='card-box'>
+                    <h1 style='font-size:40px;margin-bottom:10px;'>📝</h1>
+                    <h3 style='color:#0f172a;margin-bottom:8px;font-size:17px;'>
+                        Hujjat Yozish
+                    </h3>
+                    <p style='color:#64748b;line-height:1.6;font-size:13px;'>
+                        <b>"Rezyume yozib ber"</b>
+                        → Tayyor Word hujjat
                     </p>
                 </div>
             </div>
@@ -1324,122 +1450,163 @@ if st.session_state.current_page=="chat":
 
         st.markdown("<br>", unsafe_allow_html=True)
         st.markdown("""
-            <div style='background:linear-gradient(135deg,rgba(14,165,233,.1),rgba(99,102,241,.1));
-                        padding:25px;border-radius:20px;'>
-                <h3 style='color:#0f172a;margin-bottom:15px;text-align:center;'>
-                    💡 Nima so'rash mumkin?
-                </h3>
-                <div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-                            gap:15px;text-align:left;'>
+            <div class='info-box'>
+                <h4 style='color:#0f172a;margin:0 0 12px;text-align:center;'>
+                    💡 Qanday so'rash kerak?
+                </h4>
+                <div style='display:grid;
+                            grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+                            gap:12px;'>
                     <div>
-                        <strong style='color:#0284c7;'>📊 "Taqdimot yarat"</strong>
-                        <p style='color:#64748b;margin:5px 0;font-size:14px;'>
-                            → Professional PPTX fayl darhol yuklab olish
+                        <b style='color:#ef4444;'>📊 Taqdimot:</b>
+                        <p style='color:#64748b;margin:3px 0;font-size:13px;'>
+                            "AI haqida taqdimot <u>yaratib ber</u>"
                         </p>
                     </div>
                     <div>
-                        <strong style='color:#6366f1;'>📊 "Jadval yarat"</strong>
-                        <p style='color:#64748b;margin:5px 0;font-size:14px;'>
-                            → Rangli Excel + CSV yuklab olish
+                        <b style='color:#0ea5e9;'>🎨 Rasm:</b>
+                        <p style='color:#64748b;margin:3px 0;font-size:13px;'>
+                            "Tog' manzarasi rasmini <u>yaratib ber</u>"
                         </p>
                     </div>
                     <div>
-                        <strong style='color:#8b5cf6;'>📝 "Hujjat yoz"</strong>
-                        <p style='color:#64748b;margin:5px 0;font-size:14px;'>
-                            → Formatlangan Word fayl yuklab olish
+                        <b style='color:#8b5cf6;'>📊 Excel:</b>
+                        <p style='color:#64748b;margin:3px 0;font-size:13px;'>
+                            "Oylik xarajatlar jadvalini <u>yaratib ber</u>"
                         </p>
                     </div>
                     <div>
-                        <strong style='color:#ec4899;'>🌐 "Veb sahifa yarat"</strong>
-                        <p style='color:#64748b;margin:5px 0;font-size:14px;'>
-                            → HTML preview + yuklab olish
+                        <b style='color:#10b981;'>📝 Word:</b>
+                        <p style='color:#64748b;margin:3px 0;font-size:13px;'>
+                            "Dasturchi rezyumesini <u>yozib ber</u>"
                         </p>
                     </div>
                 </div>
+                <p style='color:#94a3b8;font-size:12px;margin:12px 0 0;text-align:center;'>
+                    ⚠️ "yaratib ber / qilib ber / yozib ber" deb so'rasangiz — 
+                    fayl yaratiladi. Aks holda faqat matn javob beriladi.
+                </p>
             </div>
         """, unsafe_allow_html=True)
 
-    # Chat tarixi
+    # CHAT TARIXI
     for m in st.session_state.messages:
         with st.chat_message(m["role"]):
             cont = m["content"]
             if isinstance(cont, list):
                 for p in cont:
-                    if isinstance(p,dict) and p.get("type")=="text":
+                    if isinstance(p, dict) and p.get("type") == "text":
                         st.markdown(p["text"])
             else:
                 st.markdown(cont)
 
     st.markdown("---")
 
-    # Biriktirilgan fayllar
+    # BIRIKTIRILGAN FAYLLAR
     if st.session_state.attached_files:
         badges = "".join(
-            f"<span class='file-badge'>{get_file_emoji(f['name'])} {f['name']}</span>"
+            f"<span class='file-badge'>"
+            f"{get_file_emoji(f['name'])} {f['name']}</span>"
             for f in st.session_state.attached_files
         )
         st.markdown(
-            f"<div style='margin-bottom:10px;'><b>📎 Biriktirilgan:</b><br>{badges}</div>",
+            f"<div style='margin-bottom:10px;'>"
+            f"<b>📎 Biriktirilgan:</b><br>{badges}</div>",
             unsafe_allow_html=True
         )
-        if st.button("🗑 Fayllarni tozalash", key="clf"):
+        if st.button("🗑 Tozalash", key="clf"):
             st.session_state.attached_files      = []
             st.session_state.uploaded_image      = None
             st.session_state.uploaded_image_type = None
             st.session_state.uploaded_file_text  = ""
             st.rerun()
 
-    # Fayl biriktirish zona
-    with st.expander("➕ Fayl biriktirish — rasm, PDF, kod, CSV va boshqalar", expanded=False):
+    # FAYL BIRIKTIRISH ZONA
+    with st.expander("➕ Fayl biriktirish — rasm, PDF, kod, CSV...",
+                     expanded=False):
         st.markdown("""
             <div class='upload-zone'>
-                <p style='color:#0284c7;font-size:16px;margin:0;'>📎 Istalgan faylni yuklang</p>
-                <p style='color:#64748b;font-size:13px;margin:5px 0 0;'>
-                    🖼 JPG/PNG · 📄 PDF · 📝 DOCX · 🐍 Kod · 📊 CSV/Excel · 🌐 HTML
+                <p style='color:#0284c7;font-size:15px;margin:0;'>
+                    📎 Istalgan faylni yuklang
+                </p>
+                <p style='color:#64748b;font-size:12px;margin:5px 0 0;'>
+                    🖼 JPG/PNG (Vision · PDF · DOCX · Kod · CSV/Excel · HTML
                 </p>
             </div>
         """, unsafe_allow_html=True)
 
         uploaded = st.file_uploader(
             "Fayl", label_visibility="collapsed",
-            type=["jpg","jpeg","png","webp","gif","pdf","docx","doc","txt","csv",
-                  "xlsx","xls","json","yaml","xml","py","js","ts","jsx","tsx",
-                  "html","css","md","java","cpp","c","go","rs","sh","svg"],
+            type=["jpg","jpeg","png","webp","gif","pdf","docx","doc","txt",
+                  "csv","xlsx","xls","json","yaml","xml","py","js","ts",
+                  "jsx","tsx","html","css","md","java","cpp","c","go",
+                  "rs","sh","svg","rb","php","kt","swift"],
             accept_multiple_files=True, key="mup"
         )
+
         if uploaded:
             for f in uploaded:
-                if any(a["name"]==f.name for a in st.session_state.attached_files):
+                if any(a["name"] == f.name
+                       for a in st.session_state.attached_files):
                     continue
                 if is_image_file(f):
                     b64   = encode_image(f)
                     mtype = get_image_media_type(f)
+                    sel   = st.session_state.get("mdl", DEFAULT_MODEL)
+                    if not MODELS.get(sel, {}).get("vision", False):
+                        st.warning(
+                            "⚠️ Rasm tahlili uchun "
+                            "**🖼 LLaMA 4 Scout — Vision** modelini tanlang!"
+                        )
                     st.session_state.uploaded_image      = b64
                     st.session_state.uploaded_image_type = mtype
-                    st.image(f, caption=f"🖼 {f.name}", width=280)
-                    st.session_state.attached_files.append(
-                        {"name":f.name,"type":"image","data":b64,"media_type":mtype}
-                    )
-                    st.success(f"✅ Rasm: {f.name}")
+                    st.image(f, caption=f"🖼 {f.name}", width=260)
+                    st.session_state.attached_files.append({
+                        "name":f.name,"type":"image",
+                        "data":b64,"media_type":mtype
+                    })
+                    st.success(f"✅ Rasm biriktirildi: {f.name}")
                 else:
                     txt = process_doc(f)
                     if txt:
-                        st.session_state.uploaded_file_text += f"\n\n=== {f.name} ===\n{txt}"
-                    st.session_state.attached_files.append(
-                        {"name":f.name,"type":"document","text":txt or ""}
-                    )
+                        st.session_state.uploaded_file_text += (
+                            f"\n\n=== {f.name} ===\n{txt}"
+                        )
+                    st.session_state.attached_files.append({
+                        "name":f.name,"type":"document","text":txt or ""
+                    })
                     st.success(f"✅ {f.name} ({len(txt):,} belgi)")
 
-    # CHAT INPUT
-    if prompt := st.chat_input("💭 Xabar yuboring...  |  ➕ fayl biriktirish yuqorida", key="ci"):
-        ts        = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        has_image = bool(st.session_state.uploaded_image)
+    # ─────────────────── CHAT INPUT ───────────────────
+    if prompt := st.chat_input(
+        "💭 Xabar yuboring...  |  ➕ Fayl — yuqorida", key="ci"
+    ):
+        ts         = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        has_image  = bool(st.session_state.uploaded_image)
+        sel_model  = st.session_state.get("mdl", DEFAULT_MODEL)
+        temperature= st.session_state.get("temp", 0.7)
+        max_tok    = st.session_state.get("maxtok", 4096)
+        want_img   = is_image_request(prompt)
+        want_file  = is_file_request(prompt)
 
+        # Vision model avtomatik
+        if has_image and not MODELS.get(sel_model,{}).get("vision", False):
+            active_model = "meta-llama/llama-4-scout-17b-16e-instruct"
+        else:
+            active_model = sel_model
+
+        # User content
         if has_image:
             user_content = [
-                {"type":"image_url","image_url":{
-                    "url":f"data:{st.session_state.uploaded_image_type};base64,{st.session_state.uploaded_image}"
-                }},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": (
+                            f"data:{st.session_state.uploaded_image_type};"
+                            f"base64,{st.session_state.uploaded_image}"
+                        )
+                    }
+                },
                 {"type":"text","text":prompt}
             ]
             names = ", ".join(f["name"] for f in st.session_state.attached_files)
@@ -1453,215 +1620,407 @@ if st.session_state.current_page=="chat":
                 disp = prompt
 
         st.session_state.messages.append({"role":"user","content":disp})
-        with st.chat_message("user"): st.markdown(disp)
+        with st.chat_message("user"):
+            st.markdown(disp)
 
         if chat_db:
-            try: chat_db.append_row([ts,uname,"User",prompt])
-            except Exception: pass
+            try:
+                chat_db.append_row([ts, uname, "User", prompt])
+            except Exception:
+                pass
 
+        # ═════════════ AI JAVOBI ═════════════
         with st.chat_message("assistant"):
-            with st.spinner("🤔 O'ylayapman..."):
-                try:
-                    sys_instr = (
-                        "Sening isming Somo AI. Seni Usmonov Sodiq yaratgan. "
-                        "Sen professional, foydali yordamchi sun'iy intellektsan. "
-                        "Rasmlarni ko'rib tahlil qila olasan. "
-                        "Matematikani LaTeX ($...$) da yoz. "
-                        "Javoblarni o'qishga qulay va strukturalashtirilgan qil. "
 
-                        "FAYL YARATISH QOIDASI: "
-                        "Taqdimot so'ralsa — ## sarlavhalar va bullet listlar bilan "
-                        "tuzilgan to'liq matn yoz, tizim o'zi PPTX yaratadi. "
-                        "Jadval so'ralsa — Markdown jadval yoki ```csv blok yoz, "
-                        "tizim o'zi Excel va CSV yaratadi. "
-                        "Hujjat/rezyume/xat so'ralsa — to'liq formatlangan matn yoz, "
-                        "tizim o'zi Word yaratadi. "
-                        "HTML so'ralsa — ```html blok ichida to'liq kod yoz. "
-                        "Kod so'ralsa — tegishli til blokida to'liq ishlaydigan kod yoz. "
-                        "HECH QACHON faqat qanday qilish kerakligini tushuntirma — "
-                        "doim to'liq tayyor kontent yoz!"
-                    )
+            # ── RASM YARATISH ─────────────────────────────
+            if want_img and not has_image:
+                ts_s = ts.replace(":","-").replace(" ","_")
 
-                    sel_model = st.session_state.get("mdl","llama-3.3-70b-versatile")
-                    model     = (
-                        "meta-llama/llama-4-scout-17b-16e-instruct"
-                        if has_image else sel_model
-                    )
+                if gemini_client:
+                    # Gemini Imagen 3 bilan haqiqiy rasm
+                    with st.spinner("🎨 Pollinations.ai rasm yaratyapti (10-30 sek)..."):
+                        img_data, err, eng_prompt = generate_image_gemini(prompt)
 
-                    msgs = [{"role":"system","content":sys_instr}]
+                    if img_data:
+                        st.markdown("""
+                            <div class='image-card'>
+                                <h4 style='color:#7c3aed;margin:0 0 10px;'>
+                                    🎨 Gemini Imagen 3 — Yaratilgan Rasm
+                                </h4>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        st.image(img_data,
+                                 caption=f"✅ {prompt[:60]}",
+                                 use_container_width=True)
+                        if eng_prompt and eng_prompt.lower() != prompt.lower():
+                            st.caption(f"🔤 Inglizcha prompt: *{eng_prompt[:80]}*")
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            st.download_button(
+                                "⬇️ 🖼 PNG yuklab olish",
+                                data=img_data,
+                                file_name=f"somo_rasm_{ts_s}.png",
+                                mime="image/png",
+                                key=f"dl_img_{ts_s}",
+                                use_container_width=True
+                            )
+                        with c2:
+                            st.download_button(
+                                "⬇️ WebP yuklab olish",
+                                data=img_data,
+                                file_name=f"somo_rasm_{ts_s}.webp",
+                                mime="image/webp",
+                                key=f"dl_img_webp_{ts_s}",
+                                use_container_width=True
+                            )
+                        st.caption("🎨 Powered by Pollinations.ai (BEPUL)")
+                        res = f"✅ Rasm muvaffaqiyatli yaratildi!"
+                    else:
+                        st.warning(f"{err}\n\n🔄 SVG bilan almashtirilmoqda...")
+                        with st.spinner("🎨 SVG rasm yaratilmoqda..."):
+                            svg = generate_svg_fallback(prompt)
+                        if svg:
+                            st.markdown("""
+                                <div class='image-card'>
+                                    <h4 style='color:#7c3aed;margin:0 0 8px;'>
+                                        🎨 SVG Vektor Rasm
+                                    </h4>
+                                </div>
+                            """, unsafe_allow_html=True)
+                            st.markdown(svg, unsafe_allow_html=True)
+                            st.download_button(
+                                "⬇️ SVG yuklab olish",
+                                svg.encode("utf-8"),
+                                file_name=f"somo_rasm_{ts_s}.svg",
+                                mime="image/svg+xml",
+                                key=f"dl_svg_{ts_s}",
+                                use_container_width=True
+                            )
+                            res = f"SVG rasm: {prompt}"
+                        else:
+                            res = "Rasm yaratib bo'lmadi"
+                            st.error(res)
+                else:
+                    # Gemini yo'q — SVG fallback
+                    with st.spinner("🎨 SVG rasm yaratilmoqda..."):
+                        svg = generate_svg_fallback(prompt)
+                    if svg:
+                        st.markdown("""
+                            <div class='image-card'>
+                                <h4 style='color:#7c3aed;margin:0 0 8px;'>
+                                    🎨 SVG Rasm
+                                    <small style='font-size:11px;opacity:.6;'>
+                                    (PNG uchun GEMINI_API_KEY kerak)
+                                    </small>
+                                </h4>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        st.markdown(svg, unsafe_allow_html=True)
+                        st.download_button(
+                            "⬇️ SVG yuklab olish",
+                            svg.encode("utf-8"),
+                            file_name=f"somo_rasm_{ts_s}.svg",
+                            mime="image/svg+xml",
+                            key=f"dl_svg_ng_{ts_s}",
+                            use_container_width=True
+                        )
+                        st.info(
+                            "💡 Haqiqiy PNG rasm uchun Gemini API key qo'shing:\n"
+                            "**aistudio.google.com** → Get API Key → BEPUL"
+                        )
+                        res = f"SVG rasm yaratildi: {prompt}"
+                    else:
+                        res = "❌ Rasm yaratib bo'lmadi"
+                        st.error(res)
 
-                    if st.session_state.uploaded_file_text:
-                        msgs.append({
-                            "role":"system",
-                            "content":f"Fayllar:\n\n{st.session_state.uploaded_file_text[:6000]}"
+                st.session_state.messages.append({"role":"assistant","content":res})
+                st.session_state.total_messages += 1
+
+            # ── MATN JAVOBI / FAYL YARATISH — GROQ ───────────
+            else:
+                with st.spinner(
+                    f"🤔 {MODELS[active_model]['label']} o'ylayapti..."
+                ):
+                    try:
+                        # System instruksiya
+                        sys_instr = (
+                            "Sening isming Somo AI. Seni Usmonov Sodiq yaratgan. "
+                            "Sen professional, foydali va samimiy yordamchisan. "
+                            "Rasmlarni ko'rib tahlil qila olasan. "
+                            "Matematikani LaTeX ($...$) da yoz. "
+                            "Javoblarni aniq, strukturalashtirilgan qil."
+                        )
+
+                        if want_file:
+                            sys_instr += (
+                                " FAYL YARATISH: "
+                                "Taqdimot so'ralsa — ## sarlavhalar va bulletlar bilan "
+                                "to'liq mazmun yoz. "
+                                "Jadval so'ralsa — Markdown jadval yoki ```csv. "
+                                "Hujjat/rezyume/xat so'ralsa — to'liq mazmun yoz. "
+                                "HTML so'ralsa — ```html blok. "
+                                "Kod so'ralsa — tegishli tildagi to'liq kod. "
+                                "DOIM to'liq tayyor kontent yoz!"
+                            )
+
+                        msgs = [{"role":"system","content":sys_instr}]
+
+                        if st.session_state.uploaded_file_text:
+                            msgs.append({
+                                "role":"system",
+                                "content": (
+                                    "Yuklangan fayllar:\n\n"
+                                    + st.session_state.uploaded_file_text[:6000]
+                                )
+                            })
+
+                        for old in st.session_state.messages[-20:]:
+                            role = old["role"]
+                            cont = old["content"]
+                            if isinstance(cont, list):
+                                txt = " ".join(
+                                    p["text"] for p in cont
+                                    if isinstance(p,dict) and p.get("type")=="text"
+                                )
+                                msgs.append({"role":role,"content":txt})
+                            else:
+                                msgs.append({"role":role,"content":cont})
+
+                        if has_image:
+                            msgs[-1] = {"role":"user","content":user_content}
+
+                        if groq_client:
+                            resp = groq_client.chat.completions.create(
+                                messages=msgs,
+                                model=active_model,
+                                temperature=temperature,
+                                max_tokens=max_tok
+                            )
+                            res = resp.choices[0].message.content
+                            st.markdown(res)
+                            st.caption(
+                                f"⚡ {MODELS[active_model]['label']}"
+                            )
+
+                            # FAQAT FAYL SO'RALSA YARATSIN
+                            if want_file:
+                                create_and_offer_files(res, ts, prompt)
+
+                            st.session_state.messages.append({
+                                "role":"assistant","content":res
+                            })
+                            st.session_state.total_messages += 1
+
+                            if chat_db:
+                                try:
+                                    chat_db.append_row(
+                                        [ts,"Somo AI","Assistant",res]
+                                    )
+                                except Exception:
+                                    pass
+
+                            # Fayllarni tozalash
+                            if has_image or st.session_state.attached_files:
+                                st.session_state.uploaded_image      = None
+                                st.session_state.uploaded_image_type = None
+                                st.session_state.attached_files      = []
+                                st.session_state.uploaded_file_text  = ""
+                        else:
+                            st.error("❌ GROQ_API_KEY mavjud emas!")
+                            st.info(
+                                "💡 **console.groq.com** → API Keys → "
+                                "Create API Key → BEPUL"
+                            )
+
+                    except Exception as e:
+                        err = f"❌ Xatolik: {e}"
+                        st.error(err)
+                        if "model" in str(e).lower():
+                            st.info("💡 Sidebar dan boshqa model tanlang")
+                        st.session_state.messages.append({
+                            "role":"assistant","content":err
                         })
 
-                    for old in st.session_state.messages[-20:]:
-                        role = old["role"]
-                        cont = old["content"]
-                        if isinstance(cont, list):
-                            txt = " ".join(
-                                p["text"] for p in cont
-                                if isinstance(p,dict) and p.get("type")=="text"
-                            )
-                            msgs.append({"role":role,"content":txt})
-                        else:
-                            msgs.append({"role":role,"content":cont})
-
-                    if has_image:
-                        msgs[-1] = {"role":"user","content":user_content}
-
-                    if client:
-                        resp = client.chat.completions.create(
-                            messages=msgs, model=model,
-                            temperature=temperature, max_tokens=4000
-                        )
-                        res = resp.choices[0].message.content
-                        st.markdown(res)
-
-                        # FAYLNI YARATIB YUKLAB BER
-                        create_and_offer_files(res, ts)
-
-                        st.session_state.messages.append({"role":"assistant","content":res})
-                        st.session_state.total_messages += 1
-
-                        if chat_db:
-                            try: chat_db.append_row([ts,"Somo AI","Assistant",res])
-                            except Exception: pass
-
-                        if has_image or st.session_state.attached_files:
-                            st.session_state.uploaded_image      = None
-                            st.session_state.uploaded_image_type = None
-                            st.session_state.attached_files      = []
-                            st.session_state.uploaded_file_text  = ""
-                    else:
-                        st.error("❌ AI xizmati mavjud emas.")
-
-                except Exception as e:
-                    err = f"❌ Xatolik: {e}"
-                    st.error(err)
-                    st.session_state.messages.append({"role":"assistant","content":err})
-
-# ════════════ SHABLONLAR ════════════
-elif st.session_state.current_page=="templates":
+# ═══════════════════════════════════════════════════════
+# 17. SHABLONLAR SAHIFASI
+# ═══════════════════════════════════════════════════════
+elif st.session_state.current_page == "templates":
     st.markdown("""
-        <div style='text-align:center;margin:30px 0;'>
-            <h1 style='font-size:42px;margin-bottom:15px;'>
+        <div style='text-align:center;margin:28px 0;'>
+            <h1 style='font-size:40px;margin-bottom:10px;'>
                 🎨 <span class='gradient-text'>Shablonlar Markazi</span>
             </h1>
-            <p style='color:#64748b;font-size:18px;'>
-                3 professional shablon bilan ishni tezlashtiring
+            <p style='color:#64748b;font-size:17px;'>
+                10 ta professional shablon — 1 bosish bilan ishlatish
             </p>
         </div>
     """, unsafe_allow_html=True)
 
     cat = st.selectbox("📁 Kategoriya:", list(TEMPLATES.keys()), key="tc")
-    st.markdown(f"### {cat} shablonlari")
+    st.markdown(f"### {cat}")
     st.markdown("---")
 
-    for i,tmpl in enumerate(TEMPLATES[cat]):
-        with st.expander(f"{tmpl['icon']} {tmpl['title']}", expanded=(i==0)):
-            st.markdown(f"**📝 Tavsif:** {tmpl['description']}")
+    for i, tmpl in enumerate(TEMPLATES[cat]):
+        with st.expander(
+            f"{tmpl['icon']} {tmpl['title']} — {tmpl['desc']}",
+            expanded=(i == 0)
+        ):
             st.code(tmpl["prompt"], language="text")
-            c1,c2 = st.columns([3,1])
+            c1, c2 = st.columns([3, 1])
             with c1:
-                if st.button("📋 Nusxalash", key=f"cp_{cat}_{i}", use_container_width=True):
-                    st.success("✅ Chatga joylashtiring!")
+                if st.button("📋 Nusxalash", key=f"cp_{cat}_{i}",
+                              use_container_width=True):
+                    st.success("✅ Chatga ko'chiring va [qavs]larni to'ldiring!")
             with c2:
-                if st.button("🚀 Ishlatish", key=f"us_{cat}_{i}", use_container_width=True):
-                    st.session_state.current_page="chat"
-                    st.session_state.messages.append({"role":"user","content":tmpl["prompt"]})
+                if st.button("🚀 Ishlatish", key=f"us_{cat}_{i}",
+                              use_container_width=True):
+                    st.session_state.current_page = "chat"
+                    st.session_state.messages.append(
+                        {"role":"user","content":tmpl["prompt"]}
+                    )
                     st.rerun()
 
-    st.info("💡 [qavs ichidagi] joylarni o'z ma'lumotlaringiz bilan to'ldiring!")
-
-# ════════════ FEEDBACK ════════════
-elif st.session_state.current_page=="feedback":
+    st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("""
-        <div style='text-align:center;margin:30px 0;'>
-            <h1 style='font-size:42px;margin-bottom:15px;'>
-                💌 <span class='gradient-text'>Fikr-Mulohazalar</span>
-            </h1>
-            <p style='color:#64748b;font-size:18px;'>Sizning fikringiz biz uchun muhim!</p>
+        <div class='info-box'>
+            <strong>💡 Qanday ishlatish:</strong>
+            <p style='color:#64748b;margin:6px 0 0;font-size:14px;'>
+                1. Shablon tanlang
+                → 2. "🚀 Ishlatish" bosing
+                → 3. AI javob beradi
+                → 4. Fayl yuklab oling!
+            </p>
+            <p style='color:#94a3b8;font-size:12px;margin:4px 0 0;'>
+                [qavs ichidagi] joylarni o'z ma'lumotlaringiz bilan to'ldiring
+            </p>
         </div>
     """, unsafe_allow_html=True)
 
-    _,fc,_ = st.columns([0.1,1,0.1])
+# ═══════════════════════════════════════════════════════
+# 18. FEEDBACK SAHIFASI
+# ═══════════════════════════════════════════════════════
+elif st.session_state.current_page == "feedback":
+    st.markdown("""
+        <div style='text-align:center;margin:28px 0;'>
+            <h1 style='font-size:40px;margin-bottom:10px;'>
+                💌 <span class='gradient-text'>Fikr-Mulohazalar</span>
+            </h1>
+            <p style='color:#64748b;font-size:17px;'>
+                Sizning fikringiz biz uchun muhim!
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    _, fc, _ = st.columns([.1, 1, .1])
     with fc:
         with st.form("fb_form"):
-            st.markdown("### ⭐ Baholang")
+            st.markdown("### ⭐ Xizmatni baholang")
             rating = st.select_slider(
-                "Baho",[1,2,3,4,5],value=5,
-                format_func=lambda x:"⭐"*x,
+                "Baho", [1,2,3,4,5], value=5,
+                format_func=lambda x: "⭐" * x,
                 label_visibility="collapsed"
             )
             st.markdown(
-                f"<p style='text-align:center;font-size:48px;margin:20px 0;'>{'⭐'*rating}</p>",
+                f"<p style='text-align:center;font-size:48px;margin:14px 0;'>"
+                f"{'⭐' * rating}</p>",
                 unsafe_allow_html=True
             )
-            cat_fb  = st.selectbox("📂 Kategoriya",
-                ["Umumiy fikr","Xato haqida","Yangi funksiya","Savol","Boshqa"],key="fbc")
-            msg_fb  = st.text_area("✍️ Xabar",placeholder="Fikrlaringiz...",height=150,key="fbm")
-            eml_fb  = st.text_input("📧 Email (ixtiyoriy)",placeholder="email@example.com",key="fbe")
-            sub_fb  = st.form_submit_button("📤 Yuborish",use_container_width=True,type="primary")
+            cat_fb = st.selectbox(
+                "📂 Kategoriya",
+                ["Umumiy fikr","Xato haqida","Yangi funksiya",
+                 "Model haqida","Savol","Boshqa"],
+                key="fbc"
+            )
+            msg_fb = st.text_area(
+                "✍️ Xabar", placeholder="Fikr-mulohazalaringiz...",
+                height=130, key="fbm"
+            )
+            eml_fb = st.text_input(
+                "📧 Email (ixtiyoriy)",
+                placeholder="email@example.com", key="fbe"
+            )
+            sub_fb = st.form_submit_button(
+                "📤 Yuborish", use_container_width=True, type="primary"
+            )
 
             if sub_fb:
-                if not msg_fb:        st.error("❌ Xabar yozing!")
-                elif len(msg_fb)<10:  st.error("❌ Kamida 10 ta belgi!")
+                if not msg_fb:
+                    st.error("❌ Xabar yozing!")
+                elif len(msg_fb) < 10:
+                    st.error("❌ Kamida 10 ta belgi!")
                 elif feedback_db:
                     try:
                         feedback_db.append_row([
                             datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            uname,rating,cat_fb,msg_fb,eml_fb or "N/A","Yangi"
+                            uname, rating, cat_fb, msg_fb,
+                            eml_fb or "N/A", "Yangi"
                         ])
                         st.balloons()
                         st.markdown("""
                             <div class='success-message'>
-                                ✅ Rahmat! Fikringiz yuborildi.
+                                ✅ Rahmat! Fikringiz yuborildi. 🙏
                             </div>
                         """, unsafe_allow_html=True)
                         time.sleep(2); st.rerun()
-                    except Exception as e: st.error(f"❌ {e}")
-                else: st.error("❌ Baza mavjud emas!")
+                    except Exception as e:
+                        st.error(f"❌ {e}")
+                else:
+                    st.error("❌ Baza mavjud emas!")
 
+    # STATISTIKA
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("### 📊 Statistika")
     if feedback_db:
         try:
             all_fb = feedback_db.get_all_records()
-            if len(all_fb)>1:
-                fc1,fc2,fc3 = st.columns(3)
+            if len(all_fb) > 1:
+                fc1, fc2, fc3 = st.columns(3)
                 rtgs = [int(f.get("Rating",0)) for f in all_fb[1:] if f.get("Rating")]
-                with fc1: st.metric("📨 Jami",len(all_fb)-1)
-                with fc2: st.metric("⭐ O'rtacha",f"{sum(rtgs)/len(rtgs):.1f}" if rtgs else "—")
-                with fc3: st.metric("🆕 Yangilar",len([f for f in all_fb[-10:] if f.get("Status")=="Yangi"]))
+                with fc1:
+                    st.metric("📨 Jami", len(all_fb) - 1)
+                with fc2:
+                    st.metric("⭐ O'rtacha",
+                              f"{sum(rtgs)/len(rtgs):.1f}" if rtgs else "—")
+                with fc3:
+                    nc = len([f for f in all_fb[-10:] if f.get("Status") == "Yangi"])
+                    st.metric("🆕 Yangilar", nc)
             else:
                 st.info("💬 Hali fikr-mulohazalar yo'q!")
         except Exception:
             st.warning("⚠️ Statistika yuklanmadi")
 
-# ───────────────────────────────────────────────
-# 12. FOOTER
-# ───────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════
+# 19. FOOTER
+# ═══════════════════════════════════════════════════════
 st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown("""
-    <div style='text-align:center;color:#94a3b8;padding:30px;
+    <div style='text-align:center;color:#94a3b8;padding:28px;
                 border-top:2px solid #e2e8f0;
-                background:linear-gradient(180deg,transparent,rgba(14,165,233,.05));'>
-        <p style='margin:8px 0;font-size:18px;font-weight:600;'>
-            🌌 <strong>Somo AI Infinity</strong>
+                background:linear-gradient(180deg,transparent,
+                rgba(14,165,233,.04));'>
+        <p style='margin:8px 0;font-size:18px;font-weight:700;'>
+            🌌 Somo AI Infinity
         </p>
-        <p style='margin:8px 0;color:#64748b;'>
-            Powered by Groq · Llama 3.3 (70B) · LLaMA 4 Scout Vision
+        <p style='margin:6px 0;color:#64748b;'>
+            Powered by&nbsp;
+            <span class='badge badge-groq'>⚡ Groq</span>&nbsp;
+            <span class='badge badge-gemini'>🌟 Gemini</span>
         </p>
-        <p style='margin:8px 0;'>👨‍💻 Yaratuvchi: <strong>Usmonov Sodiq</strong></p>
-        <p style='margin:8px 0;'>👨‍💻 Yordamchi: <strong>Davlatov Mironshoh</strong></p>
-        <p style='margin:8px 0;font-size:13px;'>
-            📧 support@somoai.uz | 🌐 www.somoai.uz
+        <p style='margin:6px 0;font-size:13px;color:#64748b;'>
+            Llama 3.3 70B · LLaMA 4 Scout Vision · Mixtral 8x7B
+            🎨 Pollinations.ai (bepul rasm yaratish)
         </p>
-        <p style='margin:15px 0 0;font-size:12px;color:#94a3b8;'>
-            © 2026 Barcha huquqlar himoyalangan | Versiya 2.3 Pro
+        <p style='margin:6px 0;'>
+            👨‍💻 <strong>Usmonov Sodiq</strong> &nbsp;|&nbsp;
+            🤝 <strong>Davlatov Mironshoh</strong>
+        </p>
+        <p style='margin:6px 0;font-size:13px;'>
+            📧 support@somoai.uz &nbsp;|&nbsp; 🌐 www.somoai.uz
+        </p>
+        <p style='margin:12px 0 0;font-size:12px;'>
+            © 2026 Barcha huquqlar himoyalangan &nbsp;|&nbsp;
+            Versiya 3.1 Pro
         </p>
     </div>
 """, unsafe_allow_html=True)
