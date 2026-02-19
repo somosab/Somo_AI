@@ -1098,8 +1098,7 @@ if not st.session_state.logged_in:
                 🖼 Gemini Vision &nbsp;|&nbsp;
                 📄 Gemini PDF &nbsp;|&nbsp;
                 📊 PPTX/Excel &nbsp;|&nbsp;
-                📝 Word &nbsp;|&nbsp;
-                🎙 Whisper Audio
+                📝 Word
             </p>
         </div>
     """, unsafe_allow_html=True)
@@ -1208,7 +1207,6 @@ if not st.session_state.logged_in:
                 | 🖼 Rasm tahlil | **Gemini Flash** | Dunyodagi eng yaxshi vision |
                 | 📄 PDF o'qish | **Gemini Flash** | Native PDF, jadval+rasm ko'radi |
                 | 📝 DOCX o'qish | **Gemini Flash** | Formatlash saqlanadi |
-                | 🎙 Audio → Matn | **Groq Whisper** | 99 til, yuqori aniqlik |
                 | 📊 PPTX yaratish | **Lokal** | Python-pptx |
                 | 📊 Excel yaratish | **Lokal** | Openpyxl |
                 | 📝 Word yaratish | **Lokal** | Python-docx |
@@ -1266,7 +1264,7 @@ with st.sidebar:
     gm_ok = "✅" if gemini_model else "❌"
     st.markdown(f"""
         <div style='background:white;border-radius:10px;padding:10px;font-size:13px;'>
-            <div>{g_ok} <b>Groq</b> — Chat, Whisper</div>
+            <div>{g_ok} <b>Groq</b> — Chat</div>
             <div>{gm_ok} <b>Gemini</b> — Vision, PDF, DOCX</div>
         </div>
     """, unsafe_allow_html=True)
@@ -1569,44 +1567,107 @@ if st.session_state.current_page == "chat":
                     })
                     st.success(f"✅ 🟠 Groq: {f.name} ({len(txt):,} belgi)")
 
-    # Audio kirish (Whisper)
-    with st.expander("🎙 Ovozli xabar — Groq Whisper", expanded=False):
-        st.markdown("""
-            <div class='upload-zone'>
-                <p style='color:#0284c7;font-size:16px;margin:0;'>🎙 Audio faylni yuklang</p>
-                <p style='color:#64748b;font-size:13px;margin:5px 0 0;'>
-                    WAV, MP3, M4A · O'zbek, Rus, Ingliz tillarida
-                </p>
-            </div>
-        """, unsafe_allow_html=True)
-        audio_file = st.file_uploader(
-            "Audio", label_visibility="collapsed",
-            type=["wav","mp3","m4a","ogg","flac","webm"],
-            key="audio_upload"
-        )
-        if audio_file:
-            st.audio(audio_file)
-            if st.button("🎙 Matnга aylantirish (Whisper)", use_container_width=True):
-                with st.spinner("🎙 Whisper AI tinglayapti..."):
-                    audio_bytes = audio_file.read()
-                    transcribed = groq_whisper(audio_bytes, audio_file.name)
-                    if transcribed:
-                        st.success(f"✅ Aniqlangan matn:")
-                        st.info(transcribed)
-                        st.session_state["whisper_text"] = transcribed
-                    else:
-                        st.error("❌ Audio o'qilmadi. Groq Whisper mavjud emas yoki xato.")
+    # ── CHATGPT USLUBIDA INPUT ───────────────────
+    st.markdown("""
+        <style>
+        /* Streamlit default chat input va footer yashirish */
+        [data-testid="stChatInput"] { display: none !important; }
+        footer { display: none !important; }
+        #MainMenu { display: none !important; }
 
-    # CHAT INPUT
-    user_input = st.chat_input(
-        "💭 Xabar yuboring... | ➕ fayl biriktirish yuqorida",
-        key="main_chat_input"
-    )
+        /* Custom chat input konteyner */
+        .custom-chat-wrapper {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            padding: 16px 20px 20px;
+            background: linear-gradient(to top, #f8fafc 80%, transparent);
+        }
+        .custom-chat-inner {
+            width: 100%;
+            max-width: 800px;
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 18px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+            display: flex;
+            align-items: flex-end;
+            gap: 10px;
+            padding: 10px 14px;
+            transition: box-shadow 0.2s, border-color 0.2s;
+        }
+        .custom-chat-inner:focus-within {
+            border-color: #0ea5e9;
+            box-shadow: 0 4px 32px rgba(14,165,233,0.18);
+        }
+        .custom-chat-inner textarea {
+            flex: 1;
+            border: none !important;
+            outline: none !important;
+            box-shadow: none !important;
+            resize: none;
+            font-size: 15px;
+            line-height: 1.6;
+            background: transparent;
+            color: #0f172a;
+            min-height: 24px;
+            max-height: 160px;
+            font-family: inherit;
+            padding: 2px 0;
+        }
+        .custom-chat-inner textarea::placeholder { color: #94a3b8; }
+        .send-btn {
+            background: linear-gradient(135deg, #0ea5e9, #6366f1);
+            border: none;
+            border-radius: 12px;
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            color: white;
+            font-size: 18px;
+        }
+        .send-btn:hover {
+            transform: scale(1.08);
+            box-shadow: 0 4px 14px rgba(14,165,233,0.4);
+        }
+        .send-btn:disabled {
+            background: #e2e8f0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        /* Chat content bottom padding */
+        .main .block-container { padding-bottom: 120px !important; }
+        </style>
+    """, unsafe_allow_html=True)
 
-    # Whisper matni avtomatik qo'shish
-    if "whisper_text" in st.session_state and st.session_state.whisper_text:
-        user_input = st.session_state.whisper_text
-        del st.session_state["whisper_text"]
+    # Input state
+    if "chat_input_value" not in st.session_state:
+        st.session_state.chat_input_value = ""
+
+    # Custom input form
+    with st.form("custom_chat_form", clear_on_submit=True):
+        col_input, col_btn = st.columns([12, 1])
+        with col_input:
+            typed = st.text_area(
+                "Xabar",
+                placeholder="💭 Xabar yuboring...",
+                label_visibility="collapsed",
+                key="custom_input_area",
+                height=56,
+            )
+        with col_btn:
+            st.markdown("<div style='padding-top:8px;'>", unsafe_allow_html=True)
+            submitted = st.form_submit_button(
+                "➤",
+                use_container_width=True,
+            )
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    user_input = typed.strip() if submitted and typed and typed.strip() else None
 
     if user_input:
         ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
