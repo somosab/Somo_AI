@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import gspread
 import hashlib
 import mammoth
@@ -6,1915 +7,1564 @@ import base64
 import time
 import json
 import io
-import os
 import csv
 import re
-from pypdf import PdfReader
 from oauth2client.service_account import ServiceAccountCredentials
 from groq import Groq
 from datetime import datetime
 from streamlit_cookies_manager import EncryptedCookieManager
 
-# ───────────────────────────────────────────────
-# 1. SAHIFA SOZLAMALARI
-# ───────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════
+# 1. PAGE CONFIG
+# ════════════════════════════════════════════════════════════════
 st.set_page_config(
-    page_title="Somo AI | Universal Infinity",
-    page_icon="🌌",
+    page_title="Somo AI",
+    page_icon="✦",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 cookies = EncryptedCookieManager(
-    password=st.secrets.get("COOKIE_PASSWORD", "Somo_AI_Secret_Key_2026_Final_PRO")
+    password=st.secrets.get("COOKIE_PASSWORD", "SomoAI_v7_2026_ultra")
 )
 if not cookies.ready():
     st.stop()
 
-# ───────────────────────────────────────────────
-# 2. CSS DIZAYN
-# ───────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════
+# 2. GLOBAL CSS — ChatGPT PIXEL-PERFECT
+# ════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
-.stApp {
-    background: linear-gradient(135deg,#f8fafc 0%,#e0f2fe 50%,#ddd6fe 100%) !important;
+/* ── FONT ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap');
+
+/* ── ROOT VARIABLES (ChatGPT exact palette) ── */
+:root {
+  --c-bg:           #ffffff;
+  --c-sidebar:      #f9f9f9;
+  --c-sidebar-item: #ececec;
+  --c-hover:        #ececec;
+  --c-active:       #e3e3e3;
+  --c-border:       #e5e5e5;
+  --c-border2:      #d1d1d1;
+  --c-input-bg:     #ffffff;
+  --c-input-border: #d1d1d1;
+  --c-user-bubble:  #f4f4f4;
+  --c-text:         #0d0d0d;
+  --c-text2:        #444444;
+  --c-text3:        #6b6b6b;
+  --c-text4:        #adadad;
+  --c-green:        #10a37f;
+  --c-send:         #0d0d0d;
+  --c-send-dis:     #d1d1d1;
+  --sb-w:           260px;
+  --font:           'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --mono:           'Fira Code', 'Courier New', monospace;
+  --r:              12px;
+  --r2:             8px;
+  --ease:           cubic-bezier(0.4, 0, 0.2, 1);
 }
-[data-testid="stSidebarNav"] { display:none !important; }
-.st-emotion-cache-1vt458p,.st-emotion-cache-k77z8z,.st-emotion-cache-12fmjuu {
-    font-size:0px !important; color:transparent !important;
+
+/* ── RESET ── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body, .stApp {
+  background: var(--c-bg) !important;
+  color: var(--c-text) !important;
+  font-family: var(--font) !important;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ── HIDE STREAMLIT CHROME ── */
+#MainMenu, footer, header,
+[data-testid="stSidebarNav"],
+[data-testid="stDecoration"],
+[data-testid="stToolbar"],
+.st-emotion-cache-1vt458p,
+.st-emotion-cache-k77z8z,
+.st-emotion-cache-12fmjuu { display: none !important; }
+
+/* ══════════════════════════════════════════
+   SIDEBAR — ChatGPT f9f9f9 exact
+   ══════════════════════════════════════════ */
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg,#e0f2fe 0%,#bae6fd 50%,#c7d2fe 100%) !important;
-    border-right: 3px solid #7dd3fc;
+  background: var(--c-sidebar) !important;
+  border-right: 1px solid var(--c-border) !important;
+  width: var(--sb-w) !important;
+  min-width: var(--sb-w) !important;
 }
-[data-testid="stSidebar"] section,
-[data-testid="stSidebar"] .stVerticalBlock { background:transparent !important; }
-div[data-testid="stSidebar"] button {
-    background: linear-gradient(135deg,#fff 0%,#f8fafc 100%) !important;
-    color: #0284c7 !important;
-    border: 2px solid #0ea5e9 !important;
-    border-radius: 12px !important;
-    font-weight: 700 !important;
-    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-    width: 100% !important;
-    padding: 12px !important;
-    margin: 5px 0 !important;
-    box-shadow: 0 2px 8px rgba(14,165,233,0.15);
+[data-testid="stSidebar"] > div:first-child {
+  padding: 0 !important;
+  background: transparent !important;
 }
-div[data-testid="stSidebar"] button:hover {
-    background: linear-gradient(135deg,#0ea5e9,#6366f1) !important;
-    color: white !important;
-    transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(14,165,233,0.4);
+[data-testid="stSidebar"] section { background: transparent !important; }
+
+/* All sidebar buttons */
+div[data-testid="stSidebar"] .stButton > button {
+  background: transparent !important;
+  color: var(--c-text2) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  font-family: var(--font) !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  text-align: left !important;
+  padding: 8px 12px !important;
+  margin: 1px 0 !important;
+  width: 100% !important;
+  min-height: 36px !important;
+  box-shadow: none !important;
+  transition: background 0.12s !important;
+  justify-content: flex-start !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
-.dashboard-container {
-    display:flex; flex-wrap:wrap; gap:25px;
-    justify-content:center; margin-top:30px; padding:20px;
+div[data-testid="stSidebar"] .stButton > button:hover {
+  background: var(--c-hover) !important;
+  color: var(--c-text) !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
-.card-box {
-    background: linear-gradient(145deg,#fff,#f1f5f9);
-    border-radius: 20px; padding: 35px; text-align: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.08),0 1px 8px rgba(0,0,0,0.05);
-    border: 2px solid #e2e8f0;
-    transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
-    flex:1; min-width:280px; max-width:380px;
-    cursor:pointer; position:relative; overflow:hidden;
+/* Primary button in sidebar (Yangi suhbat + Chiqish) */
+div[data-testid="stSidebar"] .stButton > button[kind="primary"] {
+  background: var(--c-send) !important;
+  color: #ffffff !important;
+  font-weight: 500 !important;
+  border-radius: 6px !important;
 }
-.card-box::before {
-    content:''; position:absolute; top:0; left:-100%;
-    width:100%; height:100%;
-    background:linear-gradient(90deg,transparent,rgba(14,165,233,0.1),transparent);
-    transition:0.5s;
+div[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {
+  background: #2a2a2a !important;
 }
-.card-box:hover::before { left:100%; }
-.card-box:hover {
-    transform: translateY(-12px) scale(1.02);
-    box-shadow: 0 20px 40px rgba(14,165,233,0.25);
-    border-color: #0ea5e9;
+
+/* ══════════════════════════════════════════
+   MAIN AREA
+   ══════════════════════════════════════════ */
+.main .block-container {
+  max-width: 680px !important;
+  margin: 0 auto !important;
+  padding: 0 16px 180px !important;
 }
-@media (max-width:768px) {
-    .card-box { min-width:150px !important; padding:20px !important; }
-    .card-box h1 { font-size:28px !important; }
-    .card-box h3 { font-size:17px !important; }
-    .card-box p  { font-size:13px !important; }
-    h1 { font-size:26px !important; }
+
+/* ══════════════════════════════════════════
+   CHAT MESSAGES — ChatGPT layout
+   ══════════════════════════════════════════ */
+[data-testid="stChatMessage"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 18px 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
 }
-.gradient-text {
-    background: linear-gradient(90deg,#0284c7,#6366f1,#8b5cf6,#ec4899);
-    background-size: 300% 300%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-weight: 800;
-    animation: gradient-shift 4s ease infinite;
+
+/* Message content text */
+[data-testid="stChatMessageContent"] {
+  font-family: var(--font) !important;
+  font-size: 15px !important;
+  line-height: 1.72 !important;
+  color: var(--c-text) !important;
 }
-@keyframes gradient-shift {
-    0%,100% { background-position:0% 50%; }
-    50%      { background-position:100% 50%; }
+[data-testid="stChatMessageContent"] p {
+  margin-bottom: 10px !important;
+  color: var(--c-text) !important;
 }
-.stTabs [data-baseweb="tab-list"] { gap:20px; background:transparent; }
+[data-testid="stChatMessageContent"] p:last-child { margin-bottom: 0 !important; }
+
+/* Code inline */
+[data-testid="stChatMessageContent"] code {
+  background: #f0f0f0 !important;
+  color: #c7254e !important;
+  font-family: var(--mono) !important;
+  font-size: 13px !important;
+  padding: 2px 5px !important;
+  border-radius: 4px !important;
+  border: none !important;
+}
+/* Code block */
+[data-testid="stChatMessageContent"] pre {
+  background: #f6f8fa !important;
+  border: 1px solid var(--c-border) !important;
+  border-radius: var(--r2) !important;
+  padding: 14px 16px !important;
+  overflow-x: auto !important;
+  margin: 12px 0 !important;
+  font-size: 13px !important;
+}
+[data-testid="stChatMessageContent"] pre code {
+  background: transparent !important;
+  color: #24292e !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+/* Lists in messages */
+[data-testid="stChatMessageContent"] ul,
+[data-testid="stChatMessageContent"] ol {
+  margin: 8px 0 8px 20px !important;
+  color: var(--c-text) !important;
+}
+[data-testid="stChatMessageContent"] li { margin-bottom: 4px !important; }
+
+/* ══════════════════════════════════════════
+   CHAT INPUT BAR — ChatGPT oval style
+   Oval input, + left, mic+send right
+   ══════════════════════════════════════════ */
+[data-testid="stChatInput"] {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: var(--sb-w) !important;
+  right: 0 !important;
+  background: linear-gradient(to top, #ffffff 75%, transparent) !important;
+  padding: 14px 24px 22px !important;
+  z-index: 999 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+[data-testid="stChatInput"] > div {
+  max-width: 680px !important;
+  margin: 0 auto !important;
+}
+[data-testid="stChatInput"] textarea {
+  background: var(--c-input-bg) !important;
+  color: var(--c-text) !important;
+  border: 1px solid var(--c-input-border) !important;
+  border-radius: 28px !important;
+  font-family: var(--font) !important;
+  font-size: 15px !important;
+  line-height: 1.5 !important;
+  padding: 14px 52px 14px 48px !important;
+  resize: none !important;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.05), 0 2px 6px rgba(0,0,0,0.07) !important;
+  transition: box-shadow 0.2s !important;
+  min-height: 52px !important;
+  max-height: 240px !important;
+}
+[data-testid="stChatInput"] textarea:focus {
+  outline: none !important;
+  border-color: var(--c-border2) !important;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 3px 12px rgba(0,0,0,0.1) !important;
+}
+[data-testid="stChatInput"] textarea::placeholder {
+  color: var(--c-text4) !important;
+  font-weight: 300 !important;
+}
+/* Send button — round black */
+[data-testid="stChatInput"] button {
+  background: var(--c-send) !important;
+  border-radius: 50% !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  transition: background 0.15s, transform 0.1s !important;
+}
+[data-testid="stChatInput"] button:hover {
+  background: #2a2a2a !important;
+  transform: scale(1.06) !important;
+}
+[data-testid="stChatInput"] button:disabled {
+  background: var(--c-send-dis) !important;
+  transform: none !important;
+}
+
+/* ══════════════════════════════════════════
+   FORM INPUTS
+   ══════════════════════════════════════════ */
+.stTextInput input,
+.stTextArea textarea,
+.stNumberInput input {
+  background: var(--c-bg) !important;
+  color: var(--c-text) !important;
+  border: 1px solid var(--c-border2) !important;
+  border-radius: var(--r2) !important;
+  font-family: var(--font) !important;
+  font-size: 14px !important;
+  padding: 10px 14px !important;
+  transition: border-color 0.15s, box-shadow 0.15s !important;
+  box-shadow: none !important;
+}
+.stTextInput input:focus,
+.stTextArea textarea:focus {
+  border-color: #aaaaaa !important;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.05) !important;
+  outline: none !important;
+}
+label,
+.stTextInput label, .stTextArea label,
+.stSelectbox label, .stSlider label,
+.stFileUploader label, .stCheckbox label {
+  color: var(--c-text2) !important;
+  font-family: var(--font) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+/* ══════════════════════════════════════════
+   SELECTBOX
+   ══════════════════════════════════════════ */
+.stSelectbox [data-baseweb="select"] > div {
+  background: var(--c-bg) !important;
+  border: 1px solid var(--c-border2) !important;
+  border-radius: var(--r2) !important;
+  color: var(--c-text) !important;
+  font-family: var(--font) !important;
+}
+.stSelectbox [data-baseweb="popover"] ul {
+  background: var(--c-bg) !important;
+  border: 1px solid var(--c-border) !important;
+  border-radius: var(--r2) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12) !important;
+}
+.stSelectbox [data-baseweb="popover"] li { color: var(--c-text) !important; }
+.stSelectbox [data-baseweb="popover"] li:hover { background: var(--c-hover) !important; }
+
+/* ══════════════════════════════════════════
+   BUTTONS (main area)
+   ══════════════════════════════════════════ */
+.stButton > button {
+  background: var(--c-bg) !important;
+  color: var(--c-text) !important;
+  border: 1px solid var(--c-border2) !important;
+  border-radius: var(--r2) !important;
+  font-family: var(--font) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  padding: 8px 16px !important;
+  box-shadow: none !important;
+  transition: background 0.12s !important;
+  cursor: pointer !important;
+}
+.stButton > button:hover {
+  background: var(--c-hover) !important;
+  border-color: #bbbbbb !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.stButton > button[kind="primary"] {
+  background: var(--c-send) !important;
+  color: #ffffff !important;
+  border-color: var(--c-send) !important;
+}
+.stButton > button[kind="primary"]:hover {
+  background: #2a2a2a !important;
+}
+
+/* ══════════════════════════════════════════
+   DOWNLOAD BUTTONS
+   ══════════════════════════════════════════ */
+.stDownloadButton > button {
+  background: transparent !important;
+  color: var(--c-green) !important;
+  border: 1px solid rgba(16,163,127,0.35) !important;
+  border-radius: var(--r2) !important;
+  font-family: var(--font) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  padding: 7px 14px !important;
+  box-shadow: none !important;
+  transition: background 0.12s !important;
+}
+.stDownloadButton > button:hover {
+  background: rgba(16,163,127,0.08) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* ══════════════════════════════════════════
+   FORM SUBMIT
+   ══════════════════════════════════════════ */
+[data-testid="stFormSubmitButton"] > button {
+  background: var(--c-send) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: var(--r2) !important;
+  font-family: var(--font) !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  padding: 11px 20px !important;
+  width: 100% !important;
+  box-shadow: none !important;
+  transition: background 0.12s !important;
+}
+[data-testid="stFormSubmitButton"] > button:hover {
+  background: #2a2a2a !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* ══════════════════════════════════════════
+   EXPANDER
+   ══════════════════════════════════════════ */
+.stExpander {
+  background: #fafafa !important;
+  border: 1px solid var(--c-border) !important;
+  border-radius: var(--r) !important;
+  margin-bottom: 6px !important;
+  box-shadow: none !important;
+}
+.stExpander summary {
+  color: var(--c-text2) !important;
+  font-family: var(--font) !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  padding: 10px 14px !important;
+}
+.stExpander summary:hover { color: var(--c-text) !important; }
+[data-testid="stExpanderDetails"] {
+  background: #fafafa !important;
+  padding: 10px 14px 14px !important;
+}
+
+/* ══════════════════════════════════════════
+   TABS
+   ══════════════════════════════════════════ */
+.stTabs [data-baseweb="tab-list"] {
+  background: transparent !important;
+  border-bottom: 1px solid var(--c-border) !important;
+  gap: 0 !important; padding: 0 !important;
+}
 .stTabs [data-baseweb="tab"] {
-    height:55px; background:linear-gradient(145deg,#fff,#f8fafc);
-    border-radius:12px 12px 0 0; padding:0 25px;
-    border:2px solid #e2e8f0; transition:all 0.3s;
-    box-shadow:0 2px 8px rgba(0,0,0,0.05);
+  background: transparent !important;
+  color: var(--c-text3) !important;
+  border: none !important;
+  border-bottom: 2px solid transparent !important;
+  border-radius: 0 !important;
+  font-family: var(--font) !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  padding: 10px 16px !important;
+  box-shadow: none !important;
+  margin: 0 !important;
+  transition: color 0.12s !important;
 }
-.stTabs [data-baseweb="tab"]:hover {
-    background:linear-gradient(145deg,#f1f5f9,#e2e8f0);
-    border-color:#0ea5e9; transform:translateY(-2px);
+.stTabs [data-baseweb="tab"]:hover { color: var(--c-text) !important; }
+.stTabs [aria-selected="true"] {
+  color: var(--c-text) !important;
+  border-bottom-color: var(--c-text) !important;
+  font-weight: 500 !important;
 }
-.stChatMessage {
-    background: linear-gradient(145deg,#fff,#fafafa);
-    border-radius:15px; padding:15px; margin:10px 0;
-    box-shadow:0 4px 15px rgba(0,0,0,0.06);
-    border:1px solid #e2e8f0;
+
+/* ══════════════════════════════════════════
+   FILE UPLOADER
+   ══════════════════════════════════════════ */
+[data-testid="stFileUploader"] {
+  background: #fafafa !important;
+  border: 1.5px dashed var(--c-border2) !important;
+  border-radius: var(--r) !important;
+  padding: 16px !important;
+  transition: border-color 0.15s !important;
 }
-.stChatInputContainer {
-    border-top:2px solid #e2e8f0;
-    background:linear-gradient(180deg,#fff,#f8fafc);
-    padding:15px; box-shadow:0 -4px 15px rgba(0,0,0,0.05);
+[data-testid="stFileUploader"]:hover { border-color: #aaa !important; }
+
+/* ══════════════════════════════════════════
+   ALERTS
+   ══════════════════════════════════════════ */
+.stSuccess {
+  background: #f0fdf4 !important;
+  border-left: 3px solid #22c55e !important;
+  color: #15803d !important;
+  border-radius: var(--r2) !important;
 }
-.metric-card {
-    background:linear-gradient(135deg,#fff,#f0f9ff);
-    border-radius:12px; padding:15px; text-align:center;
-    border:2px solid #bae6fd; transition:0.3s;
+.stError {
+  background: #fef2f2 !important;
+  border-left: 3px solid #ef4444 !important;
+  color: #b91c1c !important;
+  border-radius: var(--r2) !important;
 }
-.metric-card:hover {
-    transform:translateY(-5px);
-    box-shadow:0 10px 25px rgba(14,165,233,0.2);
+.stWarning {
+  background: #fffbeb !important;
+  border-left: 3px solid #f59e0b !important;
+  color: #b45309 !important;
+  border-radius: var(--r2) !important;
 }
-.upload-zone {
-    border:2px dashed #0ea5e9; border-radius:16px;
-    padding:20px; text-align:center;
-    background:linear-gradient(135deg,rgba(14,165,233,0.05),rgba(99,102,241,0.05));
-    margin-bottom:15px; transition:all 0.3s;
+.stInfo {
+  background: #eff6ff !important;
+  border-left: 3px solid #3b82f6 !important;
+  color: #1d4ed8 !important;
+  border-radius: var(--r2) !important;
 }
-.upload-zone:hover {
-    border-color:#6366f1;
-    background:linear-gradient(135deg,rgba(14,165,233,0.1),rgba(99,102,241,0.1));
-    transform:translateY(-2px);
+
+/* ══════════════════════════════════════════
+   MISC
+   ══════════════════════════════════════════ */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #dddddd; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #bbbbbb; }
+.stSpinner > div { border-top-color: var(--c-text3) !important; }
+hr { border: none !important; border-top: 1px solid var(--c-border) !important; margin: 10px 0 !important; }
+[data-testid="stMetricValue"] { color: var(--c-text) !important; font-weight: 600 !important; font-size: 20px !important; }
+[data-testid="stMetricLabel"] { color: var(--c-text3) !important; font-size: 11px !important; }
+audio { border-radius: var(--r2); width: 100%; margin-top: 6px; }
+
+/* ══════════════════════════════════════════
+   CUSTOM COMPONENTS
+   ══════════════════════════════════════════ */
+
+/* ─ Sidebar header ─ */
+.sb-top {
+  padding: 12px 10px 6px;
+  display: flex; align-items: center; justify-content: space-between;
 }
-.file-badge {
-    display:inline-flex; align-items:center; gap:8px;
-    background:linear-gradient(135deg,#e0f2fe,#ddd6fe);
-    border:1px solid #7dd3fc; border-radius:20px;
-    padding:6px 14px; font-size:13px; font-weight:600;
-    color:#0284c7; margin:4px;
+.sb-logo {
+  font-size: 14px; font-weight: 600;
+  color: var(--c-text); display: flex; align-items: center; gap: 6px;
+  letter-spacing: -.2px;
 }
-.success-message {
-    background:linear-gradient(135deg,#10b981,#059669);
-    color:white; padding:15px 25px; border-radius:12px;
-    text-align:center; font-weight:600;
-    animation:slideIn 0.5s ease;
+.sb-logo-dot { color: var(--c-green); }
+
+/* ─ Sidebar chat history item ─ */
+.sb-chat-item {
+  display: block; padding: 8px 12px; font-size: 13px;
+  color: var(--c-text2); border-radius: 6px; cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: background 0.12s;
 }
-@keyframes slideIn {
-    from { transform:translateY(-20px); opacity:0; }
-    to   { transform:translateY(0);     opacity:1; }
+.sb-chat-item:hover { background: var(--c-hover); color: var(--c-text); }
+.sb-chat-item.active { background: var(--c-active); color: var(--c-text); }
+
+/* ─ Sidebar section label ─ */
+.sb-sec {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.6px;
+  text-transform: uppercase; color: var(--c-text4);
+  padding: 12px 14px 4px;
 }
-.download-card {
-    background:linear-gradient(135deg,#f0fdf4,#dcfce7);
-    border:2px solid #86efac; border-radius:15px;
-    padding:20px; margin:10px 0;
-    box-shadow:0 4px 15px rgba(16,185,129,0.15);
+/* ─ Divider ─ */
+.sb-div { height: 1px; background: var(--c-border); margin: 6px 8px; }
+
+/* ─ Sidebar user ─ */
+.sb-user {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px 14px;
 }
-.template-card {
-    background:white; border-radius:15px; padding:25px;
-    border:2px solid #e2e8f0; transition:0.3s; cursor:pointer;
+.sb-av {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--c-green);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
 }
-.template-card:hover {
-    transform:translateY(-8px);
-    box-shadow:0 15px 35px rgba(99,102,241,0.2);
-    border-color:#6366f1;
+.sb-name { font-size: 13px; font-weight: 500; color: var(--c-text); }
+.sb-plan { font-size: 11px; color: var(--c-text4); }
+
+/* ─ Mini stat box ─ */
+.sb-stat {
+  background: var(--c-hover); border-radius: 6px;
+  padding: 8px 10px; text-align: center;
 }
-.feedback-box {
-    background:linear-gradient(145deg,#fff,#f8fafc);
-    border-radius:20px; padding:30px; margin:20px 0;
-    box-shadow:0 10px 30px rgba(0,0,0,0.08);
-    border:2px solid #e2e8f0;
+.sb-stat-v { font-size: 18px; font-weight: 600; color: var(--c-text); }
+.sb-stat-l { font-size: 10px; color: var(--c-text4); margin-top: 1px; }
+
+/* ─ API pill ─ */
+.xp {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 20px;
+  font-size: 11px; font-weight: 500; margin: 2px;
 }
-.vision-badge {
-    background:linear-gradient(135deg,#8b5cf6,#6366f1);
-    color:white; padding:4px 12px; border-radius:20px;
-    font-size:12px; font-weight:700;
-    display:inline-block; margin-bottom:10px;
+.xp-g  { background: #fff4ec; color: #c2410c; border: 1px solid #fdd6a5; }
+.xp-gm { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
+/* ─ File chip ─ */
+.xfc {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #f4f4f4; border: 1px solid var(--c-border2);
+  border-radius: 20px; padding: 3px 10px;
+  font-size: 12px; color: var(--c-text2); margin: 2px;
 }
-.api-badge {
-    display:inline-flex; align-items:center; gap:6px;
-    padding:4px 12px; border-radius:20px;
-    font-size:12px; font-weight:700; margin:2px;
+
+/* ─ Download card ─ */
+.xdl {
+  background: #fafafa; border: 1px solid var(--c-border);
+  border-left: 3px solid var(--c-green);
+  border-radius: var(--r2); padding: 12px 14px; margin: 8px 0;
 }
-.api-groq {
-    background:linear-gradient(135deg,#f97316,#ea580c);
-    color:white;
+.xdl-t { font-size: 12px; font-weight: 600; color: var(--c-green); margin-bottom: 8px; }
+
+/* ─ HOME SCREEN — ChatGPT center layout ─ */
+.home-center {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 60px 0 20px;
 }
-.api-gemini {
-    background:linear-gradient(135deg,#4285f4,#0f9d58);
-    color:white;
+.home-title {
+  font-size: 30px; font-weight: 600; color: var(--c-text);
+  letter-spacing: -0.5px; text-align: center; margin-bottom: 28px;
+}
+/* 2x2 suggestion grid */
+.sg-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 8px; width: 100%; margin: 0 0 16px;
+}
+.sg-card {
+  background: var(--c-bg); border: 1px solid var(--c-border);
+  border-radius: var(--r); padding: 14px 16px; cursor: pointer;
+  transition: background 0.12s, border-color 0.12s; text-align: left;
+}
+.sg-card:hover { background: #f7f7f7; border-color: #c0c0c0; }
+.sg-title { font-size: 13px; font-weight: 500; color: var(--c-text); margin-bottom: 2px; }
+.sg-desc  { font-size: 12px; color: var(--c-text3); line-height: 1.4; }
+
+/* ─ LOGIN ─ */
+.login-wrap { max-width: 350px; margin: 64px auto; padding: 0 16px; }
+.login-logo { font-size: 22px; font-weight: 600; color: var(--c-text); text-align: center; margin-bottom: 4px; }
+.login-sub  { font-size: 14px; color: var(--c-text3); text-align: center; margin-bottom: 22px; }
+.login-box  {
+  background: var(--c-bg); border: 1px solid var(--c-border);
+  border-radius: 14px; padding: 28px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05), 0 4px 20px rgba(0,0,0,0.07);
+}
+
+/* ─ Template card ─ */
+.tpl-card {
+  background: #fafafa; border: 1px solid var(--c-border);
+  border-radius: var(--r); padding: 16px; margin-bottom: 8px;
+}
+
+/* ─ Page header ─ */
+.pg-h { font-size: 26px; font-weight: 600; color: var(--c-text); text-align: center; padding: 36px 0 6px; letter-spacing: -0.4px; }
+.pg-s { font-size: 14px; color: var(--c-text3); text-align: center; margin-bottom: 24px; }
+
+/* ─ Footer ─ */
+.foot {
+  text-align: center; color: var(--c-text4); font-size: 12px;
+  padding: 20px 0 10px; border-top: 1px solid var(--c-border);
+  margin-top: 36px; line-height: 2;
+}
+
+/* ─ Paste notify toast ─ */
+#somo-toast {
+  position: fixed; bottom: 86px; left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  background: #0d0d0d; color: #fff;
+  padding: 8px 18px; border-radius: 20px;
+  font-size: 13px; font-family: Inter, sans-serif;
+  z-index: 9999; opacity: 0;
+  transition: opacity 0.22s, transform 0.22s;
+  pointer-events: none; white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+#somo-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ─ Mobile ─ */
+@media (max-width: 768px) {
+  :root { --sb-w: 0px; }
+  .main .block-container { padding: 0 12px 160px !important; }
+  [data-testid="stChatInput"] { left: 0 !important; padding: 10px 12px 16px !important; }
+  .sg-grid { grid-template-columns: 1fr !important; }
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ───────────────────────────────────────────────
-# 3. BAZA VA AI ALOQASI
-# ───────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════
+# 3. PASTE / DRAG-DROP JS HANDLER
+# ════════════════════════════════════════════════════════════════
+def paste_js():
+    components.html("""
+<div id="somo-toast">📋 Rasm clipboard'dan qo'shildi!</div>
+<script>
+(function(){
+  function toast(msg){
+    var el=document.getElementById('somo-toast');
+    if(!el) return;
+    el.textContent=msg;
+    el.classList.add('show');
+    setTimeout(function(){ el.classList.remove('show'); }, 2400);
+  }
+  // Paste (Ctrl+V)
+  document.addEventListener('paste', function(e){
+    var items=(e.clipboardData||window.clipboardData||{}).items;
+    if(!items) return;
+    for(var i=0;i<items.length;i++){
+      if(items[i].type.indexOf('image')!==-1){
+        var f=items[i].getAsFile();
+        if(!f) continue;
+        var r=new FileReader();
+        r.onload=function(ev){
+          sessionStorage.setItem('somo_paste_img', ev.target.result);
+          sessionStorage.setItem('somo_paste_name','clipboard_'+Date.now()+'.png');
+          toast('📋 Rasm clipboard\'dan qo\'shildi — fayl yuklang yoki Enter bosing!');
+        };
+        r.readAsDataURL(f);
+        e.preventDefault();
+        break;
+      }
+    }
+  }, false);
+  // Drag & Drop
+  document.addEventListener('dragover', function(e){ e.preventDefault(); });
+  document.addEventListener('drop', function(e){
+    e.preventDefault();
+    var files=e.dataTransfer.files;
+    if(!files.length) return;
+    var f=files[0];
+    if(f.type.startsWith('image/')){
+      var r=new FileReader();
+      r.onload=function(ev){
+        sessionStorage.setItem('somo_paste_img', ev.target.result);
+        sessionStorage.setItem('somo_paste_name', f.name);
+        toast('🖼 '+f.name+' qo\'shildi!');
+      };
+      r.readAsDataURL(f);
+    }
+  }, false);
+})();
+</script>
+""", height=0)
+
+# ════════════════════════════════════════════════════════════════
+# 4. DB + AI CONNECTIONS
+# ════════════════════════════════════════════════════════════════
 @st.cache_resource
-def get_connections():
+def get_db():
     try:
-        scope = [
-            "https://spreadsheets.google.com/feeds",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(
-            st.secrets["gcp_service_account"], scope
-        )
-        gc = gspread.authorize(creds)
-        ss = gc.open("Somo_Users")
-        user_sheet = ss.sheet1
-        chat_sheet = ss.worksheet("ChatHistory")
-        try:
-            fb_sheet = ss.worksheet("Letters")
-        except Exception:
-            fb_sheet = ss.add_worksheet(title="Letters", rows="1000", cols="10")
-            fb_sheet.append_row(
-                ["Timestamp","Username","Rating","Category","Message","Email","Status"]
-            )
-        return user_sheet, chat_sheet, fb_sheet
+        sc=["https://spreadsheets.google.com/feeds","https://www.googleapis.com/auth/drive"]
+        cr=ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], sc)
+        gc=gspread.authorize(cr)
+        ss=gc.open("Somo_Users")
+        u=ss.sheet1
+        ch=ss.worksheet("ChatHistory")
+        try:   fb=ss.worksheet("Letters")
+        except:
+            fb=ss.add_worksheet("Letters",1000,10)
+            fb.append_row(["Timestamp","Username","Rating","Category","Message","Email","Status"])
+        return u,ch,fb
     except Exception as e:
-        st.error(f"❌ Baza xatosi: {e}")
-        return None, None, None
+        st.error(f"❌ DB: {e}"); return None,None,None
 
 @st.cache_resource
-def get_groq_client():
-    """Groq client — chat uchun"""
-    try:
-        return Groq(api_key=st.secrets["GROQ_API_KEY"])
-    except Exception:
-        return None
+def get_groq():
+    try:    return Groq(api_key=st.secrets["GROQ_API_KEY"])
+    except: return None
 
 @st.cache_resource
-def get_gemini_model():
-    """Gemini — rasm + fayl o'qish uchun"""
+def get_gemini():
     try:
         import google.generativeai as genai
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
         return genai.GenerativeModel("gemini-2.0-flash")
-    except Exception as e:
-        return None
+    except: return None
 
-user_db, chat_db, feedback_db = get_connections()
-groq_client = get_groq_client()
-gemini_model = get_gemini_model()
+user_db, chat_db, fb_db = get_db()
+groq_cl   = get_groq()
+gemini_md = get_gemini()
 
-# ───────────────────────────────────────────────
-# 4. YORDAMCHI FUNKSIYALAR
-# ───────────────────────────────────────────────
-def get_file_emoji(filename):
-    ext = filename.lower().split(".")[-1] if "." in filename else ""
-    return {
-        "pdf":"📄","docx":"📝","doc":"📝","txt":"📃","csv":"📊",
-        "xlsx":"📊","xls":"📊","json":"🔧","py":"🐍","js":"🟨",
-        "html":"🌐","css":"🎨","ts":"🔷","jsx":"⚛️","tsx":"⚛️",
-        "java":"☕","cpp":"⚙️","c":"⚙️","mp3":"🎵","wav":"🎵",
-        "png":"🖼","jpg":"🖼","jpeg":"🖼","webp":"🖼","gif":"🎞",
-        "zip":"📦","rar":"📦","svg":"🎨","md":"📋",
-        "yaml":"🔧","xml":"🔧","sh":"💻","go":"🐹","rs":"🦀",
-        "pptx":"📊","rb":"💎","php":"🐘","swift":"🍎","kt":"📱",
-    }.get(ext, "📎")
+# ════════════════════════════════════════════════════════════════
+# 5. UTILITY FUNCTIONS
+# ════════════════════════════════════════════════════════════════
+def ficon(name):
+    e = name.lower().rsplit(".",1)[-1] if "." in name else ""
+    return {"pdf":"📄","docx":"📝","doc":"📝","txt":"📃","csv":"📊","xlsx":"📊","xls":"📊",
+            "json":"🔧","py":"🐍","js":"🟨","html":"🌐","css":"🎨","ts":"🔷","jsx":"⚛️",
+            "tsx":"⚛️","java":"☕","cpp":"⚙️","c":"⚙️","go":"🐹","rs":"🦀","rb":"💎",
+            "php":"🐘","swift":"🍎","kt":"📱","sql":"🗃","md":"📋","sh":"💻","svg":"🎨",
+            "yaml":"🔧","xml":"🔧","png":"🖼","jpg":"🖼","jpeg":"🖼","webp":"🖼",
+            "gif":"🎞","mp3":"🎵","wav":"🎵","m4a":"🎵"}.get(e,"📎")
 
-def is_image_file(file):
-    return file.type in ["image/jpeg","image/jpg","image/png","image/webp","image/gif"]
+def is_img(f):  return getattr(f,"type","") in ["image/jpeg","image/jpg","image/png","image/webp","image/gif"]
+def is_pdf(f):  return getattr(f,"type","") == "application/pdf"
+def is_docx(f): return "wordprocessingml" in getattr(f,"type","") or getattr(f,"name","").endswith((".docx",".doc"))
 
-def is_pdf_file(file):
-    return file.type == "application/pdf"
+def img_mime(f):
+    return {"image/jpeg":"image/jpeg","image/jpg":"image/jpeg","image/png":"image/png",
+            "image/webp":"image/webp","image/gif":"image/gif"}.get(getattr(f,"type",""),"image/png")
 
-def is_docx_file(file):
-    return "wordprocessingml" in file.type or file.name.endswith((".docx",".doc"))
-
-def encode_image_b64(f):
-    f.seek(0)
-    return base64.b64encode(f.read()).decode("utf-8")
-
-def get_image_media_type(f):
-    return {
-        "image/jpeg":"image/jpeg","image/jpg":"image/jpeg",
-        "image/png":"image/png","image/webp":"image/webp","image/gif":"image/gif",
-    }.get(f.type,"image/jpeg")
-
-# ── GEMINI FILE READER ────────────────────────
-def gemini_read_image(prompt, b64_image, media_type="image/jpeg"):
-    """Rasm → Gemini Vision"""
-    if not gemini_model:
-        return None
+def read_text(fb, name, mime=""):
+    n=name.lower()
     try:
-        import google.generativeai as genai
-        image_part = {
-            "mime_type": media_type,
-            "data": base64.b64decode(b64_image)
-        }
-        response = gemini_model.generate_content([prompt, image_part])
-        return response.text
-    except Exception as e:
-        return None
-
-def gemini_read_pdf(prompt, file_bytes):
-    """PDF → Gemini native PDF reader"""
-    if not gemini_model:
-        return None
-    try:
-        import google.generativeai as genai
-        pdf_part = {
-            "mime_type": "application/pdf",
-            "data": file_bytes
-        }
-        response = gemini_model.generate_content([prompt, pdf_part])
-        return response.text
-    except Exception as e:
-        return None
-
-def gemini_read_docx(prompt, file_bytes, filename):
-    """DOCX → matn chiqarib Gemini'ga berish"""
-    if not gemini_model:
-        return None
-    try:
-        import google.generativeai as genai
-        # mammoth bilan matn chiqarish
-        text = mammoth.extract_raw_text(io.BytesIO(file_bytes)).value
-        if text:
-            response = gemini_model.generate_content(
-                [f"{prompt}\n\nHujjat matni:\n{text[:8000]}"]
-            )
-            return response.text
-        return None
-    except Exception as e:
-        return None
-
-def process_doc_local(file):
-    """Kod fayllar va CSV uchun lokal o'qish (Groq uchun)"""
-    try:
-        if file.name.endswith(".csv") or file.type == "text/csv":
-            return "CSV:\n" + file.read().decode("utf-8", errors="ignore")[:5000]
-        elif file.name.endswith(".json"):
-            return "JSON:\n" + file.read().decode("utf-8", errors="ignore")[:5000]
-        elif file.name.endswith((".py",".js",".ts",".jsx",".tsx",".html",".css",
-                                  ".java",".cpp",".c",".go",".rs",".sh",".md",
-                                  ".yaml",".xml",".sql",".kt",".rb",".php",
-                                  ".swift",".txt",".r")):
-            return file.read().decode("utf-8", errors="ignore")
-        elif file.name.endswith((".xlsx",".xls")):
-            return f"Excel fayl: {file.name}"
-    except Exception as e:
-        st.warning(f"⚠️ {file.name}: {e}")
+        if n.endswith(".csv") or mime=="text/csv":    return "CSV:\n"+fb.decode("utf-8","ignore")[:5000]
+        if n.endswith(".json"):                        return "JSON:\n"+fb.decode("utf-8","ignore")[:5000]
+        if n.endswith((".xlsx",".xls")):               return f"Excel fayl: {name}"
+        if any(n.endswith(x) for x in [
+            ".py",".js",".ts",".jsx",".tsx",".html",".css",".md",".txt",
+            ".java",".cpp",".c",".go",".rs",".sh",".yaml",".xml",".sql",
+            ".kt",".rb",".php",".swift",".r",".toml",".env",".gitignore"]):
+            return fb.decode("utf-8","ignore")
+    except: pass
     return ""
 
-def extract_code_blocks(text):
+def cblocks(text):
     return re.findall(r"```(\w*)\n?(.*?)```", text, re.DOTALL)
 
-# ───────────────────────────────────────────────
-# 5. GROQ CHAT FUNKSIYASI
-# ───────────────────────────────────────────────
-def groq_chat(messages, model, temperature=0.6, max_tokens=4000):
-    """Groq orqali oddiy chat"""
-    if not groq_client:
-        return "❌ Groq AI xizmati mavjud emas."
+# ════════════════════════════════════════════════════════════════
+# 6. GEMINI READERS
+# ════════════════════════════════════════════════════════════════
+def gem_img(prompt, b64, mime="image/png"):
+    if not gemini_md: return None
     try:
-        resp = groq_client.chat.completions.create(
-            messages=messages,
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens
-        )
-        return resp.choices[0].message.content
-    except Exception as e:
-        return f"❌ Groq xatosi: {e}"
+        raw=base64.b64decode(b64.split(",",1)[1] if "," in b64 else b64)
+        return gemini_md.generate_content([prompt,{"mime_type":mime,"data":raw}]).text
+    except: return None
 
-def groq_whisper(audio_bytes, filename="audio.wav"):
-    """Groq Whisper — audio → matn"""
-    if not groq_client:
-        return None
+def gem_pdf(prompt, fb):
+    if not gemini_md: return None
+    try:    return gemini_md.generate_content([prompt,{"mime_type":"application/pdf","data":fb}]).text
+    except: return None
+
+def gem_docx(prompt, fb):
+    if not gemini_md: return None
     try:
-        transcription = groq_client.audio.transcriptions.create(
-            file=(filename, audio_bytes),
-            model="whisper-large-v3",
-            language="uz"
-        )
-        return transcription.text
-    except Exception as e:
-        return None
+        t=mammoth.extract_raw_text(io.BytesIO(fb)).value
+        if t.strip():
+            return gemini_md.generate_content([f"{prompt}\n\nHujjat:\n{t[:10000]}"]).text
+    except: pass
+    return None
 
-# ───────────────────────────────────────────────
-# 6. FAYL YARATISH ENGINE
-# ───────────────────────────────────────────────
-def make_excel_from_response(ai_response, ts_safe):
-    """AI javobidagi jadval/CSV dan Excel (.xlsx) yaratish"""
+# ════════════════════════════════════════════════════════════════
+# 7. GROQ FUNCTIONS
+# ════════════════════════════════════════════════════════════════
+def groq_ask(msgs, mdl, temp=0.6, tok=4096):
+    if not groq_cl: return "❌ Groq mavjud emas."
+    try:
+        r=groq_cl.chat.completions.create(messages=msgs,model=mdl,temperature=temp,max_tokens=tok)
+        return r.choices[0].message.content
+    except Exception as e: return f"❌ Groq: {e}"
+
+def groq_stt(ab, fname="audio.wav"):
+    if not groq_cl: return None
+    try:
+        t=groq_cl.audio.transcriptions.create(file=(fname,ab),model="whisper-large-v3")
+        return t.text
+    except: return None
+
+# ════════════════════════════════════════════════════════════════
+# 8. FILE CREATION ENGINE
+# ════════════════════════════════════════════════════════════════
+def mk_excel(text):
     try:
         import openpyxl
         from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
-
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Somo AI Jadval"
-
-        csv_match   = re.search(r"```csv\n?(.*?)```", ai_response, re.DOTALL)
-        table_match = re.search(
-            r"\|(.+\|)+\n(\|[-:| ]+\|)+\n((\|.+\|\n?)+)", ai_response
-        )
-
-        rows = []
-        if csv_match:
-            reader = csv.reader(io.StringIO(csv_match.group(1).strip()))
-            rows   = list(reader)
-        elif table_match:
-            for line in table_match.group(0).strip().split("\n"):
-                if "---" not in line:
-                    cells = [c.strip() for c in line.strip("|").split("|")]
-                    if any(c for c in cells):
-                        rows.append(cells)
-
-        if not rows:
-            return None
-
-        header_fill  = PatternFill("solid", fgColor="1E40AF")
-        header_font  = Font(bold=True, color="FFFFFF", size=12)
-        alt_fill     = PatternFill("solid", fgColor="EFF6FF")
-        border_side  = Side(style="thin", color="93C5FD")
-        cell_border  = Border(
-            left=border_side, right=border_side,
-            top=border_side,  bottom=border_side
-        )
-        center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
-
-        for r_idx, row in enumerate(rows, 1):
-            for c_idx, val in enumerate(row, 1):
-                cell = ws.cell(row=r_idx, column=c_idx, value=val)
-                cell.border    = cell_border
-                cell.alignment = center_align
-                if r_idx == 1:
-                    cell.fill = header_fill
-                    cell.font = header_font
-                elif r_idx % 2 == 0:
-                    cell.fill = alt_fill
-                    cell.font = Font(size=11)
-                else:
-                    cell.font = Font(size=11)
-
+        wb=openpyxl.Workbook(); ws=wb.active; ws.title="Somo AI"
+        cm=re.search(r"```csv\n?(.*?)```",text,re.DOTALL)
+        tm=re.search(r"\|(.+\|)+\n(\|[-:| ]+\|)+\n((\|.+\|\n?)+)",text)
+        rows=[]
+        if cm:   rows=list(csv.reader(io.StringIO(cm.group(1).strip())))
+        elif tm:
+            for l in tm.group(0).strip().split("\n"):
+                if "---" not in l:
+                    c=[x.strip() for x in l.strip("|").split("|")]
+                    if any(c): rows.append(c)
+        if not rows: return None
+        hf=PatternFill("solid",fgColor="0D0D0D")
+        hfnt=Font(bold=True,color="FFFFFF",size=11,name="Calibri")
+        af=PatternFill("solid",fgColor="F9F9F9")
+        bs=Side(style="thin",color="E5E5E5")
+        brd=Border(left=bs,right=bs,top=bs,bottom=bs)
+        al=Alignment(horizontal="center",vertical="center",wrap_text=True)
+        for ri,row in enumerate(rows,1):
+            for ci,val in enumerate(row,1):
+                cell=ws.cell(ri,ci,val); cell.border=brd; cell.alignment=al
+                if ri==1: cell.fill=hf; cell.font=hfnt
+                elif ri%2==0: cell.fill=af; cell.font=Font(size=11,name="Calibri")
+                else: cell.font=Font(size=11,name="Calibri")
         for col in ws.columns:
-            max_len = max((len(str(c.value or "")) for c in col), default=10)
-            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
-        for row in ws.iter_rows():
-            ws.row_dimensions[row[0].row].height = 25
+            ml=max((len(str(c.value or "")) for c in col),default=10)
+            ws.column_dimensions[col[0].column_letter].width=min(ml+4,45)
+        for row in ws.iter_rows(): ws.row_dimensions[row[0].row].height=22
+        buf=io.BytesIO(); wb.save(buf); buf.seek(0); return buf.read()
+    except: return None
 
-        buf = io.BytesIO()
-        wb.save(buf)
-        buf.seek(0)
-        return buf.read()
-    except Exception:
-        return None
-
-
-def make_pptx_from_response(ai_response, ts_safe):
-    """AI javobidan PowerPoint (.pptx) yaratish"""
+def mk_pptx(text):
     try:
         from pptx import Presentation
         from pptx.util import Inches, Pt
         from pptx.dml.color import RGBColor
         from pptx.enum.text import PP_ALIGN
+        prs=Presentation(); prs.slide_width=Inches(13.33); prs.slide_height=Inches(7.5)
+        W=RGBColor(0xFF,0xFF,0xFF); B=RGBColor(0x0D,0x0D,0x0D)
+        G=RGBColor(0xF9,0xF9,0xF9); A=RGBColor(0x10,0xA3,0x7F)
+        CL=[A,RGBColor(0x63,0x66,0xF1),RGBColor(0xF5,0x9E,0x0B),RGBColor(0xEC,0x48,0x99),RGBColor(0x06,0xB6,0xD4)]
+        def R(sl,l,t,w,h,c):
+            s=sl.shapes.add_shape(1,Inches(l),Inches(t),Inches(w),Inches(h))
+            s.fill.solid(); s.fill.fore_color.rgb=c; s.line.fill.background(); return s
+        def T(sl,txt,l,t,w,h,sz=20,bold=False,c=None,al=PP_ALIGN.LEFT,it=False):
+            b=sl.shapes.add_textbox(Inches(l),Inches(t),Inches(w),Inches(h))
+            f=b.text_frame; f.word_wrap=True; p=f.paragraphs[0]; p.alignment=al
+            r=p.add_run(); r.text=txt; r.font.size=Pt(sz); r.font.bold=bold; r.font.italic=it
+            r.font.color.rgb=c or B; return b
+        lines=text.strip().split("\n"); slides=[]; cur={"title":"","bullets":[]}
+        for ln in lines:
+            ln=ln.strip()
+            if not ln: continue
+            if re.match(r"^#{1,3}\s+",ln):
+                if cur["title"] or cur["bullets"]: slides.append(cur)
+                cur={"title":re.sub(r"^#{1,3}\s+","",ln).strip(),"bullets":[]}
+            elif re.match(r"^(\d+\.|[-*•►▸])\s+",ln):
+                cur["bullets"].append(re.sub(r"^(\d+\.|[-*•►▸])\s+","",ln).strip())
+            elif re.match(r"^\*\*(.+)\*\*$",ln):
+                if cur["title"] or cur["bullets"]: slides.append(cur)
+                cur={"title":re.sub(r"\*\*","",ln).strip(),"bullets":[]}
+            elif not ln.startswith("```"): cur["bullets"].append(ln)
+        if cur["title"] or cur["bullets"]: slides.append(cur)
+        if len(slides)<2:
+            chunks=[l.strip() for l in lines if l.strip() and not l.startswith("```")]
+            slides=[{"title":chunks[0] if chunks else "Somo AI","bullets":chunks[1:3]}]
+            for i in range(3,len(chunks),4):
+                slides.append({"title":f"Qism {(i-3)//4+1}","bullets":chunks[i:i+4]})
+        blank=prs.slide_layouts[6]
+        # Title slide
+        sl=prs.slides.add_slide(blank)
+        R(sl,0,0,13.33,7.5,B); R(sl,0,0,.07,7.5,A)
+        R(sl,0,5.85,13.33,1.65,RGBColor(0x1A,0x1A,0x1A))
+        T(sl,slides[0]["title"] or "Somo AI",.5,1.7,12.3,2.5,sz=44,bold=True,c=W)
+        sub=slides[0]["bullets"][0] if slides[0]["bullets"] else "Somo AI"
+        T(sl,sub,.5,4.2,11.0,1.1,sz=22,c=RGBColor(0x9C,0xA3,0xAF),it=True)
+        T(sl,"✦ Somo AI  ·  "+datetime.now().strftime("%Y"),.5,6.15,8.0,.55,sz=11,c=RGBColor(0x6B,0x72,0x80))
+        # Content slides
+        for idx,sd in enumerate(slides[1:],1):
+            sl=prs.slides.add_slide(blank)
+            ac=CL[idx%len(CL)]
+            R(sl,0,0,13.33,7.5,G); R(sl,0,0,.07,7.5,ac)
+            R(sl,.07,0,13.26,1.44,W); R(sl,.07,1.37,13.26,.05,ac)
+            R(sl,11.95,.18,1.1,1.1,ac)
+            T(sl,str(idx),12.0,.22,1.0,1.0,sz=28,bold=True,c=W,al=PP_ALIGN.CENTER)
+            T(sl,sd["title"] or f"Slayd {idx}",.3,.18,11.5,1.1,sz=33,bold=True,c=B)
+            buls=sd["bullets"][:7]
+            if buls:
+                y0=1.62; yst=min(.76,5.4/max(len(buls),1)); bh=yst*.88
+                for bi,bul in enumerate(buls):
+                    R(sl,.28,y0+bi*yst+.18,.08,.3,ac)
+                    cl=re.sub(r"^\*\*(.+)\*\*",r"\1",bul)
+                    ib=bul.startswith("**") and bul.endswith("**")
+                    T(sl,cl,.5,y0+bi*yst,12.5,bh,sz=19,bold=ib,c=B)
+            R(sl,0,7.2,13.33,.3,W)
+            T(sl,"✦ Somo AI",.3,7.22,4.0,.25,sz=10,c=RGBColor(0x9C,0xA3,0xAF))
+            T(sl,f"{idx}/{len(slides)-1}",12.0,7.22,1.0,.25,sz=10,c=RGBColor(0x9C,0xA3,0xAF),al=PP_ALIGN.RIGHT)
+        # End slide
+        sl=prs.slides.add_slide(blank)
+        R(sl,0,0,13.33,7.5,B); R(sl,0,3.1,13.33,.06,A); R(sl,0,4.34,13.33,.06,A)
+        T(sl,"✅ Taqdimot yakunlandi",.5,3.2,12.3,1.1,sz=40,bold=True,c=W,al=PP_ALIGN.CENTER)
+        T(sl,"✦ Somo AI  ·  Groq + Gemini",.5,4.9,12.3,.7,sz=15,c=RGBColor(0x6B,0x72,0x80),al=PP_ALIGN.CENTER)
+        buf=io.BytesIO(); prs.save(buf); buf.seek(0); return buf.read()
+    except: return None
 
-        prs = Presentation()
-        prs.slide_width  = Inches(13.33)
-        prs.slide_height = Inches(7.5)
-
-        PRIMARY   = RGBColor(0x02, 0x84, 0xC7)
-        SECONDARY = RGBColor(0x63, 0x66, 0xF1)
-        WHITE     = RGBColor(0xFF, 0xFF, 0xFF)
-        DARK      = RGBColor(0x0F, 0x17, 0x2A)
-        LIGHT_BG  = RGBColor(0xF0, 0xF9, 0xFF)
-        ACCENT    = RGBColor(0x8B, 0x5C, 0xF6)
-
-        def add_rect(slide, l, t, w, h, color):
-            shape = slide.shapes.add_shape(1, Inches(l), Inches(t), Inches(w), Inches(h))
-            shape.fill.solid()
-            shape.fill.fore_color.rgb = color
-            shape.line.fill.background()
-            return shape
-
-        def add_textbox(slide, text, l, t, w, h,
-                        size=24, bold=False, color=None,
-                        align=PP_ALIGN.LEFT, italic=False):
-            txb = slide.shapes.add_textbox(Inches(l), Inches(t), Inches(w), Inches(h))
-            tf  = txb.text_frame
-            tf.word_wrap = True
-            p   = tf.paragraphs[0]
-            p.alignment = align
-            run = p.add_run()
-            run.text = text
-            run.font.size   = Pt(size)
-            run.font.bold   = bold
-            run.font.italic = italic
-            run.font.color.rgb = color or DARK
-            return txb
-
-        lines = ai_response.strip().split("\n")
-        slides_data = []
-        current = {"title": "", "bullets": [], "type": "content"}
-
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-            if re.match(r"^#{1,3}\s+", line):
-                if current["title"] or current["bullets"]:
-                    slides_data.append(current)
-                title_text = re.sub(r"^#{1,3}\s+", "", line).strip()
-                current = {"title": title_text, "bullets": [], "type": "content"}
-            elif re.match(r"^(\d+\.|[-*•►▸])\s+", line):
-                bullet = re.sub(r"^(\d+\.|[-*•►▸])\s+", "", line).strip()
-                current["bullets"].append(bullet)
-            elif re.match(r"^\*\*(.+)\*\*$", line):
-                bold_text = re.sub(r"\*\*", "", line).strip()
-                if current["title"] or current["bullets"]:
-                    slides_data.append(current)
-                current = {"title": bold_text, "bullets": [], "type": "content"}
-            else:
-                if line and not line.startswith("```"):
-                    current["bullets"].append(line)
-
-        if current["title"] or current["bullets"]:
-            slides_data.append(current)
-
-        if len(slides_data) < 2:
-            slides_data = []
-            chunks = [l.strip() for l in lines if l.strip() and not l.startswith("```")]
-            title  = chunks[0] if chunks else "Somo AI"
-            rest   = chunks[1:]
-            slides_data.append({"title": title, "bullets": rest[:3], "type": "title"})
-            for i in range(0, len(rest), 4):
-                block = rest[i:i+4]
-                if block:
-                    slides_data.append({
-                        "title": f"Qism {i//4+1}",
-                        "bullets": block,
-                        "type": "content"
-                    })
-
-        # ── TITLE SLAYD ──────────────────────────────
-        first = slides_data[0]
-        blank = prs.slide_layouts[6]
-        slide = prs.slides.add_slide(blank)
-
-        add_rect(slide, 0, 0, 13.33, 7.5,  RGBColor(0x0F,0x17,0x2A))
-        add_rect(slide, 0, 0, 13.33, 3.8,  PRIMARY)
-        add_rect(slide, 0, 3.5, 13.33, 4.0, SECONDARY)
-        add_rect(slide, 0, 3.3, 13.33, 0.1, WHITE)
-        add_rect(slide, 10.5, 0.3, 2.5, 2.5, ACCENT)
-        add_rect(slide, 0.3, 5.5, 2.0, 1.5, RGBColor(0xEC,0x48,0x99))
-
-        add_textbox(
-            slide, first["title"] or "Somo AI Taqdimot",
-            0.8, 1.0, 12.0, 2.0,
-            size=44, bold=True, color=WHITE, align=PP_ALIGN.CENTER
-        )
-        subtitle = first["bullets"][0] if first["bullets"] else "Powered by Somo AI"
-        add_textbox(
-            slide, subtitle,
-            0.8, 3.8, 12.0, 1.2,
-            size=24, color=RGBColor(0xBA,0xE6,0xFD),
-            align=PP_ALIGN.CENTER, italic=True
-        )
-        add_textbox(
-            slide, "🌌 Somo AI Infinity",
-            0.5, 6.8, 5.0, 0.5,
-            size=14, color=RGBColor(0x94,0xA3,0xB8), align=PP_ALIGN.LEFT
-        )
-        add_textbox(
-            slide, datetime.now().strftime("%Y"),
-            11.0, 6.8, 2.0, 0.5,
-            size=14, color=RGBColor(0x94,0xA3,0xB8), align=PP_ALIGN.RIGHT
-        )
-
-        # ── KONTENT SLAYDLAR ─────────────────────────
-        colors_cycle = [PRIMARY, SECONDARY, ACCENT,
-                        RGBColor(0xEC,0x48,0x99), RGBColor(0x10,0xB9,0x81)]
-
-        for s_idx, sdata in enumerate(slides_data[1:], 1):
-            slide = prs.slides.add_slide(blank)
-            accent_color = colors_cycle[s_idx % len(colors_cycle)]
-
-            add_rect(slide, 0, 0, 13.33, 7.5, RGBColor(0xF8,0xFA,0xFC))
-            add_rect(slide, 0, 0, 0.12, 7.5, accent_color)
-            add_rect(slide, 0.12, 0, 13.21, 1.4, LIGHT_BG)
-            add_rect(slide, 0.12, 1.3, 13.21, 0.07, accent_color)
-            add_rect(slide, 11.8, 0.15, 1.0, 1.0, accent_color)
-            add_textbox(
-                slide, str(s_idx),
-                11.85, 0.18, 0.9, 0.9,
-                size=28, bold=True, color=WHITE, align=PP_ALIGN.CENTER
-            )
-            add_textbox(
-                slide, sdata["title"] or f"Slayd {s_idx}",
-                0.4, 0.15, 11.2, 1.1,
-                size=32, bold=True, color=DARK, align=PP_ALIGN.LEFT
-            )
-
-            bullets = sdata["bullets"][:7]
-            if bullets:
-                y_start = 1.6
-                y_step  = min(0.78, (5.5 / max(len(bullets), 1)))
-                box_h   = y_step * 0.85
-
-                for b_idx, bullet in enumerate(bullets):
-                    add_rect(slide, 0.35, y_start + b_idx*y_step + 0.15, 0.1, 0.35, accent_color)
-                    bullet_clean = re.sub(r"^\*\*(.+)\*\*", r"\1", bullet).strip()
-                    is_bold      = bullet.startswith("**") and bullet.endswith("**")
-                    add_textbox(
-                        slide, bullet_clean,
-                        0.6, y_start + b_idx*y_step,
-                        12.4, box_h,
-                        size=20, bold=is_bold, color=DARK, align=PP_ALIGN.LEFT
-                    )
-
-            add_rect(slide, 0, 7.15, 13.33, 0.35, LIGHT_BG)
-            add_textbox(
-                slide, "🌌 Somo AI Infinity",
-                0.3, 7.18, 4.0, 0.25,
-                size=11, color=RGBColor(0x94,0xA3,0xB8), align=PP_ALIGN.LEFT
-            )
-            add_textbox(
-                slide, f"{s_idx}/{len(slides_data)-1}",
-                12.0, 7.18, 1.0, 0.25,
-                size=11, color=RGBColor(0x94,0xA3,0xB8), align=PP_ALIGN.RIGHT
-            )
-
-        # ── YAKUNIY SLAYD ─────────────────────────────
-        slide = prs.slides.add_slide(blank)
-        add_rect(slide, 0, 0, 13.33, 7.5, RGBColor(0x0F,0x17,0x2A))
-        add_rect(slide, 0, 2.5, 13.33, 2.5, PRIMARY)
-        add_rect(slide, 0, 2.4, 13.33, 0.08, WHITE)
-        add_rect(slide, 0, 4.9, 13.33, 0.08, WHITE)
-        add_textbox(
-            slide, "✅ Taqdimot Yakunlandi!",
-            0.8, 2.7, 12.0, 1.2,
-            size=42, bold=True, color=WHITE, align=PP_ALIGN.CENTER
-        )
-        add_textbox(
-            slide, "🌌 Somo AI Infinity | Powered by Groq & Gemini",
-            0.8, 5.3, 12.0, 0.8,
-            size=18, color=RGBColor(0x94,0xA3,0xB8), align=PP_ALIGN.CENTER
-        )
-
-        buf = io.BytesIO()
-        prs.save(buf)
-        buf.seek(0)
-        return buf.read()
-    except Exception:
-        return None
-
-
-def make_word_from_response(ai_response, ts_safe):
-    """AI javobidan Word (.docx) yaratish"""
+def mk_word(text):
     try:
         from docx import Document
         from docx.shared import Pt, RGBColor, Inches
-
-        doc = Document()
-        for sec in doc.sections:
-            sec.top_margin    = Inches(1)
-            sec.bottom_margin = Inches(1)
-            sec.left_margin   = Inches(1.2)
-            sec.right_margin  = Inches(1.2)
-
-        lines = ai_response.strip().split("\n")
-        in_code_block = False
-        code_buffer   = []
-
+        doc=Document()
+        for s in doc.sections:
+            s.top_margin=s.bottom_margin=Inches(1)
+            s.left_margin=s.right_margin=Inches(1.25)
+        lines=text.strip().split("\n"); in_c=False; cbuf=[]
         for line in lines:
-            stripped = line.strip()
-
-            if stripped.startswith("```"):
-                if not in_code_block:
-                    in_code_block = True
-                    code_buffer   = []
+            s=line.strip()
+            if s.startswith("```"):
+                if not in_c: in_c=True; cbuf=[]
                 else:
-                    in_code_block = False
-                    p = doc.add_paragraph()
-                    p.paragraph_format.left_indent  = Inches(0.4)
-                    p.paragraph_format.space_before = Pt(6)
-                    p.paragraph_format.space_after  = Pt(6)
-                    run = p.add_run("\n".join(code_buffer))
-                    run.font.name  = "Courier New"
-                    run.font.size  = Pt(10)
-                    run.font.color.rgb = RGBColor(0x1E,0x40,0xAF)
+                    in_c=False; p=doc.add_paragraph()
+                    p.paragraph_format.left_indent=Inches(.3)
+                    r=p.add_run("\n".join(cbuf))
+                    r.font.name="Courier New"; r.font.size=Pt(10)
+                    r.font.color.rgb=RGBColor(0x10,0xA3,0x7F)
                 continue
+            if in_c: cbuf.append(line); continue
+            if not s: doc.add_paragraph(); continue
+            if   re.match(r"^# ",s):
+                h=doc.add_heading(s[2:],1)
+                if h.runs: h.runs[0].font.color.rgb=RGBColor(0x10,0xA3,0x7F)
+            elif re.match(r"^## ",s):
+                h=doc.add_heading(s[3:],2)
+                if h.runs: h.runs[0].font.color.rgb=RGBColor(0x63,0x66,0xF1)
+            elif re.match(r"^### ",s): doc.add_heading(s[4:],3)
+            elif re.match(r"^[-*•►▸]\s+",s):
+                p=doc.add_paragraph(style="List Bullet"); _fr(p,re.sub(r"^[-*•►▸]\s+","",s))
+            elif re.match(r"^\d+\.\s+",s):
+                p=doc.add_paragraph(style="List Number"); _fr(p,re.sub(r"^\d+\.\s+","",s))
+            else: p=doc.add_paragraph(); _fr(p,s)
+        buf=io.BytesIO(); doc.save(buf); buf.seek(0); return buf.read()
+    except: return None
 
-            if in_code_block:
-                code_buffer.append(line)
-                continue
-
-            if not stripped:
-                doc.add_paragraph()
-                continue
-
-            if re.match(r"^# ", stripped):
-                h = doc.add_heading(stripped[2:], level=1)
-                if h.runs: h.runs[0].font.color.rgb = RGBColor(0x02,0x84,0xC7)
-            elif re.match(r"^## ", stripped):
-                h = doc.add_heading(stripped[3:], level=2)
-                if h.runs: h.runs[0].font.color.rgb = RGBColor(0x63,0x66,0xF1)
-            elif re.match(r"^### ", stripped):
-                h = doc.add_heading(stripped[4:], level=3)
-                if h.runs: h.runs[0].font.color.rgb = RGBColor(0x8B,0x5C,0xF6)
-            elif re.match(r"^[-*•►▸]\s+", stripped):
-                text = re.sub(r"^[-*•►▸]\s+", "", stripped)
-                p = doc.add_paragraph(style="List Bullet")
-                _add_formatted_run_doc(p, text)
-            elif re.match(r"^\d+\.\s+", stripped):
-                text = re.sub(r"^\d+\.\s+", "", stripped)
-                p = doc.add_paragraph(style="List Number")
-                _add_formatted_run_doc(p, text)
-            else:
-                p = doc.add_paragraph()
-                _add_formatted_run_doc(p, stripped)
-
-        buf = io.BytesIO()
-        doc.save(buf)
-        buf.seek(0)
-        return buf.read()
-    except Exception:
-        return None
-
-
-def _add_formatted_run_doc(paragraph, text):
-    """Bold va italic matnni qayta ishlash"""
+def _fr(p, text):
     from docx.shared import RGBColor
-    parts = re.split(r"(\*\*.*?\*\*|\*.*?\*)", text)
-    for part in parts:
-        if part.startswith("**") and part.endswith("**"):
-            run = paragraph.add_run(part[2:-2])
-            run.bold = True
-            run.font.color.rgb = RGBColor(0x0F,0x17,0x2A)
-        elif part.startswith("*") and part.endswith("*"):
-            run = paragraph.add_run(part[1:-1])
-            run.italic = True
-        else:
-            paragraph.add_run(part)
+    for part in re.split(r"(\*\*.*?\*\*|\*.*?\*)",text):
+        if part.startswith("**") and part.endswith("**"): r=p.add_run(part[2:-2]); r.bold=True
+        elif part.startswith("*") and part.endswith("*"): r=p.add_run(part[1:-1]); r.italic=True
+        else: p.add_run(part)
 
+# ════════════════════════════════════════════════════════════════
+# 9. SMART DOWNLOAD — only when EXPLICITLY requested
+# ════════════════════════════════════════════════════════════════
+def offer_dl(ai_text, user_msg, ts):
+    ts_s=ts.replace(":","_").replace(" ","_")
+    blks=cblocks(ai_text)
+    up=user_msg.lower()
 
-def create_and_offer_files(ai_response, ts):
-    """AI javobini tahlil qilib tegishli faylni yaratadi"""
-    ts_safe        = ts.replace(":","-").replace(" ","_")
-    blocks         = extract_code_blocks(ai_response)
-    response_lower = ai_response.lower()
+    # Keywords that MUST appear in USER message
+    PK=["taqdimot","slayd","slide","presentation","pptx","powerpoint","prezentatsiya"]
+    XK=["jadval","excel","xlsx","csv","statistika","ro'yxat","hisobot","список","таблица"]
+    DK=["rezyume","resume","cv","hujjat","word","docx","xat","shartnoma","insho","referat","maqola","blog"]
 
-    # ── 1. PPTX ──────────────────────────────────
-    pptx_triggers = ["slayd","taqdimot","prezentatsiya","slide","presentation","powerpoint","pptx"]
-    has_headings  = len(re.findall(r"^#{1,3}\s+", ai_response, re.MULTILINE)) >= 3
-    wants_pptx    = any(t in response_lower for t in pptx_triggers) or has_headings
+    has_h=len(re.findall(r"^#{1,3}\s+",ai_text,re.MULTILINE))>=3
+    has_t=bool(re.search(r"\|(.+\|)+\n(\|[-:| ]+\|)+",ai_text))
+    has_c="```csv" in ai_text
 
-    if wants_pptx:
-        pptx_data = make_pptx_from_response(ai_response, ts_safe)
-        if pptx_data:
-            st.markdown("""
-                <div class='download-card'>
-                    <h4 style='color:#059669;margin:0 0 12px;'>📊 Tayyor PowerPoint Taqdimot</h4>
-                    <p style='color:#065f46;font-size:14px;margin:0;'>Professional dizaynli slaydlar!</p>
-                </div>
-            """, unsafe_allow_html=True)
-            st.download_button(
-                label="⬇️ 📊 PPTX Taqdimot yuklab olish",
-                data=pptx_data,
-                file_name=f"somo_taqdimot_{ts_safe}.pptx",
-                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                key=f"dl_pptx_{ts_safe}",
-                use_container_width=True
-            )
+    wp=any(k in up for k in PK)
+    wx=any(k in up for k in XK) or (has_t and any(k in up for k in XK+["yarat","ko'rsat","ber"])) or has_c
+    wd=any(k in up for k in DK) and not wp
 
-    # ── 2. EXCEL ─────────────────────────────────
-    xlsx_triggers = ["jadval","excel","xlsx","table","csv","statistika","ro'yxat","hisobot"]
-    has_table     = bool(re.search(r"\|(.+\|)+\n(\|[-:| ]+\|)+", ai_response))
-    has_csv_bl    = bool(re.search(r"```csv", ai_response))
-    wants_xlsx    = any(t in response_lower for t in xlsx_triggers) or has_table or has_csv_bl
+    if wp:
+        d=mk_pptx(ai_text)
+        if d:
+            st.markdown('<div class="xdl"><div class="xdl-t">📊 PowerPoint tayyor</div></div>',unsafe_allow_html=True)
+            st.download_button("⬇️ PPTX yuklab olish",d,f"somo_{ts_s}.pptx",
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                key=f"pp_{ts_s}",use_container_width=True)
 
-    if wants_xlsx:
-        xlsx_data = make_excel_from_response(ai_response, ts_safe)
-        if xlsx_data:
-            st.markdown("""
-                <div class='download-card'>
-                    <h4 style='color:#059669;margin:0 0 12px;'>📊 Tayyor Excel Jadval</h4>
-                </div>
-            """, unsafe_allow_html=True)
-            c1, c2 = st.columns(2)
-            with c1:
-                st.download_button(
-                    label="⬇️ 📊 Excel (.xlsx) yuklab olish",
-                    data=xlsx_data,
-                    file_name=f"somo_jadval_{ts_safe}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    key=f"dl_xlsx_{ts_safe}",
-                    use_container_width=True
-                )
-            # CSV ham
-            csv_buf     = io.StringIO()
-            csv_match   = re.search(r"```csv\n?(.*?)```", ai_response, re.DOTALL)
-            table_match = re.search(r"\|(.+\|)+\n(\|[-:| ]+\|)+\n((\|.+\|\n?)+)", ai_response)
-            rows = []
-            if csv_match:
-                rows = list(csv.reader(io.StringIO(csv_match.group(1).strip())))
-            elif table_match:
-                for line in table_match.group(0).strip().split("\n"):
-                    if "---" not in line:
-                        cells = [c.strip() for c in line.strip("|").split("|")]
-                        if any(c for c in cells):
-                            rows.append(cells)
+    if wx:
+        d=mk_excel(ai_text)
+        if d:
+            st.markdown('<div class="xdl"><div class="xdl-t">📊 Excel tayyor</div></div>',unsafe_allow_html=True)
+            c1,c2=st.columns(2)
+            with c1: st.download_button("⬇️ Excel (.xlsx)",d,f"somo_{ts_s}.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key=f"xl_{ts_s}",use_container_width=True)
+            rows=[]
+            cm=re.search(r"```csv\n?(.*?)```",ai_text,re.DOTALL)
+            tm=re.search(r"\|(.+\|)+\n(\|[-:| ]+\|)+\n((\|.+\|\n?)+)",ai_text)
+            if cm: rows=list(csv.reader(io.StringIO(cm.group(1).strip())))
+            elif tm:
+                for l in tm.group(0).strip().split("\n"):
+                    if "---" not in l:
+                        c=[x.strip() for x in l.strip("|").split("|")]
+                        if any(c): rows.append(c)
             if rows:
-                csv.writer(csv_buf).writerows(rows)
-                with c2:
-                    st.download_button(
-                        label="⬇️ 📋 CSV yuklab olish",
-                        data=csv_buf.getvalue().encode("utf-8"),
-                        file_name=f"somo_jadval_{ts_safe}.csv",
-                        mime="text/csv",
-                        key=f"dl_csv_{ts_safe}",
-                        use_container_width=True
-                    )
+                cb=io.StringIO(); csv.writer(cb).writerows(rows)
+                with c2: st.download_button("⬇️ CSV",cb.getvalue().encode(),f"somo_{ts_s}.csv","text/csv",
+                    key=f"cv_{ts_s}",use_container_width=True)
 
-    # ── 3. WORD ──────────────────────────────────
-    docx_triggers = ["hujjat","word","docx","maqola","xat","rezyume","resume",
-                     "shartnoma","tavsif","insho","referat","hisobot"]
-    wants_docx = any(t in response_lower for t in docx_triggers)
+    if wd:
+        d=mk_word(ai_text)
+        if d:
+            st.markdown('<div class="xdl"><div class="xdl-t">📝 Word tayyor</div></div>',unsafe_allow_html=True)
+            st.download_button("⬇️ Word (.docx)",d,f"somo_{ts_s}.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                key=f"wd_{ts_s}",use_container_width=True)
 
-    if wants_docx and not wants_pptx:
-        docx_data = make_word_from_response(ai_response, ts_safe)
-        if docx_data:
-            st.markdown("""
-                <div class='download-card'>
-                    <h4 style='color:#059669;margin:0 0 12px;'>📝 Tayyor Word Hujjat</h4>
-                </div>
-            """, unsafe_allow_html=True)
-            st.download_button(
-                label="⬇️ 📝 Word (.docx) yuklab olish",
-                data=docx_data,
-                file_name=f"somo_hujjat_{ts_safe}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                key=f"dl_docx_{ts_safe}",
-                use_container_width=True
-            )
+    # SVG
+    for i,(_,svg) in enumerate([(l,c) for l,c in blks if l.lower()=="svg" or c.strip().startswith("<svg")]):
+        st.markdown('<div class="xdl"><div class="xdl-t">🎨 SVG Rasm</div></div>',unsafe_allow_html=True)
+        st.markdown(svg.strip(),unsafe_allow_html=True)
+        st.download_button(f"⬇️ rasm_{i}.svg",svg.strip().encode(),f"somo_{ts_s}_{i}.svg","image/svg+xml",
+            key=f"sv_{ts_s}_{i}",use_container_width=True)
 
-    # ── 4. SVG ───────────────────────────────────
-    svg_blocks = [
-        (l, c) for l, c in blocks
-        if l.lower() == "svg" or c.strip().startswith("<svg")
-    ]
-    if svg_blocks:
-        st.markdown("""
-            <div class='download-card'>
-                <h4 style='color:#059669;margin:0 0 12px;'>🎨 SVG Vektor Rasm</h4>
-            </div>
-        """, unsafe_allow_html=True)
-        for i, (_, svg) in enumerate(svg_blocks):
-            st.markdown(svg.strip(), unsafe_allow_html=True)
-            st.download_button(
-                label=f"⬇️ rasm_{i}.svg yuklab olish",
-                data=svg.strip().encode("utf-8"),
-                file_name=f"somo_rasm_{ts_safe}_{i}.svg",
-                mime="image/svg+xml",
-                key=f"dl_svg_{ts_safe}_{i}",
-                use_container_width=True
-            )
+    # HTML
+    for i,(_,code) in enumerate([(l,c) for l,c in blks if l.lower()=="html"]):
+        st.markdown('<div class="xdl"><div class="xdl-t">🌐 HTML Sahifa</div></div>',unsafe_allow_html=True)
+        with st.expander("👁 Ko'rish",expanded=True):
+            components.html(code.strip(),height=400,scrolling=True)
+        st.download_button(f"⬇️ sahifa_{i}.html",code.strip().encode(),f"somo_{ts_s}_{i}.html","text/html",
+            key=f"ht_{ts_s}_{i}",use_container_width=True)
 
-    # ── 5. HTML ──────────────────────────────────
-    html_blocks = [(l, c) for l, c in blocks if l.lower() == "html"]
-    if html_blocks:
-        st.markdown("""
-            <div class='download-card'>
-                <h4 style='color:#059669;margin:0 0 12px;'>🌐 HTML Sahifa</h4>
-            </div>
-        """, unsafe_allow_html=True)
-        for i, (_, code) in enumerate(html_blocks):
-            with st.expander(f"👁 HTML Preview #{i+1}", expanded=True):
-                st.components.v1.html(code.strip(), height=400, scrolling=True)
-            st.download_button(
-                label=f"⬇️ sahifa_{i}.html yuklab olish",
-                data=code.strip().encode("utf-8"),
-                file_name=f"somo_page_{ts_safe}_{i}.html",
-                mime="text/html",
-                key=f"dl_html_{ts_safe}_{i}",
-                use_container_width=True
-            )
+    # Code files
+    EXT={"python":"py","py":"py","javascript":"js","js":"js","typescript":"ts","ts":"ts",
+         "css":"css","json":"json","sql":"sql","bash":"sh","shell":"sh","sh":"sh",
+         "yaml":"yaml","xml":"xml","markdown":"md","md":"md","jsx":"jsx","tsx":"tsx",
+         "java":"java","cpp":"cpp","c":"c","rust":"rs","go":"go","php":"php",
+         "ruby":"rb","swift":"swift","kotlin":"kt","r":"r","txt":"txt"}
+    others=[(l,c) for l,c in blks if l.lower() not in {"html","svg","csv",""}]
+    if others:
+        st.markdown('<div class="xdl"><div class="xdl-t">💾 Kod Fayllar</div></div>',unsafe_allow_html=True)
+        cols=st.columns(min(len(others),3))
+        for i,(lang,code) in enumerate(others):
+            ext=EXT.get(lang.strip().lower(),"txt"); fname=f"somo_{ts_s}_{i}.{ext}"
+            with cols[i%len(cols)]:
+                st.download_button(f"{ficon(fname)} .{ext}",code.strip().encode(),fname,"text/plain",
+                    key=f"cd_{ts_s}_{i}",use_container_width=True)
 
-    # ── 6. KOD FAYLLAR ───────────────────────────
-    ext_map = {
-        "python":"py","py":"py","javascript":"js","js":"js",
-        "typescript":"ts","ts":"ts","css":"css","json":"json",
-        "sql":"sql","bash":"sh","shell":"sh","sh":"sh",
-        "yaml":"yaml","xml":"xml","markdown":"md","md":"md",
-        "jsx":"jsx","tsx":"tsx","java":"java","cpp":"cpp",
-        "c":"c","rust":"rs","go":"go","php":"php","ruby":"rb",
-        "swift":"swift","kotlin":"kt","r":"r","txt":"txt","text":"txt",
-    }
-    skip = {"html","svg","csv",""}
-    code_blocks_other = [
-        (l, c) for l, c in blocks
-        if l.lower() not in skip
-    ]
-    if code_blocks_other:
-        st.markdown("""
-            <div class='download-card'>
-                <h4 style='color:#059669;margin:0 0 12px;'>💾 Tayyor Kod Fayllar</h4>
-            </div>
-        """, unsafe_allow_html=True)
-        cols = st.columns(min(len(code_blocks_other), 3))
-        for i, (lang, code) in enumerate(code_blocks_other):
-            ext   = ext_map.get(lang.strip().lower(), "txt")
-            fname = f"somo_{ts_safe}_{i}.{ext}"
-            with cols[i % len(cols)]:
-                st.download_button(
-                    label=f"{get_file_emoji(fname)} .{ext} yuklab olish",
-                    data=code.strip().encode("utf-8"),
-                    file_name=fname,
-                    mime="text/plain",
-                    key=f"dl_code_{ts_safe}_{i}",
-                    use_container_width=True
-                )
-
-# ───────────────────────────────────────────────
-# 7. SHABLONLAR
-# ───────────────────────────────────────────────
-TEMPLATES = {
-    "Biznes": [
-        {
-            "icon":"📊","title":"📊 Biznes Reja",
-            "description":"To'liq biznes reja yaratish",
-            "prompt":(
-                "Menga [kompaniya nomi] uchun professional biznes reja tuzing.\n"
-                "- Ijroiya xulosasi\n- Bozor tahlili\n"
-                "- Marketing strategiyasi\n- Moliyaviy rejalar\n- 5 yillik prognoz"
-            )
-        },
-        {
-            "icon":"📈","title":"📈 Marketing Strategiya",
-            "description":"Digital marketing reja",
-            "prompt":(
-                "[mahsulot/xizmat] uchun to'liq digital marketing strategiya:\n"
-                "- Target auditoriya\n- SMM rejasi\n- SEO strategiya\n"
-                "- Reklama byudjeti\n- KPI ko'rsatkichlari\n- Oylik reja"
-            )
-        },
-        {
-            "icon":"💼","title":"💼 Taklifnoma",
-            "description":"Professional biznes taklif",
-            "prompt":(
-                "[mijoz nomi] uchun professional taklifnoma yoz:\n"
-                "- Muammo tahlili\n- Bizning yechim\n- Narxlar\n"
-                "- Garantiya\n- Aloqa ma'lumotlari"
-            )
-        }
+# ════════════════════════════════════════════════════════════════
+# 10. TEMPLATES
+# ════════════════════════════════════════════════════════════════
+TMPLS={
+    "💼 Biznes":[
+        {"icon":"📊","title":"Biznes Reja","prompt":"[Kompaniya] uchun professional biznes reja:\n- Ijroiya xulosasi\n- Bozor tahlili\n- Marketing strategiyasi\n- Moliyaviy reja\n- 5 yillik prognoz"},
+        {"icon":"📈","title":"Marketing Reja","prompt":"[Mahsulot] uchun digital marketing reja:\n- Target auditoriya\n- SMM\n- SEO\n- Byudjet\n- KPI"},
+        {"icon":"📋","title":"SWOT Tahlil","prompt":"[Kompaniya] uchun batafsil SWOT tahlil jadvali yarat"},
+        {"icon":"💼","title":"Taklifnoma","prompt":"[Mijoz] uchun professional taklifnoma:\n- Muammo\n- Yechim\n- Narxlar\n- Garantiya"},
     ],
-    "Dasturlash": [
-        {
-            "icon":"💻","title":"💻 Kod Generator",
-            "description":"Har qanday tildagi kod",
-            "prompt":(
-                "[dasturlash tili]da [funksionallik] uchun kod yoz:\n"
-                "- Clean code prinsiplari\n- Izohlar bilan\n"
-                "- Error handling\n- Best practices\n- Test misollari"
-            )
-        },
-        {
-            "icon":"🌐","title":"🌐 Veb Sahifa",
-            "description":"HTML/CSS/JS sahifa",
-            "prompt":(
-                "Professional [sahifa turi] uchun HTML sahifa yarat:\n"
-                "- Responsive dizayn\n- Zamonaviy CSS\n"
-                "- Animatsiyalar\n- Mobile-friendly"
-            )
-        },
-        {
-            "icon":"🔌","title":"🔌 API Integratsiya",
-            "description":"REST API kod",
-            "prompt":(
-                "[dasturlash tili]da [API nomi] bilan integratsiya kodi:\n"
-                "- Authentication\n- CRUD operatsiyalar\n"
-                "- Error handling\n- Rate limiting\n- Dokumentatsiya"
-            )
-        }
+    "💻 Dasturlash":[
+        {"icon":"🐍","title":"Python","prompt":"Python'da [funksiya] kodi:\n- Type hints\n- Docstring\n- Error handling\n- Test"},
+        {"icon":"🌐","title":"HTML Sahifa","prompt":"[Sahifa] uchun zamonaviy HTML/CSS/JS:\n- Responsive design\n- Animatsiyalar"},
+        {"icon":"🗃","title":"SQL","prompt":"[Jadval] uchun SQL so'rovlar: SELECT, JOIN, GROUP BY, Indexes"},
+        {"icon":"🔌","title":"API","prompt":"[Til]da [API] integratsiya: Auth, CRUD, Error handling, Docs"},
     ],
-    "Ta'lim": [
-        {
-            "icon":"📖","title":"📖 Dars Rejasi",
-            "description":"O'qituvchilar uchun",
-            "prompt":(
-                "[mavzu] bo'yicha to'liq dars rejasi:\n"
-                "- O'quv maqsadlari\n- Kirish (10 daqiqa)\n"
-                "- Asosiy qism (30 daqiqa)\n- Amaliy mashqlar\n"
-                "- Yakun\n- Uyga vazifa"
-            )
-        },
-        {
-            "icon":"📝","title":"📝 Test Savollar",
-            "description":"Mavzu bo'yicha testlar",
-            "prompt":(
-                "[mavzu] bo'yicha 20 ta test savol tuz:\n"
-                "- 4 variant javob\n- To'g'ri javob belgisi\n"
-                "- Qiyinlik darajasi: oson/o'rta/qiyin\n- Tushuntirish"
-            )
-        },
-        {
-            "icon":"🎯","title":"🎯 O'quv Reja",
-            "description":"Kurs dasturi yaratish",
-            "prompt":(
-                "[soha] bo'yicha 3 oylik o'quv dasturi:\n"
-                "- Haftalik jadval\n- Har bir modul maqsadi\n"
-                "- Kerakli resurslar\n- Baholash mezonlari"
-            )
-        }
+    "📚 Ta'lim":[
+        {"icon":"📖","title":"Dars Rejasi","prompt":"[Mavzu] dars rejasi:\n- Maqsadlar\n- Kirish 10 daqiqa\n- Asosiy qism 30 daqiqa\n- Amaliy 15 daqiqa\n- Vazifa"},
+        {"icon":"📝","title":"Test Savollar","prompt":"[Mavzu] bo'yicha 20 ta test: 4 variant, to'g'ri javob, qiyinlik darajasi"},
+        {"icon":"🎯","title":"O'quv Dastur","prompt":"[Soha] 3 oylik o'quv dasturi: haftalik jadval, resurslar, baholash"},
     ],
-    "Shaxsiy": [
-        {
-            "icon":"📄","title":"📄 Rezyume",
-            "description":"Professional CV",
-            "prompt":(
-                "[kasb] uchun professional rezyume yarat:\n"
-                "- Shaxsiy ma'lumotlar\n- Kasbiy maqsad\n"
-                "- Ish tajribasi\n- Ta'lim\n- Ko'nikmalar\n- Sertifikatlar"
-            )
-        },
-        {
-            "icon":"✉️","title":"✉️ Motivatsion Xat",
-            "description":"Cover letter yozish",
-            "prompt":(
-                "[kompaniya] ga [lavozim] uchun motivatsion xat:\n"
-                "- Qiziqish sabablari\n- Tajribam\n"
-                "- Kompaniyaga qo'shim\n- Xulosa"
-            )
-        }
-    ]
+    "✍️ Kontent":[
+        {"icon":"📄","title":"Rezyume","prompt":"[Kasb] uchun professional CV:\n- Kasbiy maqsad\n- Tajriba\n- Ta'lim\n- Ko'nikmalar"},
+        {"icon":"✉️","title":"Motivatsion Xat","prompt":"[Kompaniya] ga [Lavozim] uchun motivatsion xat yoz"},
+        {"icon":"📰","title":"Blog Post","prompt":"[Mavzu] haqida blog post: sarlavha, kirish, asosiy qismlar, xulosa"},
+        {"icon":"📣","title":"Ijtimoiy Tarmoq","prompt":"[Mahsulot] uchun Instagram, Telegram, LinkedIn postlari"},
+    ],
 }
 
-# ───────────────────────────────────────────────
-# 8. SESSION BOSHQARUVI
-# ───────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════
+# 11. SESSION MANAGEMENT
+# ════════════════════════════════════════════════════════════════
 if "logged_in" not in st.session_state:
-    su = cookies.get("somo_user_session")
+    su=cookies.get("ss7")
     if su and user_db:
         try:
-            recs = user_db.get_all_records()
-            ud   = next((r for r in recs if str(r["username"]) == su), None)
-            if ud and str(ud.get("status","")).lower() == "active":
-                st.session_state.update({
-                    "username": su,
-                    "logged_in": True,
-                    "login_time": datetime.now(),
-                    "cached_user": ud
-                })
-            else:
-                st.session_state.logged_in = False
-        except Exception:
-            st.session_state.logged_in = False
-    else:
-        st.session_state.logged_in = False
+            recs=user_db.get_all_records()
+            ud=next((r for r in recs if str(r.get("username",""))==su),None)
+            if ud and str(ud.get("status","")).lower()=="active":
+                st.session_state.update({"username":su,"logged_in":True,"login_time":datetime.now()})
+            else: st.session_state.logged_in=False
+        except: st.session_state.logged_in=False
+    else: st.session_state.logged_in=False
 
-def handle_logout():
-    try:
-        cookies["somo_user_session"] = ""; cookies.save()
-    except Exception:
-        pass
-    for k in list(st.session_state.keys()):
-        del st.session_state[k]
-    st.session_state.logged_in = False
-    st.rerun()
+def do_logout():
+    try: cookies["ss7"]=""; cookies.save()
+    except: pass
+    for k in list(st.session_state.keys()): del st.session_state[k]
+    st.session_state.logged_in=False; st.rerun()
 
-# ───────────────────────────────────────────────
-# 9. LOGIN SAHIFASI
-# ───────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════
+# 12. LOGIN PAGE
+# ════════════════════════════════════════════════════════════════
 if not st.session_state.logged_in:
+    paste_js()
     st.markdown("""
-        <div style='text-align:center;margin-top:60px;'>
-            <h1 style='font-size:56px;margin-bottom:10px;'>
-                🌌 Somo AI <span class='gradient-text'>Infinity</span>
-            </h1>
-            <p style='color:#64748b;font-size:20px;margin-bottom:15px;'>
-                Kelajak texnologiyalari bilan tanishing
-            </p>
-            <p style='color:#94a3b8;font-size:16px;'>
-                ⚡ Groq 70B Chat &nbsp;|&nbsp;
-                🖼 Gemini Vision &nbsp;|&nbsp;
-                📄 Gemini PDF &nbsp;|&nbsp;
-                📊 PPTX/Excel &nbsp;|&nbsp;
-                📝 Word &nbsp;|&nbsp;
-                🎙 Whisper Audio
-            </p>
-        </div>
+    <div class="login-wrap">
+        <div class="login-logo">✦ Somo AI</div>
+        <div class="login-sub">Groq · Gemini · Whisper</div>
+    </div>
     """, unsafe_allow_html=True)
 
-    # API holati ko'rsatish
-    col_g, col_gem = st.columns(2)
-    with col_g:
-        status_groq = "✅ Ulangan" if groq_client else "❌ Ulanmagan"
-        color_groq  = "#10b981" if groq_client else "#ef4444"
-        st.markdown(f"""
-            <div style='text-align:center;padding:10px;background:#fff;border-radius:10px;
-                        border:2px solid {color_groq};margin:5px;'>
-                <b style='color:{color_groq};'>🟠 Groq AI — {status_groq}</b>
-                <p style='color:#64748b;font-size:12px;margin:0;'>Chat & Whisper</p>
-            </div>
-        """, unsafe_allow_html=True)
-    with col_gem:
-        status_gem = "✅ Ulangan" if gemini_model else "❌ Ulanmagan"
-        color_gem  = "#10b981" if gemini_model else "#ef4444"
-        st.markdown(f"""
-            <div style='text-align:center;padding:10px;background:#fff;border-radius:10px;
-                        border:2px solid {color_gem};margin:5px;'>
-                <b style='color:{color_gem};'>🔵 Gemini AI — {status_gem}</b>
-                <p style='color:#64748b;font-size:12px;margin:0;'>Vision & PDF Reader</p>
-            </div>
-        """, unsafe_allow_html=True)
+    g_ok=groq_cl is not None; gm_ok=gemini_md is not None
+    st.markdown(f"""
+    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:18px;flex-wrap:wrap;">
+        <span class="xp xp-g">{'✅' if g_ok else '❌'} Groq Chat · Whisper</span>
+        <span class="xp xp-gm">{'✅' if gm_ok else '❌'} Gemini Vision · PDF</span>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
-    _, c2, _ = st.columns([0.25, 1, 0.25])
-    with c2:
-        t1, t2, t3 = st.tabs(["🔒 Kirish", "✍️ Ro'yxatdan o'tish", "ℹ️ Ma'lumot"])
-
+    _,col,_=st.columns([1,1.1,1])
+    with col:
+        st.markdown('<div class="login-box">',unsafe_allow_html=True)
+        t1,t2,t3=st.tabs(["Kirish","Ro'yxat","Haqida"])
         with t1:
-            with st.form("login_form"):
-                st.markdown("### 🔐 Hisobingizga kiring")
-                u_in = st.text_input("👤 Username", placeholder="Username kiriting", key="login_u")
-                p_in = st.text_input("🔑 Parol", type="password", placeholder="Parol kiriting", key="login_p")
-                ca, cb = st.columns(2)
-                with ca: sub = st.form_submit_button("🚀 Kirish", use_container_width=True)
-                with cb: rem = st.checkbox("✅ Eslab qolish", value=True)
-                if sub and u_in and p_in and user_db:
+            with st.form("lf"):
+                u=st.text_input("",placeholder="Username",key="lu",label_visibility="collapsed")
+                p=st.text_input("",type="password",placeholder="Parol",key="lp",label_visibility="collapsed")
+                c1,c2=st.columns([3,1])
+                with c1: sub=st.form_submit_button("Kirish",use_container_width=True)
+                with c2: rem=st.checkbox("Eslab",value=True)
+                if sub and u and p and user_db:
                     try:
-                        recs = user_db.get_all_records()
-                        hp   = hashlib.sha256(p_in.encode()).hexdigest()
-                        usr  = next((r for r in recs if str(r["username"]) == u_in and str(r["password"]) == hp), None)
+                        recs=user_db.get_all_records()
+                        hp=hashlib.sha256(p.encode()).hexdigest()
+                        usr=next((r for r in recs if str(r.get("username",""))==u and str(r.get("password",""))==hp),None)
                         if usr:
-                            if str(usr.get("status","")).lower() == "blocked":
-                                st.error("🚫 Hisobingiz bloklangan!")
+                            if str(usr.get("status","")).lower()=="blocked": st.error("🚫 Hisob bloklangan")
                             else:
-                                st.session_state.update({
-                                    "username": u_in,
-                                    "logged_in": True,
-                                    "login_time": datetime.now(),
-                                    "cached_user": usr
-                                })
-                                if rem:
-                                    cookies["somo_user_session"] = u_in
-                                    cookies.save()
-                                st.success("✅ Muvaffaqiyatli!")
-                                time.sleep(0.5)
+                                st.session_state.update({"username":u,"logged_in":True,"login_time":datetime.now()})
+                                if rem: cookies["ss7"]=u; cookies.save()
                                 st.rerun()
-                        else:
-                            st.error("❌ Login yoki parol xato!")
-                    except Exception as e:
-                        st.error(f"❌ {e}")
-
+                        else: st.error("❌ Username yoki parol xato")
+                    except Exception as e: st.error(f"❌ {e}")
         with t2:
-            with st.form("reg_form"):
-                st.markdown("### ✨ Yangi hisob yaratish")
-                nu  = st.text_input("👤 Username", placeholder="Kamida 3 ta belgi", key="reg_u")
-                np  = st.text_input("🔑 Parol", type="password", placeholder="Kamida 6 ta belgi", key="reg_p")
-                npc = st.text_input("🔑 Tasdiqlang", type="password", placeholder="Qayta kiriting", key="reg_c")
-                ag  = st.checkbox("Foydalanish shartlariga roziman")
-                sub2 = st.form_submit_button("✨ Hisob yaratish", use_container_width=True)
-                if sub2:
-                    if not ag:            st.error("❌ Shartlarga rozilik!")
-                    elif not nu or not np: st.error("❌ Barcha maydonlar!")
-                    elif len(nu) < 3:    st.error("❌ Username ≥ 3 belgi!")
-                    elif len(np) < 6:    st.error("❌ Parol ≥ 6 belgi!")
-                    elif np != npc:      st.error("❌ Parollar mos emas!")
+            with st.form("rf"):
+                nu=st.text_input("",placeholder="Username (≥3)",key="ru",label_visibility="collapsed")
+                np=st.text_input("",type="password",placeholder="Parol (≥6)",key="rp",label_visibility="collapsed")
+                nc=st.text_input("",type="password",placeholder="Qayta kiriting",key="rc",label_visibility="collapsed")
+                ag=st.checkbox("Shartlarga roziman")
+                s2=st.form_submit_button("Hisob yaratish",use_container_width=True)
+                if s2:
+                    if not ag: st.error("❌ Shartlarga rozilik kerak")
+                    elif len(nu)<3: st.error("❌ Username ≥ 3")
+                    elif len(np)<6: st.error("❌ Parol ≥ 6")
+                    elif np!=nc: st.error("❌ Parollar mos emas")
                     elif user_db:
                         try:
-                            recs = user_db.get_all_records()
-                            if any(r["username"] == nu for r in recs):
-                                st.error("❌ Username band!")
+                            recs=user_db.get_all_records()
+                            if any(r.get("username")==nu for r in recs): st.error("❌ Username band")
                             else:
-                                user_db.append_row([
-                                    nu,
-                                    hashlib.sha256(np.encode()).hexdigest(),
-                                    "active",
-                                    str(datetime.now())
-                                ])
-                                st.balloons()
-                                st.success("🎉 Hisob yaratildi! Endi kirishingiz mumkin.")
-                        except Exception as e:
-                            st.error(f"❌ {e}")
-
+                                user_db.append_row([nu,hashlib.sha256(np.encode()).hexdigest(),"active",str(datetime.now())])
+                                st.success("🎉 Hisob yaratildi!")
+                        except Exception as e: st.error(f"❌ {e}")
         with t3:
             st.markdown("""
-                ### 🌟 Somo AI Infinity — v3.0 Pro
+**✦ Somo AI v7.0**
 
-                #### 🤖 AI Arxitektura
-                | Funksiya | AI Engine | Sabab |
-                |---------|-----------|-------|
-                | 💬 Chat | **Groq LLaMA 3.3 70B** | Eng tez, bepul |
-                | 🖼 Rasm tahlil | **Gemini Flash** | Dunyodagi eng yaxshi vision |
-                | 📄 PDF o'qish | **Gemini Flash** | Native PDF, jadval+rasm ko'radi |
-                | 📝 DOCX o'qish | **Gemini Flash** | Formatlash saqlanadi |
-                | 🎙 Audio → Matn | **Groq Whisper** | 99 til, yuqori aniqlik |
-                | 📊 PPTX yaratish | **Lokal** | Python-pptx |
-                | 📊 Excel yaratish | **Lokal** | Openpyxl |
-                | 📝 Word yaratish | **Lokal** | Python-docx |
+| Engine | Vazifa |
+|--------|--------|
+| 🟠 Groq LLaMA 3.3 70B | Chat, kod, matn |
+| 🔵 Gemini Flash 2.0 | Rasm, PDF, DOCX |
+| 🎙 Whisper v3 | Audio → Matn |
 
-                ---
-                📧 support@somoai.uz | 👨‍💻 Usmonov Sodiq | v3.0
+**Ctrl+V** — rasmni paste qiling  
+📧 support@somoai.uz
             """)
+        st.markdown('</div>',unsafe_allow_html=True)
 
-    st.markdown("""
-        <div style='text-align:center;margin-top:60px;color:#94a3b8;'>
-            <p>🔒 Xavfsiz | 🌐 24/7 Onlayn</p>
-            <p>© 2026 Somo AI | Barcha huquqlar himoyalangan</p>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<div class="foot">© 2026 Somo AI</div>',unsafe_allow_html=True)
     st.stop()
 
-# ───────────────────────────────────────────────
-# 10. SESSION STATE DEFAULTS
-# ───────────────────────────────────────────────
-defaults = {
-    "messages": [],
-    "total_messages": 0,
-    "current_page": "chat",
-    "attached_files": [],          # {name, type, data/text, media_type, bytes}
-    "pending_files": []            # gemini uchun tayyor fayllar
-}
-for k, v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+# ════════════════════════════════════════════════════════════════
+# 13. SESSION DEFAULTS
+# ════════════════════════════════════════════════════════════════
+for k,v in {"messages":[],"page":"chat","files":[],"chat_history":[]}.items():
+    if k not in st.session_state: st.session_state[k]=v
 
-uname = st.session_state.username
+uname=st.session_state.username
+paste_js()
 
-# ───────────────────────────────────────────────
-# 11. SIDEBAR
-# ───────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════
+# 14. SIDEBAR — ChatGPT exact layout
+# ════════════════════════════════════════════════════════════════
 with st.sidebar:
+    # Logo row
     st.markdown(f"""
-        <div style='text-align:center;padding:20px;margin-bottom:25px;
-                    background:linear-gradient(135deg,rgba(14,165,233,.1),rgba(99,102,241,.1));
-                    border-radius:20px;'>
-            <div style='background:linear-gradient(135deg,#0ea5e9,#6366f1);
-                        width:90px;height:90px;border-radius:50%;margin:0 auto;
-                        line-height:90px;font-size:40px;color:white;font-weight:bold;
-                        border:5px solid white;box-shadow:0 8px 20px rgba(14,165,233,.3);'>
-                {uname[0].upper()}
-            </div>
-            <h3 style='margin-top:15px;color:#0f172a;font-size:20px;'>{uname}</h3>
-            <p style='color:#10b981;font-size:14px;font-weight:600;'>🟢 Aktiv</p>
-        </div>
+    <div class="sb-top">
+        <div class="sb-logo">✦ Somo <span class="sb-logo-dot">AI</span></div>
+    </div>
     """, unsafe_allow_html=True)
 
-    # AI holati
-    st.markdown("### 🤖 AI Holati")
-    g_ok  = "✅" if groq_client  else "❌"
-    gm_ok = "✅" if gemini_model else "❌"
+    # New chat (primary black button)
+    if st.button("✏️  Yangi suhbat", use_container_width=True, key="nc", type="primary"):
+        st.session_state.messages=[]
+        st.session_state.files=[]
+        st.session_state.page="chat"
+        st.rerun()
+
+    # Navigation
+    st.markdown('<div class="sb-sec">Sahifalar</div>', unsafe_allow_html=True)
+    for icon,label,pg in [("💬","Chat","chat"),("🎨","Shablonlar","templates"),("💌","Fikrlar","feedback")]:
+        if st.button(f"{icon}  {label}",use_container_width=True,key=f"np_{pg}"):
+            st.session_state.page=pg; st.rerun()
+
+    # Chat history (last 5 messages as history)
+    if st.session_state.messages:
+        st.markdown('<div class="sb-sec">Chatlar</div>', unsafe_allow_html=True)
+        user_msgs=[m["content"] for m in st.session_state.messages if m["role"]=="user"]
+        for i,msg in enumerate(user_msgs[-5:]):
+            txt=msg[:32]+"..." if len(msg)>32 else msg
+            st.markdown(f'<div class="sb-chat-item {"active" if i==len(user_msgs[-5:])-1 else ""}">{txt}</div>',
+                        unsafe_allow_html=True)
+
+    st.markdown('<div class="sb-div"></div>', unsafe_allow_html=True)
+
+    # AI status
+    st.markdown('<div class="sb-sec">AI Holati</div>', unsafe_allow_html=True)
+    g_s="🟢" if groq_cl else "🔴"; gm_s="🟢" if gemini_md else "🔴"
     st.markdown(f"""
-        <div style='background:white;border-radius:10px;padding:10px;font-size:13px;'>
-            <div>{g_ok} <b>Groq</b> — Chat, Whisper</div>
-            <div>{gm_ok} <b>Gemini</b> — Vision, PDF, DOCX</div>
-        </div>
+    <div style="padding:2px 6px;font-size:12px;color:#666;line-height:2.3;">
+        {g_s} Groq — Chat · Whisper<br>
+        {gm_s} Gemini — Vision · PDF · DOCX
+    </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("### 🧭 Navigatsiya")
-    for lbl, pg in [
-        ("💬 Chat", "chat"),
-        ("🎨 Shablonlar", "templates"),
-        ("💌 Fikr bildirish", "feedback")
-    ]:
-        if st.button(lbl, use_container_width=True, key=f"nav_{pg}"):
-            st.session_state.current_page = pg
-            st.rerun()
+    st.markdown('<div class="sb-div"></div>', unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.markdown("### 📊 Statistika")
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown(f"""
-            <div class='metric-card'>
-                <h4 style='color:#0284c7;margin:0;'>💬</h4>
-                <h2 style='margin:5px 0;color:#0f172a;'>{len(st.session_state.messages)}</h2>
-                <p style='color:#64748b;margin:0;font-size:12px;'>Xabarlar</p>
-            </div>
-        """, unsafe_allow_html=True)
-    with c2:
-        if "login_time" in st.session_state:
-            dur = (datetime.now() - st.session_state.login_time).seconds // 60
-            st.markdown(f"""
-                <div class='metric-card'>
-                    <h4 style='color:#6366f1;margin:0;'>⏱</h4>
-                    <h2 style='margin:5px 0;color:#0f172a;'>{dur}</h2>
-                    <p style='color:#64748b;margin:0;font-size:12px;'>Daqiqa</p>
-                </div>
-            """, unsafe_allow_html=True)
+    # Settings
+    if st.session_state.page=="chat":
+        st.markdown('<div class="sb-sec">Sozlamalar</div>', unsafe_allow_html=True)
+        temperature=st.slider("Ijodkorlik",0.0,1.0,0.6,0.05,key="temp")
+        model=st.selectbox("Model",key="mdl",
+            options=["llama-3.3-70b-versatile","mixtral-8x7b-32768","gemma2-9b-it","llama-3.1-8b-instant"],
+            format_func=lambda x:{"llama-3.3-70b-versatile":"LLaMA 3.3 70B ⚡",
+                "mixtral-8x7b-32768":"Mixtral 8x7B","gemma2-9b-it":"Gemma 2 9B",
+                "llama-3.1-8b-instant":"LLaMA 3.1 8B"}.get(x,x))
+        st.caption("🔵 Rasm/PDF/DOCX → Gemini avtomatik")
 
-    st.markdown("---")
+        # Stats
+        dur=(datetime.now()-st.session_state.login_time).seconds//60 if "login_time" in st.session_state else 0
+        c1,c2=st.columns(2)
+        with c1: st.markdown(f'<div class="sb-stat"><div class="sb-stat-v">{len(st.session_state.messages)}</div><div class="sb-stat-l">Xabar</div></div>',unsafe_allow_html=True)
+        with c2: st.markdown(f'<div class="sb-stat"><div class="sb-stat-v">{dur}</div><div class="sb-stat-l">Daqiqa</div></div>',unsafe_allow_html=True)
 
-    if st.session_state.current_page == "chat":
-        st.markdown("### 🎛 Boshqaruv")
-        if st.button("🗑 Chatni tozalash", use_container_width=True, key="clr"):
-            for k, v in defaults.items():
-                st.session_state[k] = v
-            st.success("✅ Tozalandi!")
-            st.rerun()
-
+        st.markdown("")
         if st.session_state.messages:
-            chat_json = json.dumps(st.session_state.messages, ensure_ascii=False, indent=2)
-            st.download_button(
-                "📥 Chat yuklab olish",
-                chat_json,
-                file_name=f"somo_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-                mime="application/json",
-                use_container_width=True,
-                key="dl_chat_json"
-            )
+            st.download_button("📥 Saqlash",
+                json.dumps(st.session_state.messages,ensure_ascii=False,indent=2),
+                f"somo_{datetime.now().strftime('%Y%m%d_%H%M')}.json","application/json",
+                use_container_width=True,key="dlch")
+        if st.button("🗑  Tozalash",use_container_width=True,key="clr"):
+            st.session_state.messages=[]; st.session_state.files=[]; st.rerun()
 
-        st.markdown("---")
-        st.markdown("### ⚙️ Sozlamalar")
-        temperature = st.slider("🌡 Ijodkorlik", 0.0, 1.0, 0.6, 0.1, key="temp")
-        st.caption(
-            "🎯 Aniq" if temperature < 0.3 else
-            "⚖️ Muvozanatli" if temperature < 0.7 else "🎨 Ijodiy"
-        )
+    st.markdown('<div class="sb-div"></div>', unsafe_allow_html=True)
 
-        st.markdown("---")
-        st.markdown("### 🤖 Chat Modeli")
-        model_choice = st.selectbox(
-            "Model", key="mdl", label_visibility="collapsed",
-            options=[
-                "llama-3.3-70b-versatile",
-                "mixtral-8x7b-32768",
-                "gemma2-9b-it",
-                "llama-3.1-8b-instant"
-            ],
-            format_func=lambda x: {
-                "llama-3.3-70b-versatile": "🧠 Llama 3.3 70B (Kuchli)",
-                "mixtral-8x7b-32768":      "⚡ Mixtral 8x7B (Tez)",
-                "gemma2-9b-it":            "💡 Gemma 2 9B (Yengil)",
-                "llama-3.1-8b-instant":    "⚡ Llama 3.1 8B (Eng tez)"
-            }.get(x, x)
-        )
-        st.caption("📄 Rasm/PDF → avtomatik Gemini")
+    # User row (bottom like ChatGPT)
+    st.markdown(f"""
+    <div class="sb-user">
+        <div class="sb-av">{uname[0].upper()}</div>
+        <div>
+            <div class="sb-name">{uname}</div>
+            <div class="sb-plan">Free</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.markdown("<br>" * 2, unsafe_allow_html=True)
-    if st.button("🚪 Chiqish", use_container_width=True, key="logout", type="primary"):
-        handle_logout()
+    if st.button("🚪  Chiqish",use_container_width=True,key="lo",type="primary"):
+        do_logout()
 
-# ───────────────────────────────────────────────
-# 12. SAHIFALAR
-# ───────────────────────────────────────────────
+# ════════════════════════════════════════════════════════════════
+# 15. CHAT PAGE
+# ════════════════════════════════════════════════════════════════
+if st.session_state.page=="chat":
 
-# ════════════ CHAT SAHIFASI ════════════
-if st.session_state.current_page == "chat":
-
+    # ─── HOME SCREEN (when no messages)
     if not st.session_state.messages:
         st.markdown(f"""
-            <div style='text-align:center;margin:40px 0;'>
-                <h1 style='font-size:42px;margin-bottom:15px;'>
-                    Salom, <span class='gradient-text'>{uname}</span>! 👋
-                </h1>
-                <p style='color:#64748b;font-size:20px;margin-bottom:10px;'>
-                    Bugun sizga qanday yordam bera olaman?
-                </p>
-                <div style='display:inline-flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:30px;'>
-                    <span class='api-badge api-groq'>🟠 Groq — Chat</span>
-                    <span class='api-badge api-gemini'>🔵 Gemini — Vision & PDF</span>
-                </div>
-            </div>
+        <div class="home-center">
+            <div class="home-title">Bugun qanday yordam bera olaman?</div>
+        </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("""
-            <div class='dashboard-container'>
-                <div class='card-box'>
-                    <h1 style='font-size:48px;margin-bottom:15px;'>🖼</h1>
-                    <h3 style='color:#0f172a;margin-bottom:10px;'>Gemini Vision</h3>
-                    <p style='color:#64748b;line-height:1.6;'>
-                        Rasm yuklang — Gemini AI ko'radi va tahlil qiladi.
-                        Jadval, matn, formula, grafik — hammasi!
-                    </p>
-                </div>
-                <div class='card-box'>
-                    <h1 style='font-size:48px;margin-bottom:15px;'>📄</h1>
-                    <h3 style='color:#0f172a;margin-bottom:10px;'>Gemini PDF/DOCX</h3>
-                    <p style='color:#64748b;line-height:1.6;'>
-                        PDF yoki Word fayl yuklang — Gemini to'liq o'qiydi,
-                        jadval va rasmlari bilan birga tushunadi.
-                    </p>
-                </div>
-                <div class='card-box'>
-                    <h1 style='font-size:48px;margin-bottom:15px;'>⚡</h1>
-                    <h3 style='color:#0f172a;margin-bottom:10px;'>Groq Chat</h3>
-                    <p style='color:#64748b;line-height:1.6;'>
-                        70B model bilan tezkor suhbat, kod yozish,
-                        taqdimot va hujjat yaratish.
-                    </p>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        # 4 suggestion cards 2×2
+        col1, col2 = st.columns(2)
+        cards = [
+            ("🖼 Rasm tahlil qil", "Ctrl+V yoki fayl yuklang — Gemini Vision ko'radi"),
+            ("📄 PDF / DOCX o'qi", "Hujjat yuklang — jadval va rasmlar ham tahlil"),
+            ("📊 Taqdimot yarat", "\"Taqdimot yarat\" yazib yuboring — PPTX tayyor"),
+            ("💻 Kod yoz", "Python, JS, SQL yoki boshqa tilda kod yoz"),
+        ]
+        with col1:
+            for title,desc in cards[:2]:
+                st.markdown(f'<div class="sg-card"><div class="sg-title">{title}</div><div class="sg-desc">{desc}</div></div>', unsafe_allow_html=True)
+        with col2:
+            for title,desc in cards[2:]:
+                st.markdown(f'<div class="sg-card"><div class="sg-title">{title}</div><div class="sg-desc">{desc}</div></div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("""
-            <div style='background:linear-gradient(135deg,rgba(14,165,233,.1),rgba(99,102,241,.1));
-                        padding:25px;border-radius:20px;'>
-                <h3 style='color:#0f172a;margin-bottom:15px;text-align:center;'>
-                    💡 Nima qila olaman?
-                </h3>
-                <div style='display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-                            gap:15px;'>
-                    <div>
-                        <strong style='color:#4285f4;'>🖼 Rasm yuklang</strong>
-                        <p style='color:#64748b;margin:5px 0;font-size:14px;'>
-                            → Gemini ko'rib tahlil qiladi
-                        </p>
-                    </div>
-                    <div>
-                        <strong style='color:#0f9d58;'>📄 PDF/DOCX yuklang</strong>
-                        <p style='color:#64748b;margin:5px 0;font-size:14px;'>
-                            → Gemini native o'qiydi
-                        </p>
-                    </div>
-                    <div>
-                        <strong style='color:#f97316;'>📊 "Taqdimot yarat"</strong>
-                        <p style='color:#64748b;margin:5px 0;font-size:14px;'>
-                            → Professional PPTX yuklab olish
-                        </p>
-                    </div>
-                    <div>
-                        <strong style='color:#6366f1;'>📊 "Jadval yarat"</strong>
-                        <p style='color:#64748b;margin:5px 0;font-size:14px;'>
-                            → Excel + CSV yuklab olish
-                        </p>
-                    </div>
-                    <div>
-                        <strong style='color:#8b5cf6;'>📝 "Hujjat yoz"</strong>
-                        <p style='color:#64748b;margin:5px 0;font-size:14px;'>
-                            → Formatlangan Word yuklab olish
-                        </p>
-                    </div>
-                    <div>
-                        <strong style='color:#ec4899;'>🌐 "Veb sahifa yarat"</strong>
-                        <p style='color:#64748b;margin:5px 0;font-size:14px;'>
-                            → HTML preview + yuklab olish
-                        </p>
-                    </div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
 
-    # Chat tarixi ko'rsatish
+        # Quick action chips
+        quick=["📊 Biznes reja","📝 Rezyume yarat","🌐 HTML sahifa","🐍 Python kod","📈 Excel jadval","🎯 Taqdimot"]
+        bc=st.columns(3)
+        for i,q in enumerate(quick):
+            with bc[i%3]:
+                if st.button(q,key=f"qs_{i}",use_container_width=True):
+                    st.session_state.messages.append({"role":"user","content":q}); st.rerun()
+
+    # ─── CHAT HISTORY
     for m in st.session_state.messages:
         with st.chat_message(m["role"]):
-            cont = m["content"]
-            if isinstance(cont, list):
-                for p in cont:
-                    if isinstance(p, dict) and p.get("type") == "text":
-                        st.markdown(p["text"])
-            else:
-                st.markdown(cont)
+            c=m["content"]
+            if isinstance(c,list):
+                for p in c:
+                    if isinstance(p,dict) and p.get("type")=="text": st.markdown(p["text"])
+            else: st.markdown(c)
 
-    st.markdown("---")
-
-    # Biriktirilgan fayllar
-    if st.session_state.attached_files:
-        badges = "".join(
-            f"<span class='file-badge'>{get_file_emoji(f['name'])} {f['name']}"
-            f"{'<span style=\"font-size:10px;opacity:.7;\"> 🔵Gemini</span>' if f.get('use_gemini') else ''}"
-            f"</span>"
-            for f in st.session_state.attached_files
+    # ─── ATTACHED FILES BADGE
+    if st.session_state.files:
+        badges="".join(
+            f'<span class="xfc">{ficon(f["name"])} {f["name"]}'
+            f'{"&nbsp;<small style=\'color:#1d4ed8;\'>Gemini</small>" if f.get("gem") else ""}'
+            f'</span>'
+            for f in st.session_state.files
         )
-        st.markdown(
-            f"<div style='margin-bottom:10px;'><b>📎 Biriktirilgan:</b><br>{badges}</div>",
-            unsafe_allow_html=True
-        )
-        if st.button("🗑 Fayllarni tozalash", key="clf"):
-            st.session_state.attached_files = []
-            st.rerun()
+        ca,cb=st.columns([5,1])
+        with ca: st.markdown(f'<div style="margin:6px 0 2px;">{badges}</div>',unsafe_allow_html=True)
+        with cb:
+            if st.button("✕",key="clf",use_container_width=True):
+                st.session_state.files=[]; st.rerun()
 
-    # Fayl biriktirish
-    with st.expander("➕ Fayl biriktirish — rasm, PDF, DOCX, kod, CSV", expanded=False):
-        st.markdown("""
-            <div class='upload-zone'>
-                <p style='color:#0284c7;font-size:16px;margin:0;'>📎 Istalgan faylni yuklang</p>
-                <p style='color:#64748b;font-size:13px;margin:5px 0 0;'>
-                    🖼 JPG/PNG (Gemini Vision) ·
-                    📄 PDF (Gemini PDF) ·
-                    📝 DOCX (Gemini DOCX) ·
-                    🐍 Kod (Groq) ·
-                    📊 CSV/Excel (Groq)
-                </p>
-            </div>
-        """, unsafe_allow_html=True)
-
-        uploaded = st.file_uploader(
-            "Fayl", label_visibility="collapsed",
-            type=[
-                "jpg","jpeg","png","webp","gif",
-                "pdf","docx","doc","txt","csv",
-                "xlsx","xls","json","yaml","xml",
-                "py","js","ts","jsx","tsx","html","css",
-                "md","java","cpp","c","go","rs","sh","svg",
-                "rb","php","swift","kt","r","sql"
-            ],
-            accept_multiple_files=True,
-            key="multi_upload"
-        )
-
-        if uploaded:
-            for f in uploaded:
-                if any(a["name"] == f.name for a in st.session_state.attached_files):
-                    continue
-
-                f.seek(0)
-                file_bytes = f.read()
-
-                if is_image_file(f):
-                    b64   = base64.b64encode(file_bytes).decode("utf-8")
-                    mtype = get_image_media_type(f)
-                    st.image(file_bytes, caption=f"🖼 {f.name}", width=280)
-                    st.session_state.attached_files.append({
-                        "name":       f.name,
-                        "type":       "image",
-                        "bytes":      file_bytes,
-                        "data":       b64,
-                        "media_type": mtype,
-                        "use_gemini": True
-                    })
-                    st.success(f"✅ 🔵 Gemini Vision: {f.name}")
-
-                elif is_pdf_file(f):
-                    st.session_state.attached_files.append({
-                        "name":       f.name,
-                        "type":       "pdf",
-                        "bytes":      file_bytes,
-                        "use_gemini": True
-                    })
-                    size_kb = len(file_bytes) // 1024
-                    st.success(f"✅ 🔵 Gemini PDF: {f.name} ({size_kb} KB)")
-
-                elif is_docx_file(f):
-                    st.session_state.attached_files.append({
-                        "name":       f.name,
-                        "type":       "docx",
-                        "bytes":      file_bytes,
-                        "use_gemini": True
-                    })
-                    st.success(f"✅ 🔵 Gemini DOCX: {f.name}")
-
+    # ─── FILE UPLOAD EXPANDER
+    with st.expander("➕  Fayl biriktirish  ·  Ctrl+V  ·  Drag & Drop", expanded=False):
+        up=st.file_uploader("",label_visibility="collapsed",
+            type=["jpg","jpeg","png","webp","gif","pdf","docx","doc","txt","csv",
+                  "xlsx","xls","json","yaml","xml","py","js","ts","jsx","tsx",
+                  "html","css","md","java","cpp","c","go","rs","sh","svg",
+                  "rb","php","swift","kt","r","sql","toml"],
+            accept_multiple_files=True,key="fup")
+        if up:
+            for f in up:
+                if any(a["name"]==f.name for a in st.session_state.files): continue
+                f.seek(0); fb=f.read()
+                if is_img(f):
+                    b64=base64.b64encode(fb).decode()
+                    st.image(fb,caption=f.name,width=220)
+                    st.session_state.files.append({"name":f.name,"type":"image","bytes":fb,"data":b64,"media_type":img_mime(f),"gem":True})
+                    st.success(f"✅ Gemini Vision: {f.name}")
+                elif is_pdf(f):
+                    st.session_state.files.append({"name":f.name,"type":"pdf","bytes":fb,"gem":True})
+                    st.success(f"✅ Gemini PDF: {f.name} ({len(fb)//1024} KB)")
+                elif is_docx(f):
+                    st.session_state.files.append({"name":f.name,"type":"docx","bytes":fb,"gem":True})
+                    st.success(f"✅ Gemini DOCX: {f.name}")
                 else:
-                    # Kod, CSV, JSON va boshqalar → Groq uchun matn
-                    f_io = io.BytesIO(file_bytes)
-                    f_io.name = f.name
-                    f_io.type = f.type
-                    txt = process_doc_local(f_io)
-                    st.session_state.attached_files.append({
-                        "name":       f.name,
-                        "type":       "text",
-                        "text":       txt or "",
-                        "use_gemini": False
-                    })
-                    st.success(f"✅ 🟠 Groq: {f.name} ({len(txt):,} belgi)")
+                    txt=read_text(fb,f.name,getattr(f,"type",""))
+                    st.session_state.files.append({"name":f.name,"type":"text","text":txt,"gem":False})
+                    st.success(f"✅ Groq: {f.name}")
 
-    # Audio kirish (Whisper)
-    with st.expander("🎙 Ovozli xabar — Groq Whisper", expanded=False):
-        st.markdown("""
-            <div class='upload-zone'>
-                <p style='color:#0284c7;font-size:16px;margin:0;'>🎙 Audio faylni yuklang</p>
-                <p style='color:#64748b;font-size:13px;margin:5px 0 0;'>
-                    WAV, MP3, M4A · O'zbek, Rus, Ingliz tillarida
-                </p>
-            </div>
-        """, unsafe_allow_html=True)
-        audio_file = st.file_uploader(
-            "Audio", label_visibility="collapsed",
-            type=["wav","mp3","m4a","ogg","flac","webm"],
-            key="audio_upload"
-        )
-        if audio_file:
-            st.audio(audio_file)
-            if st.button("🎙 Matnга aylantirish (Whisper)", use_container_width=True):
-                with st.spinner("🎙 Whisper AI tinglayapti..."):
-                    audio_bytes = audio_file.read()
-                    transcribed = groq_whisper(audio_bytes, audio_file.name)
-                    if transcribed:
-                        st.success(f"✅ Aniqlangan matn:")
-                        st.info(transcribed)
-                        st.session_state["whisper_text"] = transcribed
-                    else:
-                        st.error("❌ Audio o'qilmadi. Groq Whisper mavjud emas yoki xato.")
+    # ─── WHISPER EXPANDER
+    with st.expander("🎙  Ovozli xabar — Groq Whisper", expanded=False):
+        af=st.file_uploader("",label_visibility="collapsed",
+            type=["wav","mp3","m4a","ogg","flac","webm"],key="aup")
+        if af:
+            st.audio(af)
+            if st.button("🎙 Matnga aylantirish",use_container_width=True,key="wbtn"):
+                with st.spinner("Whisper eshityapti..."):
+                    txt=groq_stt(af.read(),af.name)
+                    if txt: st.success("✅ Aniqlandi:"); st.info(txt); st.session_state["_w"]=txt
+                    else: st.error("❌ Audio o'qilmadi")
 
-    # CHAT INPUT
-    user_input = st.chat_input(
-        "💭 Xabar yuboring... | ➕ fayl biriktirish yuqorida",
-        key="main_chat_input"
-    )
+    # ─── CHAT INPUT (Streamlit's built-in)
+    prompt=st.chat_input("Xabar yuboring...",key="ci")
 
-    # Whisper matni avtomatik qo'shish
-    if "whisper_text" in st.session_state and st.session_state.whisper_text:
-        user_input = st.session_state.whisper_text
-        del st.session_state["whisper_text"]
+    if "_w" in st.session_state and st.session_state["_w"]:
+        prompt=st.session_state.pop("_w")
 
-    if user_input:
-        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if prompt:
+        ts=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        T=st.session_state.get("temp",0.6)
+        M=st.session_state.get("mdl","llama-3.3-70b-versatile")
 
-        # Fayl turlari ajratish
-        gemini_files = [f for f in st.session_state.attached_files if f.get("use_gemini")]
-        groq_texts   = [f for f in st.session_state.attached_files if not f.get("use_gemini")]
+        gf=[f for f in st.session_state.files if f.get("gem")]
+        tf=[f for f in st.session_state.files if not f.get("gem")]
 
-        has_gemini_file = bool(gemini_files)
-        has_groq_text   = bool(groq_texts)
+        if st.session_state.files:
+            names=", ".join(f["name"] for f in st.session_state.files)
+            disp=f"📎 *[{names}]* — {prompt}"
+        else: disp=prompt
 
-        # Display xabari
-        if st.session_state.attached_files:
-            names = ", ".join(f["name"] for f in st.session_state.attached_files)
-            disp  = f"📎 *[{names}]* — {user_input}"
-        else:
-            disp = user_input
-
-        st.session_state.messages.append({"role": "user", "content": disp})
-        with st.chat_message("user"):
-            st.markdown(disp)
+        st.session_state.messages.append({"role":"user","content":disp})
+        with st.chat_message("user"): st.markdown(disp)
 
         if chat_db:
-            try:
-                chat_db.append_row([ts, uname, "User", user_input])
-            except Exception:
-                pass
+            try: chat_db.append_row([ts,uname,"User",prompt[:500]])
+            except: pass
 
         with st.chat_message("assistant"):
+            final=None
 
-            # ── GEMINI yo'li (rasm, PDF, DOCX) ──────────
-            if has_gemini_file and gemini_model:
-                api_label = "🔵 Gemini AI"
-                file_types = [f["type"] for f in gemini_files]
-                label_str  = " + ".join(set(file_types))
-                st.markdown(f"<span class='api-badge api-gemini'>{api_label} — {label_str}</span>",
-                            unsafe_allow_html=True)
+            # GEMINI PATH
+            if gf and gemini_md:
+                st.markdown('<span class="xp xp-gm">🔵 Gemini</span>',unsafe_allow_html=True)
+                with st.spinner("Gemini o'qiyapti..."):
+                    parts=[]
+                    for f in gf:
+                        if   f["type"]=="image": r=gem_img(prompt,f["data"],f.get("media_type","image/png"))
+                        elif f["type"]=="pdf":   r=gem_pdf(prompt,f["bytes"])
+                        elif f["type"]=="docx":  r=gem_docx(prompt,f["bytes"])
+                        else: r=None
+                        if r: parts.append(f"**{f['name']}:**\n\n{r}")
+                    if parts: final="\n\n---\n\n".join(parts)
+                    else: st.warning("⚠️ Gemini javob bermadi, Groq ishlatilmoqda...")
 
-                with st.spinner(f"🔵 Gemini o'qiyapti..."):
-                    gemini_results = []
-                    for gf in gemini_files:
-                        if gf["type"] == "image":
-                            res = gemini_read_image(user_input, gf["data"], gf.get("media_type","image/jpeg"))
-                        elif gf["type"] == "pdf":
-                            res = gemini_read_pdf(user_input, gf["bytes"])
-                        elif gf["type"] == "docx":
-                            res = gemini_read_docx(user_input, gf["bytes"], gf["name"])
-                        else:
-                            res = None
+            # GROQ PATH
+            if not final:
+                st.markdown('<span class="xp xp-g">🟠 Groq</span>',unsafe_allow_html=True)
+                SYS=(
+                    "Sening isming Somo AI. Seni Usmonov Sodiq yaratgan. "
+                    "Sen foydali, professional, aniq yordamchi AI san. "
+                    "LaTeX ($...$) faqat matematika uchun. "
+                    "ASOSIY QOIDA: Oddiy savol → qisqa, aniq javob. "
+                    "Taqdimot so'ralsa → ## sarlavhalar + bullet list. "
+                    "Jadval so'ralsa → Markdown jadval yoki ```csv. "
+                    "Hujjat/CV so'ralsa → to'liq formatlangan matn. "
+                    "HTML so'ralsa → ```html blokida to'liq kod. "
+                    "Kod so'ralsa → tegishli blokda ishlaydigan kod. "
+                    "SO'RALMAGAN NARSANI HECH QACHON YARATMA!"
+                )
+                msgs=[{"role":"system","content":SYS}]
+                if tf:
+                    ctx="\n\n".join(f"=== {f['name']} ===\n{f.get('text','')[:4000]}" for f in tf if f.get("text"))
+                    if ctx: msgs.append({"role":"system","content":f"Yuklangan fayllar:\n{ctx}"})
+                for old in st.session_state.messages[-20:]:
+                    r=old["role"]; c=old["content"]
+                    if isinstance(c,list): c=" ".join(p.get("text","") for p in c if isinstance(p,dict))
+                    msgs.append({"role":r,"content":c})
+                with st.spinner("O'ylayapman..."):
+                    final=groq_ask(msgs,M,T,4096)
 
-                        if res:
-                            gemini_results.append(f"**📄 {gf['name']}:**\n{res}")
-
-                    if gemini_results:
-                        final_response = "\n\n---\n\n".join(gemini_results)
-                    else:
-                        # Gemini ishlamasa Groq bilan fallback
-                        st.warning("⚠️ Gemini javob bermadi, Groq bilan urinib ko'rilmoqda...")
-                        final_response = None
-
-                if final_response:
-                    st.markdown(final_response)
-                    create_and_offer_files(final_response, ts)
-                    st.session_state.messages.append({"role": "assistant", "content": final_response})
-                    st.session_state.total_messages += 1
-
-                    # Groq matnlari ham bor bo'lsa, alohida Groq javob
-                    if has_groq_text:
-                        groq_context = "\n\n".join(
-                            f"=== {f['name']} ===\n{f['text'][:3000]}"
-                            for f in groq_texts if f.get("text")
-                        )
-                        groq_msgs = [
-                            {"role": "system", "content":
-                                "Sen Somo AI. Yuqoridagi Gemini tahlilini va quyidagi fayl matnlarini "
-                                "hisobga olib javob ber."},
-                            {"role": "system", "content": f"Fayl matnlari:\n{groq_context}"},
-                            {"role": "user",   "content": f"{user_input}\n\nGemini tahlili:\n{final_response}"}
-                        ]
-                        model = st.session_state.get("mdl", "llama-3.3-70b-versatile")
-                        gr_res = groq_chat(groq_msgs, model, temperature, max_tokens=3000)
-                        st.markdown("---")
-                        st.markdown(f"<span class='api-badge api-groq'>🟠 Groq — Qo'shimcha tahlil</span>",
-                                    unsafe_allow_html=True)
-                        st.markdown(gr_res)
-                        create_and_offer_files(gr_res, ts + "_2")
-                        st.session_state.messages.append({"role": "assistant", "content": gr_res})
-                else:
-                    # Gemini ishlamadi — to'liq Groq fallback
-                    has_gemini_file = False
-
-            # ── GROQ yo'li (chat + kod + CSV) ────────────
-            if not has_gemini_file or not gemini_model:
-                st.markdown(f"<span class='api-badge api-groq'>🟠 Groq LLaMA — Chat</span>",
-                            unsafe_allow_html=True)
-                temperature = st.session_state.get("temp", 0.6)
-
-                with st.spinner("🤔 O'ylayapman..."):
-                    sys_instr = (
-                        "Sening isming Somo AI. Seni Usmonov Sodiq yaratgan. "
-                        "Sen professional, foydali yordamchi sun'iy intellektsan. "
-                        "Matematikani LaTeX ($...$) da yoz. "
-                        "Javoblarni o'qishga qulay va strukturalashtirilgan qil. "
-                        "FAYL YARATISH QOIDASI: "
-                        "Taqdimot so'ralsa — ## sarlavhalar va bullet listlar bilan tuzilgan to'liq matn yoz. "
-                        "Jadval so'ralsa — Markdown jadval yoki ```csv blok yoz. "
-                        "Hujjat/rezyume/xat so'ralsa — to'liq formatlangan matn yoz. "
-                        "HTML so'ralsa — ```html blok ichida to'liq kod yoz. "
-                        "Kod so'ralsa — tegishli til blokida to'liq ishlaydigan kod yoz. "
-                        "HECH QACHON faqat tushuntirma — doim to'liq tayyor kontent yoz!"
-                    )
-
-                    msgs = [{"role": "system", "content": sys_instr}]
-
-                    # Groq fayl matnlari
-                    if has_groq_text:
-                        groq_context = "\n\n".join(
-                            f"=== {f['name']} ===\n{f['text'][:3000]}"
-                            for f in groq_texts if f.get("text")
-                        )
-                        msgs.append({
-                            "role": "system",
-                            "content": f"Yuklangan fayllar:\n\n{groq_context}"
-                        })
-
-                    # Chat tarixi (oxirgi 20 ta)
-                    for old in st.session_state.messages[-20:]:
-                        role = old["role"]
-                        cont = old["content"]
-                        if isinstance(cont, list):
-                            txt = " ".join(
-                                p["text"] for p in cont
-                                if isinstance(p, dict) and p.get("type") == "text"
-                            )
-                            msgs.append({"role": role, "content": txt})
-                        else:
-                            msgs.append({"role": role, "content": cont})
-
-                    model = st.session_state.get("mdl", "llama-3.3-70b-versatile")
-                    temperature = st.session_state.get("temp", 0.6)
-                    res = groq_chat(msgs, model, temperature, max_tokens=4000)
-
-                st.markdown(res)
-                create_and_offer_files(res, ts)
-                st.session_state.messages.append({"role": "assistant", "content": res})
-                st.session_state.total_messages += 1
-
+            if final:
+                st.markdown(final)
+                offer_dl(final,prompt,ts)
+                st.session_state.messages.append({"role":"assistant","content":final})
                 if chat_db:
-                    try:
-                        chat_db.append_row([ts, "Somo AI", "Assistant", res[:500]])
-                    except Exception:
-                        pass
+                    try: chat_db.append_row([ts,"Somo AI","Assistant",final[:500]])
+                    except: pass
 
-            # Fayllarni tozalash
-            st.session_state.attached_files = []
+            st.session_state.files=[]
 
-# ════════════ SHABLONLAR ════════════
-elif st.session_state.current_page == "templates":
-    st.markdown("""
-        <div style='text-align:center;margin:30px 0;'>
-            <h1 style='font-size:42px;margin-bottom:15px;'>
-                🎨 <span class='gradient-text'>Shablonlar Markazi</span>
-            </h1>
-            <p style='color:#64748b;font-size:18px;'>
-                Professional shablonlar bilan ishni tezlashtiring
-            </p>
-        </div>
-    """, unsafe_allow_html=True)
+# ════════════════════════════════════════════════════════════════
+# 16. TEMPLATES PAGE
+# ════════════════════════════════════════════════════════════════
+elif st.session_state.page=="templates":
+    st.markdown('<div class="pg-h">🎨 Shablonlar</div>',unsafe_allow_html=True)
+    st.markdown('<div class="pg-s">Tezkor boshlash uchun professional shablonlar</div>',unsafe_allow_html=True)
 
-    cat = st.selectbox("📁 Kategoriya:", list(TEMPLATES.keys()), key="tmpl_cat")
-    st.markdown(f"### {cat} shablonlari")
+    cat=st.selectbox("",list(TMPLS.keys()),label_visibility="collapsed",key="tc")
+    st.markdown(f"#### {cat}")
     st.markdown("---")
 
-    cols = st.columns(min(len(TEMPLATES[cat]), 2))
-    for i, tmpl in enumerate(TEMPLATES[cat]):
-        with cols[i % 2]:
-            with st.expander(f"{tmpl['icon']} {tmpl['title']}", expanded=(i == 0)):
-                st.markdown(f"**📝 Tavsif:** {tmpl['description']}")
-                st.code(tmpl["prompt"], language="text")
-                c1, c2 = st.columns(2)
-                with c1:
-                    if st.button("📋 Ko'chirish", key=f"cp_{cat}_{i}", use_container_width=True):
-                        st.success("✅ Chatga joylashtiring!")
-                with c2:
-                    if st.button("🚀 Ishlatish", key=f"us_{cat}_{i}", use_container_width=True):
-                        st.session_state.current_page = "chat"
-                        st.session_state.messages.append({
-                            "role": "user",
-                            "content": tmpl["prompt"]
-                        })
-                        st.rerun()
+    items=TMPLS[cat]
+    for i in range(0,len(items),2):
+        cols=st.columns(2)
+        for j,t in enumerate(items[i:i+2]):
+            with cols[j]:
+                st.markdown(f'<div class="tpl-card"><div style="font-size:20px;margin-bottom:6px;">{t["icon"]}</div><div style="font-size:14px;font-weight:600;margin-bottom:8px;">{t["title"]}</div></div>',unsafe_allow_html=True)
+                st.code(t["prompt"],language="text")
+                ca,cb=st.columns(2)
+                with ca:
+                    if st.button("📋",key=f"cp_{i}_{j}",use_container_width=True): st.success("✅ Ko'chirildi!")
+                with cb:
+                    if st.button("🚀 Ishlatish",key=f"us_{i}_{j}",use_container_width=True):
+                        st.session_state.messages.append({"role":"user","content":t["prompt"]})
+                        st.session_state.page="chat"; st.rerun()
 
-    st.info("💡 [qavs ichidagi] joylarni o'z ma'lumotlaringiz bilan to'ldiring!")
+    st.info("💡 [qavs] ichini o'z ma'lumotlaringiz bilan almashtiring")
 
-# ════════════ FEEDBACK ════════════
-elif st.session_state.current_page == "feedback":
-    st.markdown("""
-        <div style='text-align:center;margin:30px 0;'>
-            <h1 style='font-size:42px;margin-bottom:15px;'>
-                💌 <span class='gradient-text'>Fikr-Mulohazalar</span>
-            </h1>
-            <p style='color:#64748b;font-size:18px;'>Sizning fikringiz biz uchun muhim!</p>
-        </div>
-    """, unsafe_allow_html=True)
+# ════════════════════════════════════════════════════════════════
+# 17. FEEDBACK PAGE
+# ════════════════════════════════════════════════════════════════
+elif st.session_state.page=="feedback":
+    st.markdown('<div class="pg-h">💌 Fikr-Mulohaza</div>',unsafe_allow_html=True)
+    st.markdown('<div class="pg-s">Sizning fikringiz Somo AI ni yaxshilaydi</div>',unsafe_allow_html=True)
 
-    _, fc, _ = st.columns([0.1, 1, 0.1])
+    _,fc,_=st.columns([1,2,1])
     with fc:
-        with st.form("fb_form"):
-            st.markdown("### ⭐ Baholang")
-            rating = st.select_slider(
-                "Baho", [1, 2, 3, 4, 5], value=5,
-                format_func=lambda x: "⭐" * x,
-                label_visibility="collapsed"
-            )
-            st.markdown(
-                f"<p style='text-align:center;font-size:48px;margin:20px 0;'>{'⭐' * rating}</p>",
-                unsafe_allow_html=True
-            )
-            cat_fb = st.selectbox(
-                "📂 Kategoriya",
-                ["Umumiy fikr", "Xato haqida", "Yangi funksiya", "Savol", "Boshqa"],
-                key="fbc"
-            )
-            msg_fb = st.text_area(
-                "✍️ Xabar",
-                placeholder="Fikrlaringiz...",
-                height=150,
-                key="fbm"
-            )
-            eml_fb = st.text_input(
-                "📧 Email (ixtiyoriy)",
-                placeholder="email@example.com",
-                key="fbe"
-            )
-            sub_fb = st.form_submit_button(
-                "📤 Yuborish",
-                use_container_width=True,
-                type="primary"
-            )
-
-            if sub_fb:
-                if not msg_fb:
-                    st.error("❌ Xabar yozing!")
-                elif len(msg_fb) < 10:
-                    st.error("❌ Kamida 10 ta belgi!")
-                elif feedback_db:
+        with st.form("ff"):
+            rating=st.select_slider("Baho",[1,2,3,4,5],5,format_func=lambda x:"⭐"*x)
+            st.markdown(f"<div style='text-align:center;font-size:34px;margin:8px 0;'>{'⭐'*rating}</div>",unsafe_allow_html=True)
+            cf=st.selectbox("Kategoriya",["Umumiy","Xato","Yangi funksiya","Savol","Boshqa"])
+            mf=st.text_area("Xabar",placeholder="Fikrlaringiz...",height=110)
+            ef=st.text_input("Email (ixtiyoriy)",placeholder="email@example.com")
+            sf=st.form_submit_button("Yuborish",use_container_width=True)
+            if sf:
+                if not mf or len(mf)<10: st.error("❌ Kamida 10 belgi kiriting")
+                elif fb_db:
                     try:
-                        feedback_db.append_row([
-                            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            uname, rating, cat_fb, msg_fb,
-                            eml_fb or "N/A", "Yangi"
-                        ])
-                        st.balloons()
-                        st.markdown("""
-                            <div class='success-message'>
-                                ✅ Rahmat! Fikringiz yuborildi.
-                            </div>
-                        """, unsafe_allow_html=True)
-                        time.sleep(2)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"❌ {e}")
-                else:
-                    st.error("❌ Baza mavjud emas!")
+                        fb_db.append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"),uname,rating,cf,mf,ef or "N/A","Yangi"])
+                        st.balloons(); st.success("✅ Rahmat!"); time.sleep(1.5); st.rerun()
+                    except Exception as e: st.error(f"❌ {e}")
+                else: st.error("❌ Baza yo'q")
 
-    st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("---")
-    st.markdown("### 📊 Statistika")
-    if feedback_db:
+    st.markdown("#### Statistika")
+    if fb_db:
         try:
-            all_fb = feedback_db.get_all_records()
-            if len(all_fb) > 1:
-                fc1, fc2, fc3 = st.columns(3)
-                rtgs = [int(f.get("Rating", 0)) for f in all_fb[1:] if f.get("Rating")]
-                with fc1:
-                    st.metric("📨 Jami", len(all_fb) - 1)
-                with fc2:
-                    avg = f"{sum(rtgs)/len(rtgs):.1f}" if rtgs else "—"
-                    st.metric("⭐ O'rtacha", avg)
-                with fc3:
-                    yangi = len([f for f in all_fb[-10:] if f.get("Status") == "Yangi"])
-                    st.metric("🆕 Yangilar", yangi)
-            else:
-                st.info("💬 Hali fikr-mulohazalar yo'q!")
-        except Exception:
-            st.warning("⚠️ Statistika yuklanmadi")
+            allfb=fb_db.get_all_records()
+            if len(allfb)>1:
+                c1,c2,c3=st.columns(3)
+                rtgs=[int(f.get("Rating",0)) for f in allfb[1:] if f.get("Rating")]
+                with c1: st.metric("📨 Jami",len(allfb)-1)
+                with c2: st.metric("⭐ O'rtacha",f"{sum(rtgs)/len(rtgs):.1f}" if rtgs else "—")
+                with c3: st.metric("🆕 Yangi",sum(1 for f in allfb[-20:] if f.get("Status")=="Yangi"))
+            else: st.info("💬 Hali fikr yo'q")
+        except: st.warning("⚠️ Yuklanmadi")
 
-# ───────────────────────────────────────────────
-# 13. FOOTER
-# ───────────────────────────────────────────────
-st.markdown("<br><br>", unsafe_allow_html=True)
+# ════════════════════════════════════════════════════════════════
+# 18. FOOTER
+# ════════════════════════════════════════════════════════════════
 st.markdown("""
-    <div style='text-align:center;color:#94a3b8;padding:30px;
-                border-top:2px solid #e2e8f0;
-                background:linear-gradient(180deg,transparent,rgba(14,165,233,.05));'>
-        <p style='margin:8px 0;font-size:18px;font-weight:600;'>
-            🌌 <strong>Somo AI Infinity</strong> — v3.0 Pro
-        </p>
-        <p style='margin:8px 0;color:#64748b;'>
-            🟠 Groq (Chat + Whisper) · 🔵 Gemini Flash (Vision + PDF + DOCX)
-        </p>
-        <p style='margin:8px 0;'>👨‍💻 Yaratuvchi: <strong>Usmonov Sodiq</strong></p>
-        <p style='margin:8px 0;'>👨‍💻 Yordamchi: <strong>Davlatov Mironshoh</strong></p>
-        <p style='margin:8px 0;font-size:13px;'>
-            📧 support@somoai.uz | 🌐 www.somoai.uz
-        </p>
-        <p style='margin:15px 0 0;font-size:12px;color:#94a3b8;'>
-            © 2026 Barcha huquqlar himoyalangan | Versiya 3.0 Pro
-        </p>
-    </div>
-""", unsafe_allow_html=True)
+<div class="foot">
+    ✦ Somo AI v7.0 &nbsp;·&nbsp;
+    🟠 Groq LLaMA 3.3 &nbsp;·&nbsp;
+    🔵 Gemini Flash 2.0 &nbsp;·&nbsp;
+    🎙 Whisper v3<br>
+    👨‍💻 Usmonov Sodiq &nbsp;·&nbsp; Davlatov Mironshoh<br>
+    📧 support@somoai.uz &nbsp;·&nbsp; © 2026
+</div>
+""",unsafe_allow_html=True)
