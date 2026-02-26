@@ -1,11 +1,10 @@
 streamlit
+pandas
 gspread
-oauth2client
 groq
-pypdf
-mammoth
 openpyxl
-python-pptx
 python-docx
+mammoth
+pypdf
 streamlit-cookies-manager
-google-generativeai
+oauth2client
