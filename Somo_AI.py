@@ -334,20 +334,97 @@ section[data-testid="stMainBlockContainer"] {
 .stChatMessage code { background: rgba(99,102,241,0.15) !important; color: #a5b4fc !important; border-radius: 4px; padding: 1px 6px; }
 .stChatMessage pre { background: #080814 !important; border: 1px solid rgba(99,102,241,0.2) !important; border-radius: 10px !important; }
 
-/* Chat input */
-.stChatInputContainer, [data-testid="stChatInput"] {
-    background: #0d0d1a !important;
+/* ══ CHAT INPUT — full dark override ══ */
+/* Outer wrapper */
+[data-testid="stChatInput"],
+.stChatInputContainer,
+div[data-testid="stChatInputContainer"],
+section[data-testid="stChatInput"],
+div.stChatFloatingInputContainer,
+div[class*="stChatInput"],
+div[class*="ChatInput"] {
+    background: #0a0a0f !important;
+    background-color: #0a0a0f !important;
+    border-top: 1px solid rgba(99,102,241,0.25) !important;
+    box-shadow: none !important;
+    padding: 12px 16px !important;
+}
+
+/* The inner input box wrapper */
+[data-testid="stChatInput"] > div,
+[data-testid="stChatInputContainer"] > div,
+div[class*="stChatInput"] > div {
+    background: #0a0a0f !important;
+    background-color: #0a0a0f !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+/* The actual textarea / contenteditable */
+[data-testid="stChatInput"] textarea,
+[data-testid="stChatInputContainer"] textarea,
+.stChatInputContainer textarea,
+div[class*="stChatInput"] textarea,
+div[data-baseweb="textarea"] textarea,
+[data-testid="stChatInput"] [contenteditable],
+.stChatInputContainer [contenteditable] {
+    background: #13131f !important;
+    background-color: #13131f !important;
+    color: #e2e8f0 !important;
+    border: 1px solid rgba(99,102,241,0.30) !important;
+    border-radius: 14px !important;
+    font-family: 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 14px !important;
+    padding: 14px 18px !important;
+    caret-color: #818cf8 !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+    resize: none !important;
+}
+
+[data-testid="stChatInput"] textarea::placeholder,
+[data-testid="stChatInputContainer"] textarea::placeholder,
+.stChatInputContainer textarea::placeholder {
+    color: #3d4560 !important;
+    font-size: 13px !important;
+}
+
+[data-testid="stChatInput"] textarea:focus,
+[data-testid="stChatInputContainer"] textarea:focus,
+.stChatInputContainer textarea:focus {
+    border-color: rgba(99,102,241,0.65) !important;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.12),
+                0 0 20px rgba(99,102,241,0.08) !important;
+    outline: none !important;
+    background: #14142a !important;
+}
+
+/* Send button inside chat input */
+[data-testid="stChatInput"] button,
+[data-testid="stChatInputContainer"] button,
+.stChatInputContainer button {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+    border: none !important;
+    border-radius: 10px !important;
+    color: white !important;
+    box-shadow: 0 0 15px rgba(99,102,241,0.35) !important;
+    transition: all 0.2s !important;
+}
+[data-testid="stChatInput"] button:hover,
+[data-testid="stChatInputContainer"] button:hover,
+.stChatInputContainer button:hover {
+    background: linear-gradient(135deg, #4338ca, #6d28d9) !important;
+    box-shadow: 0 0 25px rgba(99,102,241,0.55) !important;
+    transform: scale(1.05) !important;
+}
+
+/* Fix white flash / background leaking from Streamlit wrappers */
+div[data-testid="stBottom"],
+div[data-testid="stBottom"] > div,
+div[data-testid="stBottom"] > div > div {
+    background: #0a0a0f !important;
+    background-color: #0a0a0f !important;
     border-top: 1px solid rgba(99,102,241,0.2) !important;
 }
-.stChatInputContainer textarea {
-    background: #12121e !important;
-    color: #e2e8f0 !important;
-    border: 1px solid rgba(99,102,241,0.25) !important;
-    border-radius: 12px !important;
-    font-family: 'Plus Jakarta Sans', sans-serif !important;
-}
-.stChatInputContainer textarea::placeholder { color: #475569 !important; }
-.stChatInputContainer textarea:focus { border-color: rgba(99,102,241,0.6) !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.1) !important; outline: none !important; }
 
 /* ══════════════════════════════════════
    STREAMLIT FORM ELEMENTS
@@ -1586,7 +1663,7 @@ elif st.session_state.page == "chat":
                 st.error("❌ O'qilmadi")
 
     # Chat input
-    if prompt := st.chat_input("💭  Xabar yozing... (Excel, Word, Kod, HTML so'rasangiz — fayl avtomatik yaratiladi!)", key="chat_in"):
+    if prompt := st.chat_input("💭  Type a message... Ask for Excel, Word, Code, HTML — file auto-created!", key="chat_in"):
         st.session_state.messages.append({"role":"user","content":prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
@@ -1595,12 +1672,32 @@ elif st.session_state.page == "chat":
         intent = detect_intent(prompt)
 
         with st.chat_message("assistant"):
+            LANG_RULE = (
+                "CRITICAL LANGUAGE RULE: Always detect the language of the user's message "
+                "and respond in EXACTLY that same language. "
+                "If user writes in English → reply in English. "
+                "If user writes in Uzbek → reply in Uzbek. "
+                "If user writes in Russian → reply in Russian. "
+                "If user writes in any other language → reply in that language. "
+                "Never switch languages unless the user switches first."
+            )
             styles_map = {
-                "Aqlli yordamchi": "Sen Somo AI — aqlli, professional va foydali yordamchisan. Usmonov Sodiq yaratgan. Aniq, strukturali va foydali javoblar ber.",
-                "Do'stona": "Sen Somo AI — do'stona, samimiy va quvnoq. Foydalanuvchi bilan yaxin do'stdek gaplash.",
-                "Rasmiy ekspert": "Sen Somo AI — rasmiy, aniq va professional mutaxassis. Har doim batafsil va dalillangan javob ber.",
-                "Ijodkor": "Sen Somo AI — ijodkor, original va noodatiy fikrlaydigan AI. Creative solutions taklif qil.",
-                "Texnik": "Sen Somo AI — texnik ekspert. Kod, arxitektura va texnik detallar bo'yicha batafsil javob ber."
+                "Aqlli yordamchi": (
+                    "You are Somo AI — an intelligent, professional and helpful AI assistant created by Usmonov Sodiq. "
+                    "Give clear, structured and useful answers. " + LANG_RULE
+                ),
+                "Do'stona": (
+                    "You are Somo AI — friendly, warm and cheerful. Talk to the user like a close friend. " + LANG_RULE
+                ),
+                "Rasmiy ekspert": (
+                    "You are Somo AI — a formal, precise and professional expert. Always give detailed, evidence-based answers. " + LANG_RULE
+                ),
+                "Ijodkor": (
+                    "You are Somo AI — creative, original and unconventional thinker. Propose creative solutions. " + LANG_RULE
+                ),
+                "Texnik": (
+                    "You are Somo AI — a technical expert. Give detailed answers about code, architecture and technical details. " + LANG_RULE
+                ),
             }
             sys_base = styles_map.get(st.session_state.ai_style, styles_map["Aqlli yordamchi"])
 
