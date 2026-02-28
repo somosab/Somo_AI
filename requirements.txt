@@ -1,10 +1,10 @@
 streamlit
-pandas
-gspread
-groq
 openpyxl
 python-docx
-mammoth
-pypdf
-streamlit-cookies-manager
-oauth2client
+mammoth 
+pypdf 
+groq 
+gspread
+oauth2client 
+streamlit-cookies-manager 
+pandas
