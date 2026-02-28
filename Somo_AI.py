@@ -2634,9 +2634,10 @@ st.markdown("""
     <div class="f-sub" style="margin-top:10px;">
         👨‍💻 <strong style="color:#e2e8f0;">Usmonov Sodiq</strong>
         &nbsp;·&nbsp;
-        👨‍💻 <strong style="color:#e2e8f0;">Davlatov Mironshoh</strong>
+        👨‍💻 <strong style="color:#e2e8f0;">Mavlonov Saloxiddin</strong>
     </div>
     <div class="f-sub" style="margin-top:6px;">📧 support@somoai.uz &nbsp;|&nbsp; 🌐 www.somoai.uz</div>
     <div class="f-copy">© 2026 Somo AI Ultra Pro Max v3.0 — Barcha huquqlar himoyalangan</div>
 </div>
 """, unsafe_allow_html=True)
+
