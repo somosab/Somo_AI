@@ -68,7 +68,7 @@ st.set_page_config(
     page_title="Somo AI | Ultra Pro Max",
     page_icon="🌌",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="auto"
 )
 
 # ══════════════════════════════════════════════════════════════════
@@ -194,6 +194,7 @@ div[data-testid="stSidebar"] button[kind="primaryFormSubmit"] {
 .main .block-container { padding: 0 !important; max-width: 100% !important; }
 section[data-testid="stMainBlockContainer"] {
     padding: 24px 32px 80px !important;
+    padding-top: 68px !important;
     background: var(--bg-0) !important;
 }
 
@@ -884,15 +885,384 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
 .somo-footer .f-copy  { font-size: 11px; color: #2a2a40; margin-top: 18px; font-family: var(--font-mono); }
 
 /* ════════════════════════════════
-   MOBILE
+   SIDEBAR TOGGLE BUTTON
 ════════════════════════════════ */
-@media(max-width:768px) {
-    section[data-testid="stMainBlockContainer"] { padding: 14px 16px 48px !important; }
-    .somo-hero { padding: 32px 22px; }
-    .somo-hero h1 { font-size: 26px; }
-    .cards-grid { grid-template-columns: repeat(2,1fr); }
+/* Hide Streamlit's default collapse arrow, we use our own */
+[data-testid="collapsedControl"] {
+    display: none !important;
+}
+
+/* Our custom toggle button - always visible */
+#somo-sidebar-toggle {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 9999;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0f0f22, #14142a);
+    border: 1px solid rgba(100,108,255,0.35);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(100,108,255,0.15);
+    transition: all 0.25s cubic-bezier(.4,0,.2,1);
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+#somo-sidebar-toggle:hover {
+    border-color: rgba(100,108,255,0.7);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 25px rgba(100,108,255,0.35);
+    transform: scale(1.05);
+    background: linear-gradient(135deg, #13133a, #1a1440);
+}
+#somo-sidebar-toggle:active { transform: scale(0.96); }
+
+.toggle-icon {
+    display: flex;
+    flex-direction: column;
+    gap: 4.5px;
+    width: 18px;
+}
+.toggle-icon span {
+    display: block;
+    height: 2px;
+    background: #818cf8;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+.toggle-icon span:nth-child(1) { width: 18px; }
+.toggle-icon span:nth-child(2) { width: 12px; }
+.toggle-icon span:nth-child(3) { width: 16px; }
+#somo-sidebar-toggle:hover .toggle-icon span { background: #c7d2fe; }
+#somo-sidebar-toggle:hover .toggle-icon span:nth-child(2) { width: 18px; }
+
+/* ════════════════════════════════
+   BOTTOM MOBILE NAV BAR
+════════════════════════════════ */
+#somo-bottom-nav {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 8888;
+    background: linear-gradient(180deg, rgba(9,9,30,0.95), rgba(7,7,26,0.98));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(100,108,255,0.2);
+    padding: 8px 4px 12px;
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.5);
+}
+.bnav-items {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    gap: 2px;
+    max-width: 480px;
+    margin: 0 auto;
+}
+.bnav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex: 1;
+    max-width: 64px;
+    -webkit-tap-highlight-color: transparent;
+}
+.bnav-item:active { transform: scale(0.9); }
+.bnav-icon { font-size: 20px; line-height: 1; }
+.bnav-label { font-size: 9px; color: #3d4060; font-weight: 600; letter-spacing: 0.3px; text-align: center; font-family: 'Inter', sans-serif; }
+.bnav-item.bnav-active .bnav-label { color: #818cf8; }
+.bnav-item.bnav-active { background: rgba(100,108,255,0.12); }
+
+/* ════════════════════════════════
+   MOBILE FULL RESPONSIVE
+════════════════════════════════ */
+@media(max-width: 768px) {
+    /* Main content padding */
+    section[data-testid="stMainBlockContainer"] {
+        padding: 56px 12px 110px !important;
+    }
+
+    /* Hero */
+    .somo-hero {
+        padding: 28px 18px !important;
+        border-radius: 18px !important;
+        margin-bottom: 20px !important;
+    }
+    .somo-hero h1 { font-size: clamp(22px, 6vw, 32px) !important; letter-spacing: -0.8px !important; }
+    .somo-hero .subtitle { font-size: 13.5px !important; line-height: 1.6 !important; margin-bottom: 16px !important; }
+    .hero-badge { font-size: 10.5px !important; padding: 4px 10px !important; }
+
+    /* Cards - 2 per row on mobile */
+    .cards-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+        margin-bottom: 20px !important;
+    }
+    .somo-card { padding: 18px 12px !important; border-radius: 14px !important; }
+    .card-icon { font-size: 26px !important; margin-bottom: 8px !important; }
+    .card-title { font-size: 12px !important; }
+    .card-desc { font-size: 10px !important; }
+
+    /* Stat row - 2 per row */
+    .stat-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+    .stat-val { font-size: 22px !important; }
+    .stat-lbl { font-size: 9px !important; }
+
+    /* Sidebar hide on mobile, show bottom nav */
+    [data-testid="stSidebar"] {
+        width: 100% !important;
+        max-width: 280px !important;
+    }
+
+    /* Bottom nav visible on mobile */
+    #somo-bottom-nav { display: block !important; }
+
+    /* Section titles */
+    .section-title { font-size: 20px !important; }
+
+    /* Template cards */
+    .tmpl-card { padding: 16px !important; }
+    .tmpl-title { font-size: 13px !important; }
+    .tmpl-desc { font-size: 11px !important; }
+
+    /* Text areas */
+    .stTextArea textarea { font-size: 14px !important; }
+
+    /* Buttons full width on mobile */
+    .stButton > button { font-size: 13px !important; padding: 9px 14px !important; }
+
+    /* History messages */
+    .hist-msg { font-size: 12px !important; padding: 10px 12px !important; }
+
+    /* Chat input */
+    [data-testid="stChatInput"] textarea { font-size: 14px !important; }
+
+    /* Forms */
+    [data-testid="stForm"] { padding: 18px !important; border-radius: 14px !important; }
+
+    /* Profile stats - 2 per row */
+    .profile-stat { padding: 16px 12px !important; }
+    .p-stat-val { font-size: 24px !important; }
+
+    /* Footer */
+    .somo-footer { padding: 28px 16px 16px !important; margin-top: 30px !important; }
+    .somo-footer .f-title { font-size: 16px !important; }
+
+    /* API badges row */
+    .api-selector { gap: 6px !important; }
+    .api-option { min-width: 60px !important; font-size: 10px !important; padding: 6px 8px !important; }
+
+    /* Divider */
+    .somo-divider { margin: 18px 0 !important; }
+}
+
+@media(max-width: 480px) {
+    section[data-testid="stMainBlockContainer"] { padding: 52px 10px 105px !important; }
+    .somo-hero { padding: 22px 14px !important; border-radius: 14px !important; }
+    .somo-hero h1 { font-size: 20px !important; }
+    .somo-hero .subtitle { font-size: 12.5px !important; }
+    .cards-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+    .somo-card { padding: 14px 10px !important; border-radius: 12px !important; }
+    .card-icon { font-size: 22px !important; }
+    .card-title { font-size: 11px !important; }
+    .card-desc { font-size: 9.5px !important; }
+    .stat-val { font-size: 20px !important; }
+}
+
+/* Tablet */
+@media(min-width: 769px) and (max-width: 1024px) {
+    section[data-testid="stMainBlockContainer"] { padding: 20px 20px 70px !important; }
+    .cards-grid { grid-template-columns: repeat(3, 1fr) !important; }
+    .somo-hero { padding: 40px 36px !important; }
+    .somo-hero h1 { font-size: 36px !important; }
 }
 </style>
+""", unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════════════════════════
+# SIDEBAR TOGGLE BUTTON + MOBILE BOTTOM NAV
+# ══════════════════════════════════════════════════════════════════
+st.markdown("""
+<div id="somo-sidebar-toggle" onclick="somoToggleSidebar()" title="Sidebar ochish/yopish">
+    <div class="toggle-icon">
+        <span></span><span></span><span></span>
+    </div>
+</div>
+
+<div id="somo-bottom-nav">
+    <div class="bnav-items">
+        <div class="bnav-item bnav-active" onclick="somoSetPage('home')" id="bnav-home">
+            <div class="bnav-icon">🏠</div><div class="bnav-label">Bosh</div>
+        </div>
+        <div class="bnav-item" onclick="somoSetPage('chat')" id="bnav-chat">
+            <div class="bnav-icon">💬</div><div class="bnav-label">Chat</div>
+        </div>
+        <div class="bnav-item" onclick="somoSetPage('excel')" id="bnav-excel">
+            <div class="bnav-icon">📊</div><div class="bnav-label">Excel</div>
+        </div>
+        <div class="bnav-item" onclick="somoSetPage('word')" id="bnav-word">
+            <div class="bnav-icon">📝</div><div class="bnav-label">Word</div>
+        </div>
+        <div class="bnav-item" onclick="somoSetPage('code')" id="bnav-code">
+            <div class="bnav-icon">💻</div><div class="bnav-label">Kod</div>
+        </div>
+        <div class="bnav-item" onclick="somoToggleMoreMenu()" id="bnav-more">
+            <div class="bnav-icon">☰</div><div class="bnav-label">Ko'proq</div>
+        </div>
+    </div>
+</div>
+
+<div id="somo-more-menu" style="display:none;position:fixed;bottom:72px;left:10px;right:10px;z-index:9990;
+     background:linear-gradient(145deg,#09091e,#0d0d22);border:1px solid rgba(100,108,255,0.25);
+     border-radius:18px;padding:16px;box-shadow:0 -10px 40px rgba(0,0,0,0.7);backdrop-filter:blur(20px);">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:4px;">
+        <div onclick="somoSetPage('html');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+            <div style="font-size:22px;">🌐</div><div style="font-size:9.5px;color:#64748b;margin-top:4px;font-weight:700;">HTML</div></div>
+        <div onclick="somoSetPage('csv');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+            <div style="font-size:22px;">📋</div><div style="font-size:9.5px;color:#64748b;margin-top:4px;font-weight:700;">CSV</div></div>
+        <div onclick="somoSetPage('templates');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+            <div style="font-size:22px;">🎨</div><div style="font-size:9.5px;color:#64748b;margin-top:4px;font-weight:700;">Shablon</div></div>
+        <div onclick="somoSetPage('analyze');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+            <div style="font-size:22px;">🔍</div><div style="font-size:9.5px;color:#64748b;margin-top:4px;font-weight:700;">Tahlil</div></div>
+        <div onclick="somoSetPage('history');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+            <div style="font-size:22px;">📜</div><div style="font-size:9.5px;color:#64748b;margin-top:4px;font-weight:700;">Tarix</div></div>
+        <div onclick="somoSetPage('feedback');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+            <div style="font-size:22px;">💌</div><div style="font-size:9.5px;color:#64748b;margin-top:4px;font-weight:700;">Fikr</div></div>
+        <div onclick="somoSetPage('profile');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+            <div style="font-size:22px;">👤</div><div style="font-size:9.5px;color:#64748b;margin-top:4px;font-weight:700;">Profil</div></div>
+        <div onclick="somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(244,114,182,0.07);border:1px solid rgba(244,114,182,0.2);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+            <div style="font-size:22px;color:#f472b6;">✕</div><div style="font-size:9.5px;color:#f472b6;margin-top:4px;font-weight:700;">Yopish</div></div>
+    </div>
+</div>
+
+<script>
+(function() {
+
+// ── Sidebar toggle ──────────────────────────────────────
+window.somoToggleSidebar = function() {
+    try {
+        var doc = window.parent.document;
+
+        // Method 1: Try standard Streamlit collapse button
+        var selectors = [
+            '[data-testid="collapsedControl"]',
+            'button[kind="header"][aria-expanded]',
+            '.st-emotion-cache-1rtdyuf',
+            '[data-testid="baseButton-headerNoPadding"]',
+            'section[data-testid="stSidebar"] + div button',
+            'button[aria-label*="sidebar"]',
+            'button[aria-label*="Sidebar"]'
+        ];
+        var clicked = false;
+        for (var i = 0; i < selectors.length; i++) {
+            var btns = doc.querySelectorAll(selectors[i]);
+            if (btns.length > 0) {
+                btns[btns.length - 1].click();
+                clicked = true;
+                break;
+            }
+        }
+
+        // Method 2: Toggle sidebar transform
+        if (!clicked) {
+            var sidebar = doc.querySelector('[data-testid="stSidebar"]');
+            if (sidebar) {
+                var currentTransform = sidebar.style.transform || window.parent.getComputedStyle(sidebar).transform;
+                if (currentTransform && currentTransform !== 'none' && currentTransform.indexOf('matrix(1') === -1) {
+                    sidebar.style.transform = 'translateX(0)';
+                } else {
+                    sidebar.style.transform = 'translateX(-110%)';
+                }
+                sidebar.style.transition = 'transform 0.3s cubic-bezier(.4,0,.2,1)';
+            }
+        }
+    } catch(e) { console.warn('Sidebar toggle:', e); }
+};
+
+// ── Mobile bottom nav page switch ──────────────────────
+window.somoSetPage = function(pageName) {
+    var iconMap = {
+        'home':'🏠','chat':'💬','excel':'📊','word':'📝',
+        'code':'💻','html':'🌐','csv':'📋','templates':'🎨',
+        'analyze':'🔍','history':'📜','feedback':'💌','profile':'👤'
+    };
+    var icon = iconMap[pageName];
+    if (!icon) return;
+    try {
+        var doc = window.parent.document;
+        var buttons = doc.querySelectorAll('[data-testid="stSidebar"] button');
+        for (var i = 0; i < buttons.length; i++) {
+            if (buttons[i].textContent.trim().charAt(0) === icon) {
+                buttons[i].click();
+                break;
+            }
+        }
+    } catch(e) { console.warn('setPage:', e); }
+
+    // Update active state
+    var items = document.querySelectorAll('.bnav-item');
+    for (var j = 0; j < items.length; j++) { items[j].classList.remove('bnav-active'); }
+    var el = document.getElementById('bnav-' + pageName);
+    if (el) el.classList.add('bnav-active');
+
+    // Close more menu
+    var menu = document.getElementById('somo-more-menu');
+    if (menu) menu.style.display = 'none';
+};
+
+// ── More menu toggle ────────────────────────────────────
+window.somoToggleMoreMenu = function() {
+    var menu = document.getElementById('somo-more-menu');
+    if (!menu) return;
+    if (menu.style.display === 'none' || !menu.style.display) {
+        menu.style.display = 'block';
+    } else {
+        menu.style.display = 'none';
+    }
+};
+
+// Close more menu on outside tap
+document.addEventListener('touchstart', function(e) {
+    var menu = document.getElementById('somo-more-menu');
+    var moreBtn = document.getElementById('bnav-more');
+    if (menu && menu.style.display !== 'none') {
+        if (!menu.contains(e.target) && moreBtn && !moreBtn.contains(e.target)) {
+            menu.style.display = 'none';
+        }
+    }
+}, { passive: true });
+
+// ── Responsive check ────────────────────────────────────
+function somoCheckMobile() {
+    var w = window.innerWidth;
+    var nav = document.getElementById('somo-bottom-nav');
+    var toggle = document.getElementById('somo-sidebar-toggle');
+    if (nav) nav.style.display = (w <= 768) ? 'block' : 'none';
+    if (toggle) {
+        toggle.style.top    = (w <= 768) ? '8px'  : '14px';
+        toggle.style.left   = (w <= 768) ? '8px'  : '14px';
+        toggle.style.width  = (w <= 768) ? '38px' : '42px';
+        toggle.style.height = (w <= 768) ? '38px' : '42px';
+    }
+}
+somoCheckMobile();
+window.addEventListener('resize', somoCheckMobile);
+
+})();
+</script>
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════
