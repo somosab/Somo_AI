@@ -1155,41 +1155,53 @@ st.markdown("""
 window.somoToggleSidebar = function() {
     try {
         var doc = window.parent.document;
+        var sidebar = doc.querySelector('[data-testid="stSidebar"]');
+        if (!sidebar) return;
 
-        // Method 1: Try standard Streamlit collapse button
-        var selectors = [
-            '[data-testid="collapsedControl"]',
-            'button[kind="header"][aria-expanded]',
-            '.st-emotion-cache-1rtdyuf',
-            '[data-testid="baseButton-headerNoPadding"]',
-            'section[data-testid="stSidebar"] + div button',
-            'button[aria-label*="sidebar"]',
-            'button[aria-label*="Sidebar"]'
-        ];
-        var clicked = false;
-        for (var i = 0; i < selectors.length; i++) {
-            var btns = doc.querySelectorAll(selectors[i]);
-            if (btns.length > 0) {
-                btns[btns.length - 1].click();
-                clicked = true;
-                break;
+        // Get current visibility state
+        var sidebarRect = sidebar.getBoundingClientRect();
+        var isVisible = sidebarRect.left >= -10;
+
+        // Apply transition
+        sidebar.style.transition = 'transform 0.32s cubic-bezier(.4,0,.2,1)';
+        sidebar.style.position = 'fixed';
+        sidebar.style.zIndex = '9990';
+        sidebar.style.height = '100vh';
+        sidebar.style.top = '0';
+
+        if (isVisible) {
+            // Hide sidebar
+            sidebar.style.transform = 'translateX(-110%)';
+            // Show open button indicator
+            var toggle = document.getElementById('somo-sidebar-toggle');
+            if (toggle) {
+                toggle.style.background = 'linear-gradient(135deg, #1a1440, #2a1a60)';
+                toggle.style.borderColor = 'rgba(100,108,255,0.6)';
+                toggle.setAttribute('data-open', '0');
+                toggle.title = 'Sidebar ochish';
+            }
+        } else {
+            // Show sidebar
+            sidebar.style.transform = 'translateX(0)';
+            var toggle2 = document.getElementById('somo-sidebar-toggle');
+            if (toggle2) {
+                toggle2.style.background = 'linear-gradient(135deg, #0f0f22, #14142a)';
+                toggle2.style.borderColor = 'rgba(100,108,255,0.35)';
+                toggle2.setAttribute('data-open', '1');
+                toggle2.title = 'Sidebar yopish';
             }
         }
 
-        // Method 2: Toggle sidebar transform
-        if (!clicked) {
-            var sidebar = doc.querySelector('[data-testid="stSidebar"]');
-            if (sidebar) {
-                var currentTransform = sidebar.style.transform || window.parent.getComputedStyle(sidebar).transform;
-                if (currentTransform && currentTransform !== 'none' && currentTransform.indexOf('matrix(1') === -1) {
-                    sidebar.style.transform = 'translateX(0)';
-                } else {
+        // On mobile, click outside to close
+        if (window.innerWidth <= 768 && !isVisible) {
+            doc.addEventListener('click', function closeSidebar(e) {
+                if (!sidebar.contains(e.target) && e.target.id !== 'somo-sidebar-toggle') {
                     sidebar.style.transform = 'translateX(-110%)';
+                    doc.removeEventListener('click', closeSidebar);
                 }
-                sidebar.style.transition = 'transform 0.3s cubic-bezier(.4,0,.2,1)';
-            }
+            }, { once: false });
         }
-    } catch(e) { console.warn('Sidebar toggle:', e); }
+    } catch(e) { console.warn('Sidebar toggle error:', e); }
 };
 
 // ── Mobile bottom nav page switch ──────────────────────
@@ -1280,7 +1292,7 @@ API_CONFIGS = {
     "gemini": {
         "name": "Gemini",
         "icon": "✨",
-        "model": "gemini-1.5-flash",
+        "model": "gemini-2.0-flash",
         "color": "#34d399",
         "badge_class": "api-gemini",
         "desc": "Google Gemini · 1.5 Flash"
@@ -1303,32 +1315,62 @@ API_CONFIGS = {
     }
 }
 
+def _get_secret(key):
+    """Safely get API key from secrets — multiple formats supported."""
+    try:
+        val = st.secrets.get(key, "")
+        if val: return str(val).strip()
+    except: pass
+    try:
+        for section in ["keys","api","api_keys","APIs","secrets"]:
+            try:
+                val = st.secrets[section][key]
+                if val: return str(val).strip()
+            except: pass
+    except: pass
+    import os
+    return str(os.environ.get(key,"")).strip()
+
 # Initialize clients
 @st.cache_resource
 def init_clients():
     clients = {}
-    try:
-        if HAS_GROQ:
-            key = st.secrets.get("GROQ_API_KEY","")
+
+    # Groq
+    if HAS_GROQ:
+        try:
+            key = _get_secret("GROQ_API_KEY")
             if key: clients["groq"] = Groq(api_key=key)
-    except: pass
-    try:
-        if HAS_GEMINI:
-            key = st.secrets.get("GEMINI_API_KEY","")
-            if key:
-                genai.configure(api_key=key)
-                clients["gemini"] = genai.GenerativeModel("gemini-1.5-flash")
-    except: pass
-    try:
-        if HAS_COHERE:
-            key = st.secrets.get("COHERE_API_KEY","")
+        except: pass
+
+    # Gemini
+    if HAS_GEMINI:
+        for model_name in ["gemini-2.0-flash","gemini-2.0-flash","gemini-pro"]:
+            try:
+                key = _get_secret("GEMINI_API_KEY")
+                if key:
+                    genai.configure(api_key=key)
+                    clients["gemini"] = genai.GenerativeModel(model_name)
+                    break
+            except Exception as e:
+                if "not found" in str(e).lower() or "404" in str(e):
+                    continue
+                break
+
+    # Cohere
+    if HAS_COHERE:
+        try:
+            key = _get_secret("COHERE_API_KEY")
             if key: clients["cohere"] = cohere.Client(api_key=key)
-    except: pass
-    try:
-        if HAS_MISTRAL:
-            key = st.secrets.get("MISTRAL_API_KEY","")
+        except: pass
+
+    # Mistral
+    if HAS_MISTRAL:
+        try:
+            key = _get_secret("MISTRAL_API_KEY")
             if key: clients["mistral"] = Mistral(api_key=key)
-    except: pass
+        except: pass
+
     return clients
 
 ai_clients = init_clients()
@@ -1886,13 +1928,40 @@ if not st.session_state.logged_in:
             <p style="font-size:17px;color:rgba(255,255,255,0.55);max-width:560px;margin:0 auto 30px;line-height:1.7;font-family:'Inter',sans-serif;">
                 Excel · Word · Kod · HTML · CSV — To'rt xil AI bilan har qanday faylni yarating
             </p>
-            <div class="hero-badges" style="justify-content:center; gap: 10px;">
+            <div class="hero-badges" style="justify-content:center; gap: 10px;" id="api-status-badges">
                 <span class="api-badge api-groq"><span class="api-dot"></span>⚡ Groq / Llama 3.3</span>
                 <span class="api-badge api-gemini"><span class="api-dot"></span>✨ Google Gemini</span>
                 <span class="api-badge api-cohere"><span class="api-dot"></span>🔮 Cohere R+</span>
                 <span class="api-badge api-mistral"><span class="api-dot"></span>🌪 Mistral Large</span>
             </div>
         </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Dynamic API status on login page
+    _api_status_html = ""
+    _api_defs = [
+        ("groq", "api-groq", "⚡", "Groq · Llama 3.3"),
+        ("gemini", "api-gemini", "✨", "Gemini 2.0"),
+        ("cohere", "api-cohere", "🔮", "Cohere R+"),
+        ("mistral", "api-mistral", "🌪", "Mistral Large"),
+    ]
+    _all_connected = True
+    for _pkey, _pclass, _picon, _pname in _api_defs:
+        _connected = _pkey in ai_clients
+        if not _connected: _all_connected = False
+        if _connected:
+            _api_status_html += f'<span class="api-badge {_pclass}"><span class="api-dot"></span>{_picon} {_pname} ✅</span>'
+        else:
+            _api_status_html += f'<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(100,100,100,0.08);border:1px solid rgba(100,100,100,0.2);color:#4a4a6a;">{_picon} {_pname} ❌</span>'
+    
+    _status_msg = "✅ Barcha AI lar ulangan" if _all_connected else f"⚡ {len(ai_clients)}/4 AI ulangan"
+    st.markdown(f"""
+    <div style="text-align:center;margin:-16px 0 20px;padding:12px 20px;background:rgba(100,108,255,0.05);
+                border-radius:14px;border:1px solid rgba(100,108,255,0.12);">
+        <p style="font-size:11px;color:#646cff;font-weight:700;margin-bottom:10px;letter-spacing:1px;
+                  text-transform:uppercase;font-family:'JetBrains Mono',monospace;">{_status_msg}</p>
+        <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px;">{_api_status_html}</div>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1988,7 +2057,7 @@ if not st.session_state.logged_in:
                 </div>
                 <div style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:12px;padding:14px;">
                     <p style="color:#34d399;font-weight:700;font-size:12px;font-family:'JetBrains Mono',monospace;">✨ GEMINI</p>
-                    <p style="color:#50506a;font-size:11px;margin-top:4px;line-height:1.6;">HTML, Tahlil<br>Gemini 1.5 Flash</p>
+                    <p style="color:#50506a;font-size:11px;margin-top:4px;line-height:1.6;">HTML, Tahlil<br>Gemini 2.0 Flash</p>
                 </div>
                 <div style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.2);border-radius:12px;padding:14px;">
                     <p style="color:#38bdf8;font-weight:700;font-size:12px;font-family:'JetBrains Mono',monospace;">🔮 COHERE</p>
@@ -2190,7 +2259,7 @@ if st.session_state.page == "home":
     api_cols = st.columns(4)
     api_data = [
         ("groq",    "Excel + Chat",   "Llama 3.3 70B"),
-        ("gemini",  "HTML + Tahlil",  "Gemini 1.5 Flash"),
+        ("gemini",  "HTML + Tahlil",  "Gemini 2.0 Flash"),
         ("cohere",  "Python Kod",     "Command R+"),
         ("mistral", "Word + CSV",     "Mistral Large"),
     ]
