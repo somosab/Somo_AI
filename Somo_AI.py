@@ -3385,3 +3385,4 @@ st.markdown("""
     <div class="f-copy">© 2026 Somo AI Ultra Pro Max v3.0 — Barcha huquqlar himoyalangan · Python · Streamlit</div>
 </div>
 """, unsafe_allow_html=True)
+
