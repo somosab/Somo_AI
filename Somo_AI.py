@@ -148,6 +148,11 @@ header[data-testid="stHeader"],
     background: linear-gradient(180deg, #07071a 0%, #09091e 100%) !important;
     border-right: 1px solid var(--border) !important;
     width: 268px !important;
+    transition: transform 0.3s cubic-bezier(.4,0,.2,1) !important;
+}
+/* Sidebar collapsed state */
+[data-testid="stSidebar"][aria-expanded="false"] {
+    transform: translateX(-100%) !important;
 }
 [data-testid="stSidebar"] > div { padding: 0 !important; }
 [data-testid="stSidebar"] section { background: transparent !important; }
@@ -889,7 +894,9 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
 ════════════════════════════════ */
 /* Hide Streamlit's default collapse arrow, we use our own */
 [data-testid="collapsedControl"] {
-    display: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    overflow: hidden !important;
 }
 
 /* Our custom toggle button - always visible */
@@ -1152,57 +1159,71 @@ st.markdown("""
 (function() {
 
 // ── Sidebar toggle ──────────────────────────────────────
+window._somoOpen = (window.innerWidth > 768);
+
 window.somoToggleSidebar = function() {
     try {
-        var doc = window.parent.document;
-        var sidebar = doc.querySelector('[data-testid="stSidebar"]');
-        if (!sidebar) return;
-
-        // Get current visibility state
-        var sidebarRect = sidebar.getBoundingClientRect();
-        var isVisible = sidebarRect.left >= -10;
-
-        // Apply transition
-        sidebar.style.transition = 'transform 0.32s cubic-bezier(.4,0,.2,1)';
-        sidebar.style.position = 'fixed';
-        sidebar.style.zIndex = '9990';
-        sidebar.style.height = '100vh';
-        sidebar.style.top = '0';
-
-        if (isVisible) {
-            // Hide sidebar
-            sidebar.style.transform = 'translateX(-110%)';
-            // Show open button indicator
-            var toggle = document.getElementById('somo-sidebar-toggle');
-            if (toggle) {
-                toggle.style.background = 'linear-gradient(135deg, #1a1440, #2a1a60)';
-                toggle.style.borderColor = 'rgba(100,108,255,0.6)';
-                toggle.setAttribute('data-open', '0');
-                toggle.title = 'Sidebar ochish';
+        var pdoc = window.parent.document;
+        var sb = pdoc.querySelector('[data-testid="stSidebar"]');
+        if (!sb) return;
+        var btn = document.getElementById('somo-sidebar-toggle');
+        sb.style.position = 'fixed';
+        sb.style.top = '0';
+        sb.style.left = '0';
+        sb.style.height = '100vh';
+        sb.style.zIndex = '9980';
+        sb.style.transition = 'transform 0.32s cubic-bezier(.4,0,.2,1)';
+        if (window._somoOpen) {
+            sb.style.transform = 'translateX(-110%)';
+            window._somoOpen = false;
+            if (btn) {
+                btn.style.background = 'linear-gradient(135deg,#150d30,#1e1050)';
+                btn.style.borderColor = 'rgba(139,92,246,0.9)';
+                btn.style.boxShadow = '0 0 20px rgba(139,92,246,0.3)';
+                btn.title = 'Menyuni ochish';
             }
         } else {
-            // Show sidebar
-            sidebar.style.transform = 'translateX(0)';
-            var toggle2 = document.getElementById('somo-sidebar-toggle');
-            if (toggle2) {
-                toggle2.style.background = 'linear-gradient(135deg, #0f0f22, #14142a)';
-                toggle2.style.borderColor = 'rgba(100,108,255,0.35)';
-                toggle2.setAttribute('data-open', '1');
-                toggle2.title = 'Sidebar yopish';
+            sb.style.transform = 'translateX(0)';
+            window._somoOpen = true;
+            if (btn) {
+                btn.style.background = 'linear-gradient(135deg,#0f0f22,#14142a)';
+                btn.style.borderColor = 'rgba(100,108,255,0.35)';
+                btn.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5),0 0 15px rgba(100,108,255,0.15)';
+                btn.title = 'Menyuni yopish';
+            }
+            if (window.innerWidth <= 768) {
+                setTimeout(function() {
+                    pdoc.addEventListener('click', function _cls(e) {
+                        if (!sb.contains(e.target) && !e.target.closest('#somo-sidebar-toggle')) {
+                            sb.style.transform = 'translateX(-110%)';
+                            window._somoOpen = false;
+                            if (btn) {
+                                btn.style.background = 'linear-gradient(135deg,#150d30,#1e1050)';
+                                btn.style.borderColor = 'rgba(139,92,246,0.9)';
+                            }
+                            pdoc.removeEventListener('click', _cls);
+                        }
+                    });
+                }, 200);
             }
         }
-
-        // On mobile, click outside to close
-        if (window.innerWidth <= 768 && !isVisible) {
-            doc.addEventListener('click', function closeSidebar(e) {
-                if (!sidebar.contains(e.target) && e.target.id !== 'somo-sidebar-toggle') {
-                    sidebar.style.transform = 'translateX(-110%)';
-                    doc.removeEventListener('click', closeSidebar);
-                }
-            }, { once: false });
-        }
-    } catch(e) { console.warn('Sidebar toggle error:', e); }
+    } catch(ex) { console.warn('toggle:', ex); }
 };
+setTimeout(function() {
+    if (window.innerWidth <= 768) {
+        try {
+            var sb = window.parent.document.querySelector('[data-testid="stSidebar"]');
+            if (sb) {
+                sb.style.position = 'fixed'; sb.style.top = '0'; sb.style.left = '0';
+                sb.style.height = '100vh'; sb.style.zIndex = '9980';
+                sb.style.transform = 'translateX(-110%)'; sb.style.transition = 'transform 0.3s ease';
+                window._somoOpen = false;
+                var b = document.getElementById('somo-sidebar-toggle');
+                if (b) { b.style.background='linear-gradient(135deg,#150d30,#1e1050)'; b.style.borderColor='rgba(139,92,246,0.9)'; }
+            }
+        } catch(e) {}
+    }
+}, 700);
 
 // ── Mobile bottom nav page switch ──────────────────────
 window.somoSetPage = function(pageName) {
@@ -1316,64 +1337,81 @@ API_CONFIGS = {
 }
 
 def _get_secret(key):
-    """Safely get API key from secrets — multiple formats supported."""
+    """Read secret key — supports flat toml: KEY = 'value' format."""
+    # Method 1: direct bracket access (most reliable for Streamlit secrets.toml)
     try:
-        val = st.secrets.get(key, "")
+        val = st.secrets[key]
         if val: return str(val).strip()
     except: pass
+    # Method 2: .get() fallback
     try:
-        for section in ["keys","api","api_keys","APIs","secrets"]:
-            try:
-                val = st.secrets[section][key]
-                if val: return str(val).strip()
-            except: pass
+        val = st.secrets.get(key)
+        if val: return str(val).strip()
     except: pass
-    import os
-    return str(os.environ.get(key,"")).strip()
+    # Method 3: nested sections
+    for section in ["keys", "api", "api_keys"]:
+        try:
+            val = st.secrets[section][key]
+            if val: return str(val).strip()
+        except: pass
+    # Method 4: environment variable
+    val = os.environ.get(key, "")
+    return val.strip() if val else ""
 
-# Initialize clients
-@st.cache_resource
+# Initialize clients — no cache so secrets always read fresh
 def init_clients():
     clients = {}
 
-    # Groq
+    # ── Groq ─────────────────────────────────────────────
     if HAS_GROQ:
         try:
-            key = _get_secret("GROQ_API_KEY")
-            if key: clients["groq"] = Groq(api_key=key)
-        except: pass
+            k = _get_secret("GROQ_API_KEY")
+            if k:
+                clients["groq"] = Groq(api_key=k)
+        except Exception:
+            pass
 
-    # Gemini
+    # ── Gemini ───────────────────────────────────────────
     if HAS_GEMINI:
-        for model_name in ["gemini-2.0-flash","gemini-2.0-flash","gemini-pro"]:
-            try:
-                key = _get_secret("GEMINI_API_KEY")
-                if key:
-                    genai.configure(api_key=key)
-                    clients["gemini"] = genai.GenerativeModel(model_name)
-                    break
-            except Exception as e:
-                if "not found" in str(e).lower() or "404" in str(e):
-                    continue
-                break
+        try:
+            k = _get_secret("GEMINI_API_KEY")
+            if k:
+                genai.configure(api_key=k)
+                # Try models in order
+                for m in ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-pro"]:
+                    try:
+                        clients["gemini"] = genai.GenerativeModel(m)
+                        API_CONFIGS["gemini"]["model"] = m
+                        break
+                    except Exception:
+                        continue
+        except Exception:
+            pass
 
-    # Cohere
+    # ── Cohere ───────────────────────────────────────────
     if HAS_COHERE:
         try:
-            key = _get_secret("COHERE_API_KEY")
-            if key: clients["cohere"] = cohere.Client(api_key=key)
-        except: pass
+            k = _get_secret("COHERE_API_KEY")
+            if k:
+                clients["cohere"] = cohere.Client(api_key=k)
+        except Exception:
+            pass
 
-    # Mistral
+    # ── Mistral ──────────────────────────────────────────
     if HAS_MISTRAL:
         try:
-            key = _get_secret("MISTRAL_API_KEY")
-            if key: clients["mistral"] = Mistral(api_key=key)
-        except: pass
+            k = _get_secret("MISTRAL_API_KEY")
+            if k:
+                clients["mistral"] = Mistral(api_key=k)
+        except Exception:
+            pass
 
     return clients
 
-ai_clients = init_clients()
+# Cache in session state so it runs once per session (not per rerun)
+if "ai_clients" not in st.session_state:
+    st.session_state["ai_clients"] = init_clients()
+ai_clients = st.session_state["ai_clients"]
 
 # ══════════════════════════════════════════════════════════════════
 # CALL AI FUNCTION — multi-API dispatcher
