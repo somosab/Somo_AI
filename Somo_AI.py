@@ -90,7 +90,6 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
 
-/* ─── RESET & BASE ─── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -126,7 +125,6 @@ html, body, .stApp {
 }
 .stApp { background: var(--bg-0) !important; }
 
-/* Noise overlay */
 .stApp::before {
     content: '';
     position: fixed;
@@ -137,7 +135,6 @@ html, body, .stApp {
     opacity: 0.35;
 }
 
-/* ─── HIDE STREAMLIT CHROME ─── */
 [data-testid="stSidebarNav"],
 .st-emotion-cache-1vt458p, .st-emotion-cache-k77z8z,
 header[data-testid="stHeader"],
@@ -149,10 +146,6 @@ header[data-testid="stHeader"],
     border-right: 1px solid var(--border) !important;
     width: 268px !important;
     transition: transform 0.3s cubic-bezier(.4,0,.2,1) !important;
-}
-/* Sidebar collapsed state */
-[data-testid="stSidebar"][aria-expanded="false"] {
-    transform: translateX(-100%) !important;
 }
 [data-testid="stSidebar"] > div { padding: 0 !important; }
 [data-testid="stSidebar"] section { background: transparent !important; }
@@ -195,7 +188,16 @@ div[data-testid="stSidebar"] button[kind="primaryFormSubmit"] {
     border: 1px solid var(--border) !important;
 }
 
-/* ─── MAIN ─── */
+/* Hide Streamlit's native sidebar collapse button */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="collapsedControl"],
+button[data-testid="stSidebarCollapseButton"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
 .main .block-container { padding: 0 !important; max-width: 100% !important; }
 section[data-testid="stMainBlockContainer"] {
     padding: 24px 32px 80px !important;
@@ -203,15 +205,11 @@ section[data-testid="stMainBlockContainer"] {
     background: var(--bg-0) !important;
 }
 
-/* ─── SCROLLBAR ─── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: var(--bg-1); }
 ::-webkit-scrollbar-thumb { background: #2a2a55; border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
-/* ════════════════════════════════
-   HERO BANNER
-════════════════════════════════ */
 .somo-hero {
     position: relative;
     overflow: hidden;
@@ -242,8 +240,6 @@ section[data-testid="stMainBlockContainer"] {
     0%,100% { transform: scale(1) translate(0,0); }
     50% { transform: scale(1.2) translate(-20px,-20px); }
 }
-
-/* Grid dots background */
 .somo-hero .grid-dots {
     position: absolute;
     inset: 0;
@@ -251,7 +247,6 @@ section[data-testid="stMainBlockContainer"] {
     background-size: 32px 32px;
     opacity: 0.3;
 }
-
 .somo-hero-content { position: relative; z-index: 2; }
 .somo-hero h1 {
     font-family: var(--font-head) !important;
@@ -283,7 +278,6 @@ section[data-testid="stMainBlockContainer"] {
     letter-spacing: 0.3px;
 }
 
-/* ═══ API INDICATOR BADGE ═══ */
 .api-badge {
     display: inline-flex;
     align-items: center;
@@ -312,9 +306,6 @@ section[data-testid="stMainBlockContainer"] {
 .api-cohere .api-dot  { background:#38bdf8; }
 .api-mistral .api-dot { background:#f472b6; }
 
-/* ════════════════════════════════
-   GRADIENT TEXT
-════════════════════════════════ */
 .g-text {
     background: linear-gradient(90deg, #818cf8, #c084fc, #f472b6, #818cf8);
     background-size: 300%;
@@ -325,13 +316,6 @@ section[data-testid="stMainBlockContainer"] {
 }
 @keyframes g-shift { 0%,100%{background-position:0%} 50%{background-position:100%} }
 
-/* ════════════════════════════════
-   TYPEWRITER ANIMATION
-════════════════════════════════ */
-.typewriter-container {
-    position: relative;
-    display: inline-block;
-}
 .typewriter-cursor {
     display: inline-block;
     width: 2px;
@@ -345,7 +329,6 @@ section[data-testid="stMainBlockContainer"] {
 }
 @keyframes cursor-blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
-/* Streaming message style */
 .streaming-msg {
     background: linear-gradient(145deg, var(--bg-card), var(--bg-2)) !important;
     border: 1px solid var(--border) !important;
@@ -365,9 +348,6 @@ section[data-testid="stMainBlockContainer"] {
 }
 @keyframes scan-line { 0%{left:-60%} 100%{left:160%} }
 
-/* ════════════════════════════════
-   SECTION LABELS
-════════════════════════════════ */
 .section-label {
     font-size: 10px;
     font-weight: 700;
@@ -397,9 +377,6 @@ section[data-testid="stMainBlockContainer"] {
 }
 .section-desc { font-size: 14px; color: var(--text-3); margin-bottom: 28px; }
 
-/* ════════════════════════════════
-   CARDS GRID
-════════════════════════════════ */
 .cards-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
@@ -439,9 +416,6 @@ section[data-testid="stMainBlockContainer"] {
 .card-v5:hover { border-color: rgba(56,189,248,0.6);  box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(56,189,248,0.2); }
 .card-v6:hover { border-color: rgba(167,139,250,0.6); box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(167,139,250,0.2); }
 
-/* ════════════════════════════════
-   STAT BOXES
-════════════════════════════════ */
 .stat-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px,1fr)); gap: 12px; margin-bottom: 28px; }
 .stat-box {
     background: var(--bg-card);
@@ -458,9 +432,6 @@ section[data-testid="stMainBlockContainer"] {
 .stat-lbl { font-size: 10px; font-weight: 700; color: var(--text-3); margin-top: 6px; text-transform: uppercase; letter-spacing: 1.5px; font-family: var(--font-mono); }
 .stat-icon { font-size: 20px; margin-bottom: 8px; }
 
-/* ════════════════════════════════
-   DIVIDER
-════════════════════════════════ */
 .somo-divider {
     height: 1px;
     background: linear-gradient(90deg, transparent, var(--border), transparent);
@@ -468,9 +439,6 @@ section[data-testid="stMainBlockContainer"] {
     border: none;
 }
 
-/* ════════════════════════════════
-   CHAT MESSAGES
-════════════════════════════════ */
 .stChatMessage {
     background: var(--bg-card) !important;
     border: 1px solid var(--border) !important;
@@ -483,9 +451,6 @@ section[data-testid="stMainBlockContainer"] {
 .stChatMessage code { background: rgba(100,108,255,0.12) !important; color: #a5b4fc !important; border-radius: 4px; padding: 1px 6px; font-family: var(--font-mono) !important; }
 .stChatMessage pre { background: #04040f !important; border: 1px solid var(--border) !important; border-radius: var(--radius-sm) !important; }
 
-/* ════════════════════════════════
-   CHAT INPUT
-════════════════════════════════ */
 [data-testid="stChatInput"],
 .stChatInputContainer,
 div[data-testid="stChatInputContainer"],
@@ -550,9 +515,6 @@ div[data-testid="stBottom"] > div > div {
     border-top: 1px solid var(--border) !important;
 }
 
-/* ════════════════════════════════
-   FORM ELEMENTS
-════════════════════════════════ */
 .stTextInput input, .stTextArea textarea, .stSelectbox select,
 div[data-baseweb="input"] input, div[data-baseweb="textarea"] textarea {
     background: var(--bg-2) !important;
@@ -615,9 +577,6 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
 .stCheckbox [data-baseweb="checkbox"] div { border-color: var(--border) !important; background: transparent !important; border-radius: 5px !important; }
 .stCheckbox [data-baseweb="checkbox"] div[aria-checked="true"] { background: var(--accent) !important; border-color: var(--accent) !important; }
 
-/* ════════════════════════════════
-   BUTTONS
-════════════════════════════════ */
 .stButton > button {
     background: rgba(100,108,255,0.07) !important;
     color: #a5b4fc !important;
@@ -665,9 +624,6 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
     box-shadow: 0 8px 30px rgba(16,185,129,0.5) !important;
 }
 
-/* ════════════════════════════════
-   TABS
-════════════════════════════════ */
 .stTabs [data-baseweb="tab-list"] {
     background: transparent !important;
     gap: 4px !important;
@@ -688,9 +644,6 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
 .stTabs [aria-selected="true"][data-baseweb="tab"] { color: #818cf8 !important; border-bottom: 2px solid var(--accent) !important; }
 .stTabs [data-baseweb="tab-panel"] { background: transparent !important; padding: 20px 0 !important; }
 
-/* ════════════════════════════════
-   EXPANDER
-════════════════════════════════ */
 .streamlit-expanderHeader {
     background: var(--bg-card) !important;
     border: 1px solid var(--border) !important;
@@ -707,9 +660,6 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
     color: var(--text-2) !important;
 }
 
-/* ════════════════════════════════
-   FORMS
-════════════════════════════════ */
 [data-testid="stForm"] {
     background: linear-gradient(145deg,var(--bg-card),var(--bg-2)) !important;
     border: 1px solid var(--border) !important;
@@ -724,9 +674,6 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
     box-shadow: 0 4px 20px rgba(100,108,255,0.35) !important;
 }
 
-/* ════════════════════════════════
-   METRICS
-════════════════════════════════ */
 [data-testid="stMetric"] {
     background: var(--bg-card) !important;
     border: 1px solid var(--border) !important;
@@ -736,22 +683,13 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
 [data-testid="stMetricLabel"] { color: var(--text-3) !important; font-size: 11px !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 1.5px !important; font-family: var(--font-mono) !important; }
 [data-testid="stMetricValue"] { color: var(--text-1) !important; font-weight: 900 !important; font-size: 28px !important; font-family: var(--font-head) !important; }
 
-/* ════════════════════════════════
-   DATAFRAME
-════════════════════════════════ */
 .stDataFrame, iframe { border-radius: var(--radius) !important; border: 1px solid var(--border) !important; }
 
-/* ════════════════════════════════
-   ALERTS
-════════════════════════════════ */
 .stSuccess > div { background: rgba(52,211,153,0.08) !important; border: 1px solid rgba(52,211,153,0.25) !important; border-radius: var(--radius-sm) !important; color: #6ee7b7 !important; }
 .stWarning > div { background: rgba(251,191,36,0.08) !important; border: 1px solid rgba(251,191,36,0.25) !important; border-radius: var(--radius-sm) !important; color: #fcd34d !important; }
 .stError > div   { background: rgba(244,114,182,0.08) !important; border: 1px solid rgba(244,114,182,0.25) !important; border-radius: var(--radius-sm) !important; color: #fca5a5 !important; }
 .stInfo > div    { background: rgba(100,108,255,0.08) !important; border: 1px solid rgba(100,108,255,0.25) !important; border-radius: var(--radius-sm) !important; color: #a5b4fc !important; }
 
-/* ════════════════════════════════
-   PROGRESS BAR
-════════════════════════════════ */
 .stProgress > div > div > div > div {
     background: linear-gradient(90deg,#4f46e5,#7c3aed,#f472b6) !important;
     border-radius: 99px !important;
@@ -759,9 +697,6 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
 }
 .stProgress > div > div { background: rgba(100,108,255,0.1) !important; border-radius: 99px !important; }
 
-/* ════════════════════════════════
-   CODE BLOCKS
-════════════════════════════════ */
 .stCode, [data-testid="stCode"] {
     background: #04040f !important;
     border: 1px solid var(--border) !important;
@@ -769,9 +704,6 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
 }
 .stCode code { color: #e2e8f0 !important; font-size: 13px !important; font-family: var(--font-mono) !important; }
 
-/* ════════════════════════════════
-   CUSTOM NOTIFICATIONS
-════════════════════════════════ */
 .somo-notify {
     background: linear-gradient(135deg, rgba(100,108,255,0.12), rgba(167,139,250,0.08));
     border: 1px solid rgba(100,108,255,0.3);
@@ -799,9 +731,6 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
 }
 @keyframes slide-in { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
 
-/* ════════════════════════════════
-   API SELECTOR TABS (custom)
-════════════════════════════════ */
 .api-selector {
     display: flex;
     gap: 8px;
@@ -825,14 +754,7 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
     border: 1px solid transparent;
     min-width: 80px;
 }
-.api-option.active-groq    { background: rgba(251,191,36,0.15); color:#fbbf24; border-color: rgba(251,191,36,0.35); }
-.api-option.active-gemini  { background: rgba(52,211,153,0.15); color:#34d399; border-color: rgba(52,211,153,0.35); }
-.api-option.active-cohere  { background: rgba(56,189,248,0.15); color:#38bdf8; border-color: rgba(56,189,248,0.35); }
-.api-option.active-mistral { background: rgba(244,114,182,0.15);color:#f472b6; border-color: rgba(244,114,182,0.35); }
 
-/* ════════════════════════════════
-   TEMPLATE CARDS
-════════════════════════════════ */
 .tmpl-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -861,9 +783,6 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
 .tmpl-title { font-size: 15px; font-weight: 700; color: var(--text-1); margin-bottom: 5px; font-family: var(--font-head); }
 .tmpl-desc  { font-size: 12px; color: var(--text-3); line-height: 1.55; }
 
-/* ════════════════════════════════
-   HISTORY
-════════════════════════════════ */
 .hist-msg { border-left: 3px solid; border-radius: 0 var(--radius) var(--radius) 0; padding: 12px 16px; margin: 8px 0; font-size: 13px; }
 .hist-user { background: rgba(100,108,255,0.07); border-color: var(--accent); }
 .hist-ai   { background: rgba(52,211,153,0.06);  border-color: var(--accent-4); }
@@ -872,39 +791,23 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
 .hist-ai   .hist-role { color: #34d399; }
 .hist-body { color: var(--text-2); line-height: 1.55; }
 
-/* ════════════════════════════════
-   PROFILE
-════════════════════════════════ */
 .profile-stat { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 22px 18px; text-align: center; transition: border-color 0.3s; }
 .profile-stat:hover { border-color: var(--border-h); }
 .p-stat-icon { font-size: 26px; margin-bottom: 10px; }
 .p-stat-val  { font-size: 30px; font-weight: 900; color: var(--text-1); font-family: var(--font-head); }
 .p-stat-lbl  { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700; margin-top: 4px; font-family: var(--font-mono); }
 
-/* ════════════════════════════════
-   FOOTER
-════════════════════════════════ */
 .somo-footer { text-align: center; padding: 48px 20px 24px; border-top: 1px solid var(--border); margin-top: 64px; }
 .somo-footer .f-title { font-size: 20px; font-weight: 800; color: var(--text-1); margin-bottom: 10px; font-family: var(--font-head); letter-spacing: -0.5px; }
 .somo-footer .f-sub   { font-size: 13px; color: var(--text-3); margin-bottom: 5px; }
 .somo-footer .f-copy  { font-size: 11px; color: #2a2a40; margin-top: 18px; font-family: var(--font-mono); }
 
-/* ════════════════════════════════
-   SIDEBAR TOGGLE BUTTON
-════════════════════════════════ */
-/* Hide Streamlit's default collapse arrow, we use our own */
-[data-testid="collapsedControl"] {
-    visibility: hidden !important;
-    width: 0 !important;
-    overflow: hidden !important;
-}
-
-/* Our custom toggle button - always visible */
+/* ════ CUSTOM SIDEBAR TOGGLE ════ */
 #somo-sidebar-toggle {
     position: fixed;
     top: 14px;
     left: 14px;
-    z-index: 9999;
+    z-index: 99999;
     width: 42px;
     height: 42px;
     border-radius: 12px;
@@ -946,9 +849,7 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
 #somo-sidebar-toggle:hover .toggle-icon span { background: #c7d2fe; }
 #somo-sidebar-toggle:hover .toggle-icon span:nth-child(2) { width: 18px; }
 
-/* ════════════════════════════════
-   BOTTOM MOBILE NAV BAR
-════════════════════════════════ */
+/* ════ MOBILE BOTTOM NAV ════ */
 #somo-bottom-nav {
     display: none;
     position: fixed;
@@ -990,90 +891,39 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
 .bnav-item.bnav-active .bnav-label { color: #818cf8; }
 .bnav-item.bnav-active { background: rgba(100,108,255,0.12); }
 
-/* ════════════════════════════════
-   MOBILE FULL RESPONSIVE
-════════════════════════════════ */
+/* ════ RESPONSIVE ════ */
 @media(max-width: 768px) {
-    /* Main content padding */
-    section[data-testid="stMainBlockContainer"] {
-        padding: 56px 12px 110px !important;
-    }
-
-    /* Hero */
-    .somo-hero {
-        padding: 28px 18px !important;
-        border-radius: 18px !important;
-        margin-bottom: 20px !important;
-    }
+    section[data-testid="stMainBlockContainer"] { padding: 56px 12px 110px !important; }
+    .somo-hero { padding: 28px 18px !important; border-radius: 18px !important; margin-bottom: 20px !important; }
     .somo-hero h1 { font-size: clamp(22px, 6vw, 32px) !important; letter-spacing: -0.8px !important; }
     .somo-hero .subtitle { font-size: 13.5px !important; line-height: 1.6 !important; margin-bottom: 16px !important; }
     .hero-badge { font-size: 10.5px !important; padding: 4px 10px !important; }
-
-    /* Cards - 2 per row on mobile */
-    .cards-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 10px !important;
-        margin-bottom: 20px !important;
-    }
+    .cards-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px !important; margin-bottom: 20px !important; }
     .somo-card { padding: 18px 12px !important; border-radius: 14px !important; }
     .card-icon { font-size: 26px !important; margin-bottom: 8px !important; }
     .card-title { font-size: 12px !important; }
     .card-desc { font-size: 10px !important; }
-
-    /* Stat row - 2 per row */
-    .stat-row {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 8px !important;
-    }
+    .stat-row { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
     .stat-val { font-size: 22px !important; }
     .stat-lbl { font-size: 9px !important; }
-
-    /* Sidebar hide on mobile, show bottom nav */
-    [data-testid="stSidebar"] {
-        width: 100% !important;
-        max-width: 280px !important;
-    }
-
-    /* Bottom nav visible on mobile */
+    [data-testid="stSidebar"] { width: 100% !important; max-width: 280px !important; }
     #somo-bottom-nav { display: block !important; }
-
-    /* Section titles */
     .section-title { font-size: 20px !important; }
-
-    /* Template cards */
     .tmpl-card { padding: 16px !important; }
     .tmpl-title { font-size: 13px !important; }
     .tmpl-desc { font-size: 11px !important; }
-
-    /* Text areas */
     .stTextArea textarea { font-size: 14px !important; }
-
-    /* Buttons full width on mobile */
     .stButton > button { font-size: 13px !important; padding: 9px 14px !important; }
-
-    /* History messages */
     .hist-msg { font-size: 12px !important; padding: 10px 12px !important; }
-
-    /* Chat input */
     [data-testid="stChatInput"] textarea { font-size: 14px !important; }
-
-    /* Forms */
     [data-testid="stForm"] { padding: 18px !important; border-radius: 14px !important; }
-
-    /* Profile stats - 2 per row */
     .profile-stat { padding: 16px 12px !important; }
     .p-stat-val { font-size: 24px !important; }
-
-    /* Footer */
     .somo-footer { padding: 28px 16px 16px !important; margin-top: 30px !important; }
     .somo-footer .f-title { font-size: 16px !important; }
-
-    /* API badges row */
-    .api-selector { gap: 6px !important; }
     .api-option { min-width: 60px !important; font-size: 10px !important; padding: 6px 8px !important; }
-
-    /* Divider */
     .somo-divider { margin: 18px 0 !important; }
+    #somo-sidebar-toggle { top: 8px !important; left: 8px !important; width: 38px !important; height: 38px !important; }
 }
 
 @media(max-width: 480px) {
@@ -1089,7 +939,6 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
     .stat-val { font-size: 20px !important; }
 }
 
-/* Tablet */
 @media(min-width: 769px) and (max-width: 1024px) {
     section[data-testid="stMainBlockContainer"] { padding: 20px 20px 70px !important; }
     .cards-grid { grid-template-columns: repeat(3, 1fr) !important; }
@@ -1100,10 +949,10 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════
-# SIDEBAR TOGGLE BUTTON + MOBILE BOTTOM NAV
+# ██████  FIXED SIDEBAR TOGGLE + MOBILE NAV  ██████
 # ══════════════════════════════════════════════════════════════════
 st.markdown("""
-<div id="somo-sidebar-toggle" onclick="somoToggleSidebar()" title="Sidebar ochish/yopish">
+<div id="somo-sidebar-toggle" title="Sidebar">
     <div class="toggle-icon">
         <span></span><span></span><span></span>
     </div>
@@ -1136,96 +985,194 @@ st.markdown("""
      background:linear-gradient(145deg,#09091e,#0d0d22);border:1px solid rgba(100,108,255,0.25);
      border-radius:18px;padding:16px;box-shadow:0 -10px 40px rgba(0,0,0,0.7);backdrop-filter:blur(20px);">
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:4px;">
-        <div onclick="somoSetPage('html');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+        <div onclick="somoSetPage('html');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;">
             <div style="font-size:22px;">🌐</div><div style="font-size:9.5px;color:#64748b;margin-top:4px;font-weight:700;">HTML</div></div>
-        <div onclick="somoSetPage('csv');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+        <div onclick="somoSetPage('csv');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;">
             <div style="font-size:22px;">📋</div><div style="font-size:9.5px;color:#64748b;margin-top:4px;font-weight:700;">CSV</div></div>
-        <div onclick="somoSetPage('templates');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+        <div onclick="somoSetPage('templates');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;">
             <div style="font-size:22px;">🎨</div><div style="font-size:9.5px;color:#64748b;margin-top:4px;font-weight:700;">Shablon</div></div>
-        <div onclick="somoSetPage('analyze');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+        <div onclick="somoSetPage('analyze');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;">
             <div style="font-size:22px;">🔍</div><div style="font-size:9.5px;color:#64748b;margin-top:4px;font-weight:700;">Tahlil</div></div>
-        <div onclick="somoSetPage('history');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+        <div onclick="somoSetPage('history');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;">
             <div style="font-size:22px;">📜</div><div style="font-size:9.5px;color:#64748b;margin-top:4px;font-weight:700;">Tarix</div></div>
-        <div onclick="somoSetPage('feedback');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+        <div onclick="somoSetPage('feedback');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;">
             <div style="font-size:22px;">💌</div><div style="font-size:9.5px;color:#64748b;margin-top:4px;font-weight:700;">Fikr</div></div>
-        <div onclick="somoSetPage('profile');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+        <div onclick="somoSetPage('profile');somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.15);cursor:pointer;">
             <div style="font-size:22px;">👤</div><div style="font-size:9.5px;color:#64748b;margin-top:4px;font-weight:700;">Profil</div></div>
-        <div onclick="somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(244,114,182,0.07);border:1px solid rgba(244,114,182,0.2);cursor:pointer;-webkit-tap-highlight-color:transparent;">
+        <div onclick="somoToggleMoreMenu();" style="text-align:center;padding:12px 4px;border-radius:12px;background:rgba(244,114,182,0.07);border:1px solid rgba(244,114,182,0.2);cursor:pointer;">
             <div style="font-size:22px;color:#f472b6;">✕</div><div style="font-size:9.5px;color:#f472b6;margin-top:4px;font-weight:700;">Yopish</div></div>
     </div>
 </div>
 
 <script>
 (function() {
+'use strict';
 
-// ── Sidebar toggle ──────────────────────────────────────
-window._somoOpen = true;
+// ══════════════════════════════════════════════
+// SIDEBAR TOGGLE — ishonchli usul
+// ══════════════════════════════════════════════
+var _sidebarOpen = true;
+var _initDone = false;
+
+function getSidebar() {
+    var pdoc = window.parent ? window.parent.document : document;
+    return pdoc.querySelector('[data-testid="stSidebar"]');
+}
+
+function getMainContent() {
+    var pdoc = window.parent ? window.parent.document : document;
+    return pdoc.querySelector('section[data-testid="stMainBlockContainer"]') ||
+           pdoc.querySelector('.main .block-container') ||
+           pdoc.querySelector('[data-testid="stAppViewBlockContainer"]');
+}
+
+function applyOpen(sb) {
+    sb.style.cssText += ';transform:translateX(0) !important;visibility:visible !important;';
+    sb.setAttribute('aria-expanded', 'true');
+}
+
+function applyClose(sb) {
+    sb.style.position = 'fixed';
+    sb.style.top = '0';
+    sb.style.left = '0';
+    sb.style.height = '100vh';
+    sb.style.zIndex = '9980';
+    sb.style.transform = 'translateX(-110%)';
+    sb.style.transition = 'transform 0.32s cubic-bezier(.4,0,.2,1)';
+    sb.setAttribute('aria-expanded', 'false');
+}
+
+function updateToggleBtn(open) {
+    var btn = document.getElementById('somo-sidebar-toggle');
+    if (!btn) return;
+    if (open) {
+        btn.style.background = 'linear-gradient(135deg,#0f0f22,#14142a)';
+        btn.style.borderColor = 'rgba(100,108,255,0.35)';
+        btn.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5),0 0 15px rgba(100,108,255,0.15)';
+    } else {
+        btn.style.background = 'linear-gradient(135deg,#150d30,#1e1050)';
+        btn.style.borderColor = 'rgba(139,92,246,0.9)';
+        btn.style.boxShadow = '0 0 20px rgba(139,92,246,0.3)';
+    }
+}
 
 window.somoToggleSidebar = function() {
     try {
-        var pdoc = window.parent.document;
-        var sb = pdoc.querySelector('[data-testid="stSidebar"]');
-        if (!sb) return;
-        var btn = document.getElementById('somo-sidebar-toggle');
-        sb.style.position = 'fixed';
-        sb.style.top = '0';
-        sb.style.left = '0';
-        sb.style.height = '100vh';
-        sb.style.zIndex = '9980';
-        sb.style.transition = 'transform 0.32s cubic-bezier(.4,0,.2,1)';
-        if (window._somoOpen) {
+        var sb = getSidebar();
+        if (!sb) { console.warn('Somo: sidebar topilmadi'); return; }
+
+        if (_sidebarOpen) {
+            // Yopish
+            sb.style.position = 'fixed';
+            sb.style.top = '0';
+            sb.style.left = '0';
+            sb.style.height = '100vh';
+            sb.style.zIndex = '9980';
+            sb.style.transition = 'transform 0.32s cubic-bezier(.4,0,.2,1)';
             sb.style.transform = 'translateX(-110%)';
-            window._somoOpen = false;
-            if (btn) {
-                btn.style.background = 'linear-gradient(135deg,#150d30,#1e1050)';
-                btn.style.borderColor = 'rgba(139,92,246,0.9)';
-                btn.style.boxShadow = '0 0 20px rgba(139,92,246,0.3)';
-                btn.title = 'Menyuni ochish';
-            }
+            _sidebarOpen = false;
+            updateToggleBtn(false);
         } else {
+            // Ochish
+            sb.style.position = 'fixed';
+            sb.style.top = '0';
+            sb.style.left = '0';
+            sb.style.height = '100vh';
+            sb.style.zIndex = '9980';
+            sb.style.transition = 'transform 0.32s cubic-bezier(.4,0,.2,1)';
             sb.style.transform = 'translateX(0)';
-            window._somoOpen = true;
-            if (btn) {
-                btn.style.background = 'linear-gradient(135deg,#0f0f22,#14142a)';
-                btn.style.borderColor = 'rgba(100,108,255,0.35)';
-                btn.style.boxShadow = '0 4px 20px rgba(0,0,0,0.5),0 0 15px rgba(100,108,255,0.15)';
-                btn.title = 'Menyuni yopish';
-            }
+            _sidebarOpen = true;
+            updateToggleBtn(true);
+
+            // Mobilda tashqariga bossalar yopish
             if (window.innerWidth <= 768) {
+                var pdoc = window.parent ? window.parent.document : document;
                 setTimeout(function() {
-                    pdoc.addEventListener('click', function _cls(e) {
-                        if (!sb.contains(e.target) && !e.target.closest('#somo-sidebar-toggle')) {
-                            sb.style.transform = 'translateX(-110%)';
-                            window._somoOpen = false;
-                            if (btn) {
-                                btn.style.background = 'linear-gradient(135deg,#150d30,#1e1050)';
-                                btn.style.borderColor = 'rgba(139,92,246,0.9)';
-                            }
-                            pdoc.removeEventListener('click', _cls);
+                    function outsideClick(e) {
+                        var sb2 = getSidebar();
+                        var toggleBtn = document.getElementById('somo-sidebar-toggle');
+                        if (sb2 && !sb2.contains(e.target) && toggleBtn && !toggleBtn.contains(e.target)) {
+                            sb2.style.transform = 'translateX(-110%)';
+                            _sidebarOpen = false;
+                            updateToggleBtn(false);
+                            pdoc.removeEventListener('click', outsideClick);
                         }
-                    });
-                }, 200);
+                    }
+                    pdoc.addEventListener('click', outsideClick);
+                }, 250);
             }
         }
-    } catch(ex) { console.warn('toggle:', ex); }
+    } catch(err) {
+        console.warn('Somo toggle xato:', err);
+    }
 };
-setTimeout(function() {
-    if (window.innerWidth <= 768) {
+
+// Toggle buttonni bog'lash
+function attachToggle() {
+    var btn = document.getElementById('somo-sidebar-toggle');
+    if (btn && !btn._attached) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            window.somoToggleSidebar();
+        });
+        btn._attached = true;
+    }
+}
+
+// Mobilda boshlanganda sidebar yopiq bo'lsin
+function initMobileSidebar() {
+    if (window.innerWidth <= 768 && !_initDone) {
         try {
-            var sb = window.parent.document.querySelector('[data-testid="stSidebar"]');
+            var sb = getSidebar();
             if (sb) {
-                sb.style.position = 'fixed'; sb.style.top = '0'; sb.style.left = '0';
-                sb.style.height = '100vh'; sb.style.zIndex = '9980';
-                sb.style.transform = 'translateX(-110%)'; sb.style.transition = 'transform 0.3s ease';
-                window._somoOpen = false;
-                var b = document.getElementById('somo-sidebar-toggle');
-                if (b) { b.style.background='linear-gradient(135deg,#150d30,#1e1050)'; b.style.borderColor='rgba(139,92,246,0.9)'; }
+                sb.style.position = 'fixed';
+                sb.style.top = '0';
+                sb.style.left = '0';
+                sb.style.height = '100vh';
+                sb.style.zIndex = '9980';
+                sb.style.transform = 'translateX(-110%)';
+                sb.style.transition = 'transform 0.3s ease';
+                _sidebarOpen = false;
+                updateToggleBtn(false);
+                _initDone = true;
             }
         } catch(e) {}
     }
-}, 700);
+}
 
-// ── Mobile bottom nav page switch ──────────────────────
+// ══════════════════════════════════════════════
+// Sidebar tayyor bo'lishini kutish
+// ══════════════════════════════════════════════
+var _attempts = 0;
+function waitAndInit() {
+    var sb = getSidebar();
+    if (sb) {
+        attachToggle();
+        initMobileSidebar();
+    } else if (_attempts < 20) {
+        _attempts++;
+        setTimeout(waitAndInit, 300);
+    }
+}
+setTimeout(waitAndInit, 400);
+
+// Resize da qayta tekshirish
+window.addEventListener('resize', function() {
+    var nav = document.getElementById('somo-bottom-nav');
+    var toggle = document.getElementById('somo-sidebar-toggle');
+    if (nav) nav.style.display = (window.innerWidth <= 768) ? 'block' : 'none';
+    if (toggle) {
+        toggle.style.top    = (window.innerWidth <= 768) ? '8px'  : '14px';
+        toggle.style.left   = (window.innerWidth <= 768) ? '8px'  : '14px';
+        toggle.style.width  = (window.innerWidth <= 768) ? '38px' : '42px';
+        toggle.style.height = (window.innerWidth <= 768) ? '38px' : '42px';
+    }
+});
+
+// ══════════════════════════════════════════════
+// BOTTOM NAV
+// ══════════════════════════════════════════════
 window.somoSetPage = function(pageName) {
     var iconMap = {
         'home':'🏠','chat':'💬','excel':'📊','word':'📝',
@@ -1235,39 +1182,32 @@ window.somoSetPage = function(pageName) {
     var icon = iconMap[pageName];
     if (!icon) return;
     try {
-        var doc = window.parent.document;
-        var buttons = doc.querySelectorAll('[data-testid="stSidebar"] button');
+        var pdoc = window.parent ? window.parent.document : document;
+        var buttons = pdoc.querySelectorAll('[data-testid="stSidebar"] button');
         for (var i = 0; i < buttons.length; i++) {
-            if (buttons[i].textContent.trim().charAt(0) === icon) {
+            var txt = buttons[i].textContent.trim();
+            if (txt.charAt(0) === icon || txt.indexOf(icon) === 0) {
                 buttons[i].click();
                 break;
             }
         }
     } catch(e) { console.warn('setPage:', e); }
 
-    // Update active state
     var items = document.querySelectorAll('.bnav-item');
     for (var j = 0; j < items.length; j++) { items[j].classList.remove('bnav-active'); }
     var el = document.getElementById('bnav-' + pageName);
     if (el) el.classList.add('bnav-active');
 
-    // Close more menu
     var menu = document.getElementById('somo-more-menu');
     if (menu) menu.style.display = 'none';
 };
 
-// ── More menu toggle ────────────────────────────────────
 window.somoToggleMoreMenu = function() {
     var menu = document.getElementById('somo-more-menu');
     if (!menu) return;
-    if (menu.style.display === 'none' || !menu.style.display) {
-        menu.style.display = 'block';
-    } else {
-        menu.style.display = 'none';
-    }
+    menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'block' : 'none';
 };
 
-// Close more menu on outside tap
 document.addEventListener('touchstart', function(e) {
     var menu = document.getElementById('somo-more-menu');
     var moreBtn = document.getElementById('bnav-more');
@@ -1278,8 +1218,10 @@ document.addEventListener('touchstart', function(e) {
     }
 }, { passive: true });
 
-// ── Responsive check ────────────────────────────────────
-function somoCheckMobile() {
+// ══════════════════════════════════════════════
+// Responsive check
+// ══════════════════════════════════════════════
+(function checkResponsive() {
     var w = window.innerWidth;
     var nav = document.getElementById('somo-bottom-nav');
     var toggle = document.getElementById('somo-sidebar-toggle');
@@ -1290,16 +1232,14 @@ function somoCheckMobile() {
         toggle.style.width  = (w <= 768) ? '38px' : '42px';
         toggle.style.height = (w <= 768) ? '38px' : '42px';
     }
-}
-somoCheckMobile();
-window.addEventListener('resize', somoCheckMobile);
+})();
 
 })();
 </script>
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════════
-# API CLIENTS SETUP
+# API CONFIGS
 # ══════════════════════════════════════════════════════════════════
 API_CONFIGS = {
     "groq": {
@@ -1316,7 +1256,7 @@ API_CONFIGS = {
         "model": "gemini-2.0-flash",
         "color": "#34d399",
         "badge_class": "api-gemini",
-        "desc": "Google Gemini · 1.5 Flash"
+        "desc": "Google Gemini · 2.0 Flash"
     },
     "cohere": {
         "name": "Cohere",
@@ -1336,83 +1276,106 @@ API_CONFIGS = {
     }
 }
 
+# ══════════════════════════════════════════════════════════════════
+# SECRET READER — barcha usullarni sinab ko'radi
+# ══════════════════════════════════════════════════════════════════
 def _get_secret(key):
-    """Read secret key — supports flat toml: KEY = 'value' format."""
-    # Method 1: direct bracket access (most reliable for Streamlit secrets.toml)
+    # 1. To'g'ridan-to'g'ri
     try:
         val = st.secrets[key]
-        if val: return str(val).strip()
+        if val and str(val).strip(): return str(val).strip()
     except: pass
-    # Method 2: .get() fallback
+    # 2. .get()
     try:
         val = st.secrets.get(key)
-        if val: return str(val).strip()
+        if val and str(val).strip(): return str(val).strip()
     except: pass
-    # Method 3: nested sections
-    for section in ["keys", "api", "api_keys"]:
+    # 3. Nested bo'limlar
+    for section in ["keys", "api", "api_keys", "secrets"]:
         try:
             val = st.secrets[section][key]
-            if val: return str(val).strip()
+            if val and str(val).strip(): return str(val).strip()
         except: pass
-    # Method 4: environment variable
+    # 4. Environment variable
     val = os.environ.get(key, "")
     return val.strip() if val else ""
 
-# Initialize clients — no cache so secrets always read fresh
+# ══════════════════════════════════════════════════════════════════
+# ██████  API INIT — session_state da saqlanadi (cache YO'Q!)  ██████
+# Bu juda muhim: @st.cache_resource API kalitlarni bir marta
+# keshlab qo'yadi va yangi kalitlar ta'sir qilmaydi.
+# session_state har sessiya uchun qayta ishga tushadi.
+# ══════════════════════════════════════════════════════════════════
 def init_clients():
+    """Barcha API clientlarni yaratadi. Xatolar log ga yoziladi."""
     clients = {}
+    errors = {}
 
-    # ── Groq ─────────────────────────────────────────────
+    # ── GROQ ─────────────────────────────────────────────
     if HAS_GROQ:
         try:
             k = _get_secret("GROQ_API_KEY")
             if k:
-                clients["groq"] = Groq(api_key=k)
-        except Exception:
-            pass
+                client = Groq(api_key=k)
+                # Test qilish
+                clients["groq"] = client
+            else:
+                errors["groq"] = "GROQ_API_KEY topilmadi"
+        except Exception as e:
+            errors["groq"] = str(e)
 
-    # ── Gemini ───────────────────────────────────────────
+    # ── GEMINI ────────────────────────────────────────────
     if HAS_GEMINI:
         try:
             k = _get_secret("GEMINI_API_KEY")
             if k:
                 genai.configure(api_key=k)
-                # Store key — model created lazily in call_ai (avoids init errors)
-                clients["gemini"] = k
-        except Exception:
-            pass
-    # ── Cohere ───────────────────────────────────────────
+                # Model yaratamiz va saqlaymiz
+                model = genai.GenerativeModel("gemini-2.0-flash")
+                clients["gemini"] = model
+            else:
+                errors["gemini"] = "GEMINI_API_KEY topilmadi"
+        except Exception as e:
+            errors["gemini"] = str(e)
+
+    # ── COHERE ────────────────────────────────────────────
     if HAS_COHERE:
         try:
             k = _get_secret("COHERE_API_KEY")
             if k:
-                clients["cohere"] = cohere.Client(api_key=k)
-        except Exception:
-            pass
+                client = cohere.Client(api_key=k)
+                clients["cohere"] = client
+            else:
+                errors["cohere"] = "COHERE_API_KEY topilmadi"
+        except Exception as e:
+            errors["cohere"] = str(e)
 
-    # ── Mistral ──────────────────────────────────────────
+    # ── MISTRAL ───────────────────────────────────────────
     if HAS_MISTRAL:
         try:
             k = _get_secret("MISTRAL_API_KEY")
             if k:
-                clients["mistral"] = Mistral(api_key=k)
-        except Exception:
-            pass
+                client = Mistral(api_key=k)
+                clients["mistral"] = client
+            else:
+                errors["mistral"] = "MISTRAL_API_KEY topilmadi"
+        except Exception as e:
+            errors["mistral"] = str(e)
 
-    return clients
+    return clients, errors
 
-# Cache in session state so it runs once per session (not per rerun)
-@st.cache_resource(show_spinner=False)
-def _load_clients():
-    return init_clients()
-ai_clients = _load_clients()
+# Session state da API clientlarni saqlash (har sessiya uchun bir marta)
+if 'ai_clients' not in st.session_state or 'api_errors' not in st.session_state:
+    _clients, _errors = init_clients()
+    st.session_state.ai_clients = _clients
+    st.session_state.api_errors = _errors
+
+ai_clients = st.session_state.ai_clients
 
 # ══════════════════════════════════════════════════════════════════
-# CALL AI FUNCTION — multi-API dispatcher
+# CALL AI — ko'p API dispatcher
 # ══════════════════════════════════════════════════════════════════
 def call_ai(messages, temperature=0.6, max_tokens=3000, provider="groq"):
-    """Call the selected AI provider. Falls back through providers if needed."""
-    # Choose provider with fallback
     providers_order = [provider] + [p for p in ["groq","gemini","cohere","mistral"] if p != provider]
 
     for prov in providers_order:
@@ -1429,7 +1392,6 @@ def call_ai(messages, temperature=0.6, max_tokens=3000, provider="groq"):
                 return resp.choices[0].message.content, "groq"
 
             elif prov == "gemini":
-                # Convert to Gemini format
                 sys_msg = next((m["content"] for m in messages if m["role"]=="system"), "")
                 user_msgs = [m for m in messages if m["role"] != "system"]
                 chat_hist = []
@@ -1439,11 +1401,8 @@ def call_ai(messages, temperature=0.6, max_tokens=3000, provider="groq"):
                 last_msg = user_msgs[-1]["content"] if user_msgs else ""
                 if sys_msg:
                     last_msg = f"[System: {sys_msg}]\n\n{last_msg}"
-                _gk = ai_clients["gemini"]
-                if isinstance(_gk, str):
-                    genai.configure(api_key=_gk)
-                    _gk = genai.GenerativeModel("gemini-2.0-flash")
-                chat = _gk.start_chat(history=chat_hist)
+                model = ai_clients["gemini"]
+                chat = model.start_chat(history=chat_hist)
                 resp = chat.send_message(last_msg)
                 return resp.text, "gemini"
 
@@ -1480,7 +1439,6 @@ def call_ai(messages, temperature=0.6, max_tokens=3000, provider="groq"):
     return "❌ Hech bir AI xizmati mavjud emas yoki xatolik yuz berdi.", "none"
 
 def call_ai_stream(messages, temperature=0.6, max_tokens=3000, provider="groq"):
-    """Streaming version — yields text chunks. Falls back to non-stream if needed."""
     providers_order = [provider] + [p for p in ["groq","gemini","cohere","mistral"] if p != provider]
 
     for prov in providers_order:
@@ -1495,10 +1453,8 @@ def call_ai_stream(messages, temperature=0.6, max_tokens=3000, provider="groq"):
                     max_tokens=max_tokens,
                     stream=True
                 )
-                full = ""
                 for chunk in stream:
                     if chunk.choices[0].delta.content:
-                        full += chunk.choices[0].delta.content
                         yield chunk.choices[0].delta.content, "groq"
                 return
 
@@ -1512,11 +1468,8 @@ def call_ai_stream(messages, temperature=0.6, max_tokens=3000, provider="groq"):
                 last_msg = user_msgs[-1]["content"] if user_msgs else ""
                 if sys_msg:
                     last_msg = f"[System: {sys_msg}]\n\n{last_msg}"
-                _gk2 = ai_clients["gemini"]
-                if isinstance(_gk2, str):
-                    genai.configure(api_key=_gk2)
-                    _gk2 = genai.GenerativeModel("gemini-2.0-flash")
-                chat = _gk2.start_chat(history=chat_hist)
+                model = ai_clients["gemini"]
+                chat = model.start_chat(history=chat_hist)
                 resp = chat.send_message(last_msg, stream=True)
                 for chunk in resp:
                     if chunk.text:
@@ -1524,7 +1477,6 @@ def call_ai_stream(messages, temperature=0.6, max_tokens=3000, provider="groq"):
                 return
 
             elif prov == "cohere":
-                # Cohere supports streaming too
                 sys_msg = next((m["content"] for m in messages if m["role"]=="system"), "")
                 user_msgs = [m for m in messages if m["role"] != "system"]
                 chat_hist = []
@@ -1559,7 +1511,6 @@ def call_ai_stream(messages, temperature=0.6, max_tokens=3000, provider="groq"):
                 return
 
         except Exception as e:
-            # fallback to next
             continue
 
     yield "❌ Xatolik yuz berdi.", "none"
@@ -1647,11 +1598,13 @@ MIME = {
 }
 
 # ══════════════════════════════════════════════════════════════════
-# FILE GENERATORS — use appropriate API per type
+# FILE GENERATORS
 # ══════════════════════════════════════════════════════════════════
 def gen_excel(prompt, temp=0.15, provider="groq"):
     if not HAS_OPENPYXL:
         return None, "openpyxl o'rnatilmagan"
+    # Fallback: available provider
+    prov = provider if provider in ai_clients else (list(ai_clients.keys())[0] if ai_clients else "groq")
     sys_p = """Sen Excel fayl strukturasi uchun JSON qaytaruvchi ekspertsan.
 FAQAT quyidagi JSON formatini qaytar, boshqa hech narsa yozma:
 {
@@ -1676,7 +1629,7 @@ Qoidalar:
 - FAQAT JSON, markdown yoki izoh yo'q"""
 
     raw, _ = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}],
-                  temperature=temp, max_tokens=4000, provider=provider)
+                  temperature=temp, max_tokens=4000, provider=prov)
     raw = re.sub(r'```json|```', '', raw).strip()
     m = re.search(r'\{.*\}', raw, re.DOTALL)
     if not m: return None, "JSON topilmadi"
@@ -1760,6 +1713,7 @@ Qoidalar:
 def gen_word(prompt, temp=0.4, provider="mistral"):
     if not HAS_DOCX:
         return None, "python-docx o'rnatilmagan"
+    prov = provider if provider in ai_clients else (list(ai_clients.keys())[0] if ai_clients else "groq")
     sys_p = """Sen professional Word hujjat strukturasi JSON qaytaruvchi ekspertsan.
 FAQAT JSON qaytargin:
 {
@@ -1776,7 +1730,7 @@ FAQAT JSON qaytargin:
 Muhim: Mazmunli, haqiqiy va to'liq kontent. Kamida 10-14 bo'lim. Faqat JSON."""
 
     raw, _ = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}],
-                  temperature=temp, max_tokens=4000, provider=provider)
+                  temperature=temp, max_tokens=4000, provider=prov)
     raw = re.sub(r'```json|```','',raw).strip()
     m = re.search(r'\{.*\}',raw,re.DOTALL)
     if not m: return None, "Struktura topilmadi"
@@ -1872,33 +1826,36 @@ Muhim: Mazmunli, haqiqiy va to'liq kontent. Kamida 10-14 bo'lim. Faqat JSON."""
 
 
 def gen_code(prompt, temp=0.12, provider="cohere"):
+    prov = provider if provider in ai_clients else (list(ai_clients.keys())[0] if ai_clients else "groq")
     sys_p = """Sen tajribali Python dasturchi. Professional, to'liq ishlaydigan kod yoz.
 FAQAT Python kodi ber — markdown, tushuntirma yo'q (kod ichidagi # izohlar yaxshi).
 Kod clean, error handling bilan, best practices bo'yicha."""
     raw, _ = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}],
-                  temperature=temp, max_tokens=3500, provider=provider)
+                  temperature=temp, max_tokens=3500, provider=prov)
     raw = re.sub(r'```python|```py|```','',raw).strip()
     safe = re.sub(r'[^\w]','_',prompt[:30]).strip('_')
     return raw.encode('utf-8'), f"{safe}_{datetime.now().strftime('%H%M%S')}.py"
 
 
 def gen_html(prompt, temp=0.5, provider="gemini"):
+    prov = provider if provider in ai_clients else (list(ai_clients.keys())[0] if ai_clients else "groq")
     sys_p = """Sen professional frontend developer. Chiroyli, zamonaviy, to'liq HTML/CSS/JS sahifa yarat.
 Dark theme, Google Fonts, smooth animations, glassmorphism ishlat.
 FAQAT HTML kodi ber, markdown yo'q."""
     raw, _ = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}],
-                  temperature=temp, max_tokens=4000, provider=provider)
+                  temperature=temp, max_tokens=4000, provider=prov)
     raw = re.sub(r'```html|```','',raw).strip()
     safe = re.sub(r'[^\w]','_',prompt[:25]).strip('_')
     return raw.encode('utf-8'), f"{safe}_{datetime.now().strftime('%H%M%S')}.html"
 
 
 def gen_csv(prompt, temp=0.3, provider="mistral"):
+    prov = provider if provider in ai_clients else (list(ai_clients.keys())[0] if ai_clients else "groq")
     sys_p = """Sen ma'lumotlar mutaxassisi. Foydalanuvchi so'roviga asosan CSV formatda katta ma'lumot to'plami ber.
 FAQAT CSV (vergul bilan ajratilgan). Birinchi satr sarlavha. Kamida 25 satr.
 Hech qanday tushuntirma, markdown yoki qo'shimcha matn yo'q."""
     raw, _ = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}],
-                  temperature=temp, max_tokens=3000, provider=provider)
+                  temperature=temp, max_tokens=3000, provider=prov)
     raw = re.sub(r'```csv|```','',raw).strip()
     safe = re.sub(r'[^\w]','_',prompt[:25]).strip('_')
     return raw.encode('utf-8'), f"{safe}_{datetime.now().strftime('%H%M%S')}.csv"
@@ -1916,7 +1873,7 @@ def download_block(file_bytes, fname, label):
                        key=f"dl_{fname}_{time.time()}")
 
 # ══════════════════════════════════════════════════════════════════
-# API STATUS INDICATOR
+# API STATUS HTML
 # ══════════════════════════════════════════════════════════════════
 def api_status_html(provider):
     cfg = API_CONFIGS.get(provider, API_CONFIGS["groq"])
@@ -1945,9 +1902,14 @@ def logout():
             cookies["somo_user_session"] = ""
             cookies.save()
     except: pass
+    # ai_clients va api_errors ni saqlab, qolganlarini o'chirish
+    saved_clients = st.session_state.get('ai_clients', {})
+    saved_errors = st.session_state.get('api_errors', {})
     keys = list(st.session_state.keys())
     for k in keys: del st.session_state[k]
     st.session_state.logged_in = False
+    st.session_state.ai_clients = saved_clients
+    st.session_state.api_errors = saved_errors
     st.rerun()
 
 # ══════════════════════════════════════════════════════════════════
@@ -1968,34 +1930,28 @@ if not st.session_state.logged_in:
             <p style="font-size:17px;color:rgba(255,255,255,0.55);max-width:560px;margin:0 auto 30px;line-height:1.7;font-family:'Inter',sans-serif;">
                 Excel · Word · Kod · HTML · CSV — To'rt xil AI bilan har qanday faylni yarating
             </p>
-            <div class="hero-badges" style="justify-content:center; gap: 10px;" id="api-status-badges">
-                <span class="api-badge api-groq"><span class="api-dot"></span>⚡ Groq / Llama 3.3</span>
-                <span class="api-badge api-gemini"><span class="api-dot"></span>✨ Google Gemini</span>
-                <span class="api-badge api-cohere"><span class="api-dot"></span>🔮 Cohere R+</span>
-                <span class="api-badge api-mistral"><span class="api-dot"></span>🌪 Mistral Large</span>
-            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # Dynamic API status on login page
+    # API holati ko'rsatish
     _api_status_html = ""
     _api_defs = [
-        ("groq", "api-groq", "⚡", "Groq · Llama 3.3"),
-        ("gemini", "api-gemini", "✨", "Gemini 2.0"),
-        ("cohere", "api-cohere", "🔮", "Cohere R+"),
-        ("mistral", "api-mistral", "🌪", "Mistral Large"),
+        ("groq",    "api-groq",    "⚡", "Groq"),
+        ("gemini",  "api-gemini",  "✨", "Gemini"),
+        ("cohere",  "api-cohere",  "🔮", "Cohere"),
+        ("mistral", "api-mistral", "🌪", "Mistral"),
     ]
-    _all_connected = True
+    _connected_count = sum(1 for p,_,_,_ in _api_defs if p in ai_clients)
     for _pkey, _pclass, _picon, _pname in _api_defs:
         _connected = _pkey in ai_clients
-        if not _connected: _all_connected = False
+        _err = st.session_state.api_errors.get(_pkey, "")
         if _connected:
             _api_status_html += f'<span class="api-badge {_pclass}"><span class="api-dot"></span>{_picon} {_pname} ✅</span>'
         else:
-            _api_status_html += f'<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(100,100,100,0.08);border:1px solid rgba(100,100,100,0.2);color:#4a4a6a;">{_picon} {_pname} ❌</span>'
-    
-    _status_msg = "✅ Barcha AI lar ulangan" if _all_connected else f"⚡ {len(ai_clients)}/4 AI ulangan"
+            _api_status_html += f'<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(100,100,100,0.08);border:1px solid rgba(100,100,100,0.2);color:#4a4a6a;" title="{_err}">{_picon} {_pname} ❌</span>'
+
+    _status_msg = f"🤖 {_connected_count}/4 AI ulangan"
     st.markdown(f"""
     <div style="text-align:center;margin:-16px 0 20px;padding:12px 20px;background:rgba(100,108,255,0.05);
                 border-radius:14px;border:1px solid rgba(100,108,255,0.12);">
@@ -2089,7 +2045,6 @@ if not st.session_state.logged_in:
             <div style="padding:8px 0;">
             <p class="section-label">Platformalar</p>
             <p class="section-title" style="font-size:18px;">4 AI · 5 Format · ∞ Imkoniyat</p>
-
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;">
                 <div style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:12px;padding:14px;">
                     <p style="color:#fbbf24;font-weight:700;font-size:12px;font-family:'JetBrains Mono',monospace;">⚡ GROQ</p>
@@ -2142,13 +2097,22 @@ DEFS = {
 for k,v in DEFS.items():
     if k not in st.session_state: st.session_state[k] = v
 
+# Default providerlarni mavjud APIlarga moslash
+def _safe_provider(pref, fallback="groq"):
+    if pref in ai_clients: return pref
+    if ai_clients: return list(ai_clients.keys())[0]
+    return fallback
+
+for pk in ['chat_provider','excel_provider','word_provider','code_provider','html_provider','csv_provider','analyze_provider']:
+    st.session_state[pk] = _safe_provider(st.session_state[pk])
+
 # ══════════════════════════════════════════════════════════════════
 # ████████████  SIDEBAR  ████████████
 # ══════════════════════════════════════════════════════════════════
 with st.sidebar:
     uname = st.session_state.username
     avail_providers = [p for p in ["groq","gemini","cohere","mistral"] if p in ai_clients]
-    
+
     st.markdown(f"""
     <div style="padding:22px 16px 18px;border-bottom:1px solid rgba(100,108,255,0.12);margin-bottom:6px;">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
@@ -2162,8 +2126,8 @@ with st.sidebar:
             <div>
                 <div style="font-size:14px;font-weight:700;color:#f0f0ff;font-family:'Syne',sans-serif;">{uname}</div>
                 <div style="font-size:10px;color:#34d399;font-weight:600;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:4px;margin-top:2px;">
-                    <span style="background:#34d399;width:5px;height:5px;border-radius:50%;display:inline-block;animation:blink-dot 2s ease-in-out infinite;"></span>
-                    ONLINE
+                    <span style="background:#34d399;width:5px;height:5px;border-radius:50%;display:inline-block;"></span>
+                    ONLINE · {len(avail_providers)}/4 API
                 </div>
             </div>
         </div>
@@ -2210,12 +2174,11 @@ with st.sidebar:
 
     if st.session_state.page == "chat":
         st.markdown('<p class="section-label" style="padding:0 14px 6px;font-size:9px;">Chat Sozlamalari</p>', unsafe_allow_html=True)
-        provider_options = [(p, f"{API_CONFIGS[p]['icon']} {API_CONFIGS[p]['name']}") for p in avail_providers] if avail_providers else [("groq","⚡ Groq")]
-        provider_keys = [p[0] for p in provider_options]
-        provider_labels = [p[1] for p in provider_options]
-        curr_idx = provider_keys.index(st.session_state.chat_provider) if st.session_state.chat_provider in provider_keys else 0
-        sel = st.selectbox("🤖 AI Provider", provider_labels, index=curr_idx, key="chat_prov_sel")
-        st.session_state.chat_provider = provider_keys[provider_labels.index(sel)]
+        if avail_providers:
+            provider_labels = [f"{API_CONFIGS[p]['icon']} {API_CONFIGS[p]['name']}" for p in avail_providers]
+            curr_idx = avail_providers.index(st.session_state.chat_provider) if st.session_state.chat_provider in avail_providers else 0
+            sel = st.selectbox("🤖 AI Provider", provider_labels, index=curr_idx, key="chat_prov_sel")
+            st.session_state.chat_provider = avail_providers[provider_labels.index(sel)]
         st.session_state.temp = st.slider("🌡  Ijodkorlik", 0.0, 1.0, st.session_state.temp, 0.05, key="temp_sl")
         st.session_state.ai_style = st.selectbox("💬  Uslub",
             ["Aqlli yordamchi","Do'stona","Rasmiy ekspert","Ijodkor","Texnik"], key="ai_sl")
@@ -2226,6 +2189,20 @@ with st.sidebar:
             chat_json = json.dumps(st.session_state.messages, ensure_ascii=False, indent=2)
             st.download_button("📥  JSON Export", chat_json.encode(),
                 f"chat_{datetime.now():%Y%m%d}.json", use_container_width=True)
+
+    # API debug bo'limi
+    if st.session_state.api_errors:
+        with st.expander("⚠️ API Xatolari", expanded=False):
+            for prov, err in st.session_state.api_errors.items():
+                st.markdown(f'<p style="font-size:10px;color:#f87171;font-family:monospace;">{prov}: {err}</p>',
+                            unsafe_allow_html=True)
+        if st.button("🔄 API Qayta Ulanish", use_container_width=True, key="reconnect_api"):
+            _clients, _errors = init_clients()
+            st.session_state.ai_clients = _clients
+            st.session_state.api_errors = _errors
+            ai_clients.clear()
+            ai_clients.update(_clients)
+            st.rerun()
 
     st.markdown('<br>', unsafe_allow_html=True)
     if st.button("🚪  Tizimdan chiqish", use_container_width=True, type="primary", key="logout"):
@@ -2303,23 +2280,34 @@ if st.session_state.page == "home":
         ("cohere",  "Python Kod",     "Command R+"),
         ("mistral", "Word + CSV",     "Mistral Large"),
     ]
+    rgb_map = {
+        "groq": "100,108,255", "gemini": "52,211,153",
+        "cohere": "56,189,248", "mistral": "244,114,182"
+    }
     for col, (prov, use, model) in zip(api_cols, api_data):
         cfg = API_CONFIGS[prov]
         connected = prov in ai_clients
         status_color = "#34d399" if connected else "#f87171"
-        status_text = "Ulangan" if connected else "Ulanmagan"
+        status_text = "✅ Ulangan" if connected else "❌ Ulanmagan"
+        err_tip = st.session_state.api_errors.get(prov, "")
         with col:
             st.markdown(f"""
-            <div style="background:rgba({('100,108,255' if prov=='groq' else '52,211,153' if prov=='gemini' else '56,189,248' if prov=='cohere' else '244,114,182')},0.05);
-                        border:1px solid rgba({('100,108,255' if prov=='groq' else '52,211,153' if prov=='gemini' else '56,189,248' if prov=='cohere' else '244,114,182')},0.2);
-                        border-radius:14px;padding:18px;text-align:center;margin-bottom:8px;">
+            <div style="background:rgba({rgb_map[prov]},0.05);
+                        border:1px solid rgba({rgb_map[prov]},0.2);
+                        border-radius:14px;padding:18px;text-align:center;margin-bottom:8px;"
+                 title="{err_tip}">
                 <div style="font-size:28px;margin-bottom:10px;">{cfg['icon']}</div>
                 <div style="font-size:14px;font-weight:800;color:#f0f0ff;font-family:'Syne',sans-serif;margin-bottom:4px;">{cfg['name']}</div>
                 <div style="font-size:10px;color:#50506a;font-family:'JetBrains Mono',monospace;margin-bottom:8px;">{model}</div>
-                <div style="font-size:10px;font-weight:700;color:{status_color};font-family:'JetBrains Mono',monospace;">● {status_text}</div>
+                <div style="font-size:11px;font-weight:700;color:{status_color};font-family:'JetBrains Mono',monospace;">{status_text}</div>
                 <div style="font-size:10px;color:#50506a;margin-top:4px;">{use}</div>
             </div>
             """, unsafe_allow_html=True)
+
+    # Agar API lar ulanmagan bo'lsa, hint ko'rsatish
+    if len(avail) < 4:
+        missing = [p for p in ["groq","gemini","cohere","mistral"] if p not in ai_clients]
+        st.info(f"💡 Quyidagi API kalitlari kerak: " + ", ".join([f"**{p.upper()}_API_KEY**" for p in missing]) + " — Streamlit Secrets da sozlang")
 
     st.markdown('<hr class="somo-divider">', unsafe_allow_html=True)
     st.markdown('<p class="section-label">Tezkor Harakatlar</p>', unsafe_allow_html=True)
@@ -2331,7 +2319,7 @@ if st.session_state.page == "home":
                 st.rerun()
 
 # ══════════════════════════════════════════════════════════════════
-# PAGE: CHAT AI — with streaming typewriter effect
+# PAGE: CHAT AI
 # ══════════════════════════════════════════════════════════════════
 elif st.session_state.page == "chat":
     cur_prov = st.session_state.chat_provider
@@ -2371,21 +2359,16 @@ elif st.session_state.page == "chat":
         </div>
         """, unsafe_allow_html=True)
 
-    # Chat history
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
-            # Show provider badge for assistant
             if msg["role"] == "assistant" and "provider" in msg:
                 prov_used = msg.get("provider","groq")
-                cfg_used = API_CONFIGS.get(prov_used, API_CONFIGS["groq"])
-                st.markdown(f'<div style="margin-bottom:8px;">{api_status_html(prov_used)}</div>',
-                            unsafe_allow_html=True)
+                st.markdown(f'<div style="margin-bottom:8px;">{api_status_html(prov_used)}</div>', unsafe_allow_html=True)
             st.markdown(msg["content"])
             if "file_data" in msg:
                 fd = msg["file_data"]
                 download_block(fd["bytes"], fd["name"], fd["label"])
 
-    # File upload
     with st.expander("📂  Hujjat yuklash (PDF yoki DOCX)", expanded=False):
         upl = st.file_uploader("Fayl tanlang", type=["pdf","docx"], key="chat_upload",
                                label_visibility="collapsed")
@@ -2398,7 +2381,6 @@ elif st.session_state.page == "chat":
             else:
                 st.error("❌ O'qilmadi")
 
-    # Chat input
     if prompt := st.chat_input("💭  Yozing... Excel, Word, Kod, HTML so'rang — fayl avtomatik yaratiladi!", key="chat_in"):
         st.session_state.messages.append({"role":"user","content":prompt})
         with st.chat_message("user"):
@@ -2430,8 +2412,6 @@ elif st.session_state.page == "chat":
                     "csv":   (gen_csv,   "📋 CSV dataset","csv",  st.session_state.csv_provider),
                 }
                 gfunc, glabel, gext, gen_prov = GENERATORS[intent]
-                cfg_gen = API_CONFIGS.get(gen_prov, API_CONFIGS["groq"])
-
                 em = {"excel":"📊","word":"📝","code":"💻","html":"🌐","csv":"📋"}[intent]
                 st.markdown(f'<div class="somo-notify">{em} {glabel} yaratilmoqda... {api_status_html(gen_prov)} ishlamoqda</div>',
                             unsafe_allow_html=True)
@@ -2441,19 +2421,15 @@ elif st.session_state.page == "chat":
                     prog.progress(i)
                 try:
                     fb, fn = gfunc(prompt, provider=gen_prov)
-                    prog.progress(100)
-                    time.sleep(0.15)
-                    prog.empty()
+                    prog.progress(100); time.sleep(0.15); prog.empty()
                     if fb and isinstance(fb, bytes):
-                        resp_txt = f"✅ **{glabel}** tayyor!\n\n📁 `{fn}` · {api_status_html(gen_prov)}"
+                        resp_txt = f"✅ **{glabel}** tayyor!\n\n📁 `{fn}`"
                         file_info = {"bytes":fb,"name":fn,"label":glabel}
-                        st.markdown(f'<div style="margin-bottom:8px;">{api_status_html(gen_prov)}</div>',
-                                    unsafe_allow_html=True)
+                        st.markdown(f'<div style="margin-bottom:8px;">{api_status_html(gen_prov)}</div>', unsafe_allow_html=True)
                         st.markdown(f"✅ **{glabel}** muvaffaqiyatli yaratildi! — `{fn}`")
                         download_block(fb, fn, glabel)
                         st.session_state.files_cnt += 1
                         st.session_state.last_files.append(fn)
-                        db_log("Somo AI","Assistant",resp_txt,intent,gen_prov)
                         msg_d = {"role":"assistant","content":resp_txt,"file_data":file_info,"provider":gen_prov}
                     else:
                         prog.empty()
@@ -2468,7 +2444,6 @@ elif st.session_state.page == "chat":
                 st.session_state.messages.append(msg_d)
 
             else:
-                # ── TYPEWRITER STREAMING ──────────────────────────────
                 msgs_for_ai = [{"role":"system","content":sys_base}]
                 if st.session_state.uploaded_text:
                     msgs_for_ai.append({"role":"system","content":
@@ -2476,41 +2451,28 @@ elif st.session_state.page == "chat":
                 for m in st.session_state.messages[-22:]:
                     msgs_for_ai.append({"role":m["role"],"content":m["content"]})
 
-                # Show API badge
-                st.markdown(f'<div style="margin-bottom:10px;">{api_status_html(cur_prov)}</div>',
-                            unsafe_allow_html=True)
-
+                st.markdown(f'<div style="margin-bottom:10px;">{api_status_html(cur_prov)}</div>', unsafe_allow_html=True)
                 response_placeholder = st.empty()
                 full_response = ""
                 used_prov = cur_prov
 
-                # Stream with typewriter effect
                 try:
-                    for chunk, prov_name in call_ai_stream(msgs_for_ai, st.session_state.temp,
-                                                           provider=cur_prov):
+                    for chunk, prov_name in call_ai_stream(msgs_for_ai, st.session_state.temp, provider=cur_prov):
                         full_response += chunk
                         used_prov = prov_name
-                        # Show streaming text with cursor
                         response_placeholder.markdown(
                             full_response + '<span class="typewriter-cursor"></span>',
                             unsafe_allow_html=True
                         )
-                        time.sleep(0.008)  # tiny delay for smooth effect
-
-                    # Final render without cursor
+                        time.sleep(0.008)
                     response_placeholder.markdown(full_response)
-
                 except Exception as e:
-                    # Fallback to non-streaming
                     with st.spinner("🤔 O'ylayapman..."):
-                        full_response, used_prov = call_ai(msgs_for_ai, st.session_state.temp,
-                                                           provider=cur_prov)
+                        full_response, used_prov = call_ai(msgs_for_ai, st.session_state.temp, provider=cur_prov)
                         response_placeholder.markdown(full_response)
 
                 db_log("Somo AI","Assistant",full_response,"chat",used_prov)
-                st.session_state.messages.append({
-                    "role":"assistant","content":full_response,"provider":used_prov
-                })
+                st.session_state.messages.append({"role":"assistant","content":full_response,"provider":used_prov})
 
         st.session_state.total_msgs += 1
         st.rerun()
@@ -2561,7 +2523,7 @@ elif st.session_state.page == "excel":
     with col_inp:
         xl_prompt = st.text_area("📝  Jadval tavsifi:",
             value=st.session_state.get("xl_prompt",""),
-            placeholder="Masalan: 6 xodimlik IT kompaniya uchun oy bo'yicha ish haqi jadvali, bonuslar va soliq chegirmalari bilan...",
+            placeholder="Masalan: 6 xodimlik IT kompaniya uchun oy bo'yicha ish haqi jadvali...",
             height=140, key="xl_in")
     with col_opt:
         if avail_provs:
@@ -2579,12 +2541,9 @@ elif st.session_state.page == "excel":
         else:
             fp = xl_prompt + ("\n\nOxirida umumiy xulosa (Summary) varag'i ham qo'sh." if add_summary else "")
             xl_prov = st.session_state.excel_provider
-            st.markdown(f'<div class="somo-notify">📊 Excel yaratilmoqda... {api_status_html(xl_prov)}</div>',
-                        unsafe_allow_html=True)
+            st.markdown(f'<div class="somo-notify">📊 Excel yaratilmoqda... {api_status_html(xl_prov)}</div>', unsafe_allow_html=True)
             prog = st.progress(0)
-            for pct in range(0,75,12):
-                time.sleep(0.28)
-                prog.progress(pct)
+            for pct in range(0,75,12): time.sleep(0.28); prog.progress(pct)
             fb, fn = gen_excel(fp, xl_temp, provider=xl_prov)
             prog.progress(100); time.sleep(0.15); prog.empty()
             if fb and isinstance(fb, bytes):
@@ -2639,14 +2598,13 @@ elif st.session_state.page == "word":
     with col_wd:
         wd_prompt = st.text_area("📝  Hujjat tavsifi:",
             value=st.session_state.get("wd_prompt",""),
-            placeholder="Masalan: O'zbekistonda ro'yxatdan o'tgan IT kompaniya uchun dasturchi yollash bo'yicha mehnat shartnomasi...",
+            placeholder="Masalan: IT kompaniya uchun dasturchi yollash bo'yicha mehnat shartnomasi...",
             height=140, key="wd_in")
     with col_wopt:
         if avail_provs:
             curr_wd_idx = avail_provs.index(st.session_state.word_provider) if st.session_state.word_provider in avail_provs else 0
             wd_prov_sel = st.selectbox("🤖 AI", prov_labels, index=curr_wd_idx, key="wd_prov")
             st.session_state.word_provider = avail_provs[prov_labels.index(wd_prov_sel)]
-        st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
         gen_wd = st.button("🚀  Word Yaratish", use_container_width=True, type="primary", key="gen_wd")
 
     if gen_wd:
@@ -2654,12 +2612,9 @@ elif st.session_state.page == "word":
             st.warning("⚠️  Hujjat tavsifini kiriting!")
         else:
             wd_prov = st.session_state.word_provider
-            st.markdown(f'<div class="somo-notify">📝 Word hujjat yaratilmoqda... {api_status_html(wd_prov)}</div>',
-                        unsafe_allow_html=True)
+            st.markdown(f'<div class="somo-notify">📝 Word hujjat yaratilmoqda... {api_status_html(wd_prov)}</div>', unsafe_allow_html=True)
             prog = st.progress(0)
-            for pct in range(0,75,15):
-                time.sleep(0.28)
-                prog.progress(pct)
+            for pct in range(0,75,15): time.sleep(0.28); prog.progress(pct)
             fb, fn = gen_word(wd_prompt, provider=wd_prov)
             prog.progress(100); time.sleep(0.15); prog.empty()
             if fb and isinstance(fb, bytes):
@@ -2714,7 +2669,7 @@ elif st.session_state.page == "code":
     with col_cd:
         cd_prompt = st.text_area("📝  Kod tavsifi:",
             value=st.session_state.get("cd_prompt",""),
-            placeholder="Masalan: Telegram bot yozing — foydalanuvchi narx so'raganda Olx.uz dan avtomatik qidirsin...",
+            placeholder="Masalan: Telegram bot yozing — foydalanuvchi narx so'raganda Olx.uz dan qidirsin...",
             height=140, key="cd_in")
     with col_co:
         if avail_provs:
@@ -2722,7 +2677,6 @@ elif st.session_state.page == "code":
             cd_prov_sel = st.selectbox("🤖 AI", prov_labels, index=curr_cd_idx, key="cd_prov")
             st.session_state.code_provider = avail_provs[prov_labels.index(cd_prov_sel)]
         cd_temp = st.slider("Ijodkorlik", 0.0, 0.5, 0.1, 0.05, key="cd_temp")
-        st.markdown('<div style="height:4px"></div>', unsafe_allow_html=True)
         gen_cd = st.button("🚀  Kod Yaratish", use_container_width=True, type="primary", key="gen_cd")
 
     if gen_cd:
@@ -2730,23 +2684,18 @@ elif st.session_state.page == "code":
             st.warning("⚠️  Kod tavsifini kiriting!")
         else:
             cd_prov = st.session_state.code_provider
-            st.markdown(f'<div class="somo-notify">💻 Python kodi yozilmoqda... {api_status_html(cd_prov)}</div>',
-                        unsafe_allow_html=True)
+            st.markdown(f'<div class="somo-notify">💻 Python kodi yozilmoqda... {api_status_html(cd_prov)}</div>', unsafe_allow_html=True)
             prog = st.progress(0)
-            for pct in range(0,65,15):
-                time.sleep(0.22)
-                prog.progress(pct)
+            for pct in range(0,65,15): time.sleep(0.22); prog.progress(pct)
             fb, fn = gen_code(cd_prompt, cd_temp, provider=cd_prov)
             prog.progress(100); prog.empty()
             code_txt = fb.decode('utf-8')
             st.session_state.files_cnt += 1
-            st.markdown('<div class="somo-success">✅  Kod tayyor — preview va yuklab olish quyida</div>',
-                        unsafe_allow_html=True)
+            st.markdown('<div class="somo-success">✅  Kod tayyor — preview va yuklab olish quyida</div>', unsafe_allow_html=True)
             with st.expander("👁  Kod Preview", expanded=True):
                 st.code(code_txt, language="python")
-            st.download_button("⬇️  .py Fayl Yuklab Olish", fb, fn,
-                               "text/x-python", use_container_width=True, type="primary",
-                               key=f"dl_py_{time.time()}")
+            st.download_button("⬇️  .py Fayl Yuklab Olish", fb, fn, "text/x-python",
+                               use_container_width=True, type="primary", key=f"dl_py_{time.time()}")
 
 # ══════════════════════════════════════════════════════════════════
 # PAGE: HTML GENERATOR
@@ -2794,14 +2743,13 @@ elif st.session_state.page == "html":
     with col_ht:
         ht_prompt = st.text_area("📝  Sahifa tavsifi:",
             value=st.session_state.get("ht_prompt",""),
-            placeholder="Masalan: AI kompaniyasi uchun zamonaviy landing page — hero, features, pricing, CTA — dark neon dizayn...",
+            placeholder="Masalan: AI kompaniyasi uchun zamonaviy landing page — dark neon dizayn...",
             height=140, key="ht_in")
     with col_hopt:
         if avail_provs:
             curr_ht_idx = avail_provs.index(st.session_state.html_provider) if st.session_state.html_provider in avail_provs else 0
             ht_prov_sel = st.selectbox("🤖 AI", prov_labels, index=curr_ht_idx, key="ht_prov")
             st.session_state.html_provider = avail_provs[prov_labels.index(ht_prov_sel)]
-        st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
         gen_ht = st.button("🚀  HTML Yaratish", use_container_width=True, type="primary", key="gen_ht")
 
     if gen_ht:
@@ -2809,23 +2757,18 @@ elif st.session_state.page == "html":
             st.warning("⚠️  Sahifa tavsifini kiriting!")
         else:
             ht_prov = st.session_state.html_provider
-            st.markdown(f'<div class="somo-notify">🌐 HTML sahifa yaratilmoqda... {api_status_html(ht_prov)}</div>',
-                        unsafe_allow_html=True)
+            st.markdown(f'<div class="somo-notify">🌐 HTML sahifa yaratilmoqda... {api_status_html(ht_prov)}</div>', unsafe_allow_html=True)
             prog = st.progress(0)
-            for pct in range(0,70,14):
-                time.sleep(0.28)
-                prog.progress(pct)
+            for pct in range(0,70,14): time.sleep(0.28); prog.progress(pct)
             fb, fn = gen_html(ht_prompt, 0.5, provider=ht_prov)
             prog.progress(100); prog.empty()
             html_txt = fb.decode('utf-8')
             st.session_state.files_cnt += 1
-            st.markdown('<div class="somo-success">✅ HTML tayyor! Faylni yuklab, brauzerda oching.</div>',
-                        unsafe_allow_html=True)
+            st.markdown('<div class="somo-success">✅ HTML tayyor! Faylni yuklab, brauzerda oching.</div>', unsafe_allow_html=True)
             with st.expander("👁  HTML Kod Preview"):
                 st.code(html_txt[:3000]+("..." if len(html_txt)>3000 else ""), language="html")
-            st.download_button("⬇️  HTML Fayl Yuklab Olish", fb, fn,
-                               "text/html", use_container_width=True, type="primary",
-                               key=f"dl_html_{time.time()}")
+            st.download_button("⬇️  HTML Fayl Yuklab Olish", fb, fn, "text/html",
+                               use_container_width=True, type="primary", key=f"dl_html_{time.time()}")
             st.info("💡  Faylni yuklab oling va ikki marta bosib brauzerda oching")
 
 # ══════════════════════════════════════════════════════════════════
@@ -2843,7 +2786,7 @@ elif st.session_state.page == "csv":
                 ✦ Data Generator · {api_status_html(st.session_state.csv_provider)}
             </p>
             <h1>📋 CSV <span class="g-text">Generator</span></h1>
-            <p class="subtitle">Katta ma'lumotlar to'plamini — test data, namuna dataset — bir so'rovda yarating.</p>
+            <p class="subtitle">Katta ma'lumotlar to'plamini bir so'rovda yarating.</p>
             <div class="hero-badges">
                 <span class="hero-badge">✅ 25+ satr</span>
                 <span class="hero-badge">✅ Real ma'lumotlar</span>
@@ -2874,14 +2817,13 @@ elif st.session_state.page == "csv":
     with col_cv:
         cv_prompt = st.text_area("📝  Dataset tavsifi:",
             value=st.session_state.get("cv_prompt",""),
-            placeholder="Masalan: 80 ta O'zbekiston shahri: viloyati, aholisi, maydoni, asosiy sanoat...",
+            placeholder="Masalan: 80 ta O'zbekiston shahri: viloyati, aholisi, maydoni...",
             height=130, key="cv_in")
     with col_copt:
         if avail_provs:
             curr_cv_idx = avail_provs.index(st.session_state.csv_provider) if st.session_state.csv_provider in avail_provs else 0
             cv_prov_sel = st.selectbox("🤖 AI", prov_labels, index=curr_cv_idx, key="cv_prov")
             st.session_state.csv_provider = avail_provs[prov_labels.index(cv_prov_sel)]
-        st.markdown('<div style="height:6px"></div>', unsafe_allow_html=True)
         gen_cv = st.button("🚀  CSV Yaratish", use_container_width=True, type="primary", key="gen_cv")
 
     if gen_cv:
@@ -2889,27 +2831,21 @@ elif st.session_state.page == "csv":
             st.warning("⚠️  Dataset tavsifini kiriting!")
         else:
             cv_prov = st.session_state.csv_provider
-            st.markdown(f'<div class="somo-notify">📋 Dataset yaratilmoqda... {api_status_html(cv_prov)}</div>',
-                        unsafe_allow_html=True)
+            st.markdown(f'<div class="somo-notify">📋 Dataset yaratilmoqda... {api_status_html(cv_prov)}</div>', unsafe_allow_html=True)
             prog = st.progress(0)
-            for pct in range(0,65,15):
-                time.sleep(0.22)
-                prog.progress(pct)
+            for pct in range(0,65,15): time.sleep(0.22); prog.progress(pct)
             fb, fn = gen_csv(cv_prompt, provider=cv_prov)
             prog.progress(100); prog.empty()
             st.session_state.files_cnt += 1
             try:
                 df = pd.read_csv(io.BytesIO(fb))
-                st.markdown(f'<div class="somo-success">✅  CSV tayyor — {len(df)} satr, {len(df.columns)} ustun</div>',
-                            unsafe_allow_html=True)
+                st.markdown(f'<div class="somo-success">✅  CSV tayyor — {len(df)} satr, {len(df.columns)} ustun</div>', unsafe_allow_html=True)
                 st.dataframe(df.head(10), use_container_width=True)
-                if len(df) > 10:
-                    st.caption(f"↑ Birinchi 10 ta satr (jami {len(df)} ta)")
+                if len(df) > 10: st.caption(f"↑ Birinchi 10 ta satr (jami {len(df)} ta)")
             except:
                 st.markdown('<div class="somo-success">✅  CSV tayyor!</div>', unsafe_allow_html=True)
             st.download_button("⬇️  CSV Yuklab Olish", fb, fn, "text/csv",
-                               use_container_width=True, type="primary",
-                               key=f"dl_csv_{time.time()}")
+                               use_container_width=True, type="primary", key=f"dl_csv_{time.time()}")
 
 # ══════════════════════════════════════════════════════════════════
 # PAGE: TEMPLATES
@@ -2919,84 +2855,43 @@ elif st.session_state.page == "templates":
     <div class="somo-hero">
         <div class="grid-dots"></div>
         <div class="somo-hero-content">
-            <p style="font-size:11px;letter-spacing:3.5px;font-weight:700;color:#646cff;margin-bottom:10px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">
-                ✦ Template Library
-            </p>
+            <p style="font-size:11px;letter-spacing:3.5px;font-weight:700;color:#646cff;margin-bottom:10px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">✦ Template Library</p>
             <h1>🎨 Shablonlar <span class="g-text">Markazi</span></h1>
             <p class="subtitle">16 ta professional shablon — bitta bosish bilan yarating yoki Chat AI ga yuboring.</p>
-            <div class="hero-badges">
-                <span class="hero-badge">📊 Biznes</span>
-                <span class="hero-badge">💻 Dasturlash</span>
-                <span class="hero-badge">📚 Ta'lim</span>
-                <span class="hero-badge">👤 Shaxsiy</span>
-            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
     TEMPLATES = {
         "📊 Biznes": [
-            {"ico":"💰","title":"Oylik Byudjet","tag":"excel","tag_cls":"tag-excel",
-             "desc":"12 oylik moliyaviy byudjet, SUM/AVERAGE formulalar",
-             "prompt":"12 oylik moliyaviy byudjet Excel jadvali: har oy daromad (ish haqi, freelance, passiv), xarajatlar 8 kategoriya, sof foyda, yig'ilgan jamg'arma, formulalar bilan"},
-            {"ico":"📈","title":"KPI Dashboard","tag":"excel","tag_cls":"tag-excel",
-             "desc":"Kompaniya KPI ko'rsatkichlari, maqsad vs haqiqat",
-             "prompt":"Kompaniya KPI Excel dashboard: 15 ko'rsatkich, har oy maqsad va haqiqat, farq foizi, RAG ranglash"},
-            {"ico":"📋","title":"Biznes Reja","tag":"word","tag_cls":"tag-word",
-             "desc":"To'liq startap biznes reja hujjati",
-             "prompt":"IT startap uchun to'liq biznes reja Word hujjati: ijroiya xulosa, bozor tahlili, mahsulot, marketing, moliyaviy prognoz 3 yil, risklar"},
-            {"ico":"🤝","title":"Hamkorlik Xati","tag":"word","tag_cls":"tag-word",
-             "desc":"Professional hamkorlik taklifnomasi",
-             "prompt":"Professional hamkorlik taklifnomasi xati Word: kompaniya taqdimoti, taklif mazmuni, o'zaro foyda, shartlar, imzo joyi"},
+            {"ico":"💰","title":"Oylik Byudjet","tag":"excel","tag_cls":"tag-excel","desc":"12 oylik moliyaviy byudjet, SUM/AVERAGE formulalar","prompt":"12 oylik moliyaviy byudjet Excel jadvali: har oy daromad (ish haqi, freelance, passiv), xarajatlar 8 kategoriya, sof foyda, yig'ilgan jamg'arma, formulalar bilan"},
+            {"ico":"📈","title":"KPI Dashboard","tag":"excel","tag_cls":"tag-excel","desc":"Kompaniya KPI ko'rsatkichlari, maqsad vs haqiqat","prompt":"Kompaniya KPI Excel dashboard: 15 ko'rsatkich, har oy maqsad va haqiqat, farq foizi, RAG ranglash"},
+            {"ico":"📋","title":"Biznes Reja","tag":"word","tag_cls":"tag-word","desc":"To'liq startap biznes reja hujjati","prompt":"IT startap uchun to'liq biznes reja Word hujjati: ijroiya xulosa, bozor tahlili, mahsulot, marketing, moliyaviy prognoz 3 yil, risklar"},
+            {"ico":"🤝","title":"Hamkorlik Xati","tag":"word","tag_cls":"tag-word","desc":"Professional hamkorlik taklifnomasi","prompt":"Professional hamkorlik taklifnomasi xati Word: kompaniya taqdimoti, taklif mazmuni, o'zaro foyda, shartlar, imzo joyi"},
         ],
         "💻 Dasturlash": [
-            {"ico":"🤖","title":"Telegram Bot","tag":"code","tag_cls":"tag-code",
-             "desc":"Aiogram v3, FSM, inline keyboard",
-             "prompt":"Aiogram v3 bilan to'liq Telegram bot: /start, /help, InlineKeyboard, FSM, SQLite baza, admin panel, .env konfiguratsiya"},
-            {"ico":"🌐","title":"FastAPI REST","tag":"code","tag_cls":"tag-code",
-             "desc":"CRUD, JWT, PostgreSQL, Swagger",
-             "prompt":"FastAPI REST API: User, Post, Comment modellari, SQLAlchemy+PostgreSQL, Pydantic, JWT, CRUD, CORS, Swagger"},
-            {"ico":"🎨","title":"Portfolio Sayt","tag":"html","tag_cls":"tag-html",
-             "desc":"Dark theme, glassmorphism, animatsiya",
-             "prompt":"Web developer portfolio HTML/CSS/JS: typewriter hero, skills bars, projects glassmorphism cards, particle background, dark theme, mobile responsive"},
-            {"ico":"📊","title":"Streamlit App","tag":"code","tag_cls":"tag-code",
-             "desc":"Data dashboard, grafik, filter",
-             "prompt":"Streamlit data analytics app: CSV/Excel yuklash, pandas, Plotly Express grafiklar, dinamik filterlar, PDF eksport, dark theme"},
+            {"ico":"🤖","title":"Telegram Bot","tag":"code","tag_cls":"tag-code","desc":"Aiogram v3, FSM, inline keyboard","prompt":"Aiogram v3 bilan to'liq Telegram bot: /start, /help, InlineKeyboard, FSM, SQLite baza, admin panel, .env konfiguratsiya"},
+            {"ico":"🌐","title":"FastAPI REST","tag":"code","tag_cls":"tag-code","desc":"CRUD, JWT, PostgreSQL, Swagger","prompt":"FastAPI REST API: User, Post, Comment modellari, SQLAlchemy+PostgreSQL, Pydantic, JWT, CRUD, CORS, Swagger"},
+            {"ico":"🎨","title":"Portfolio Sayt","tag":"html","tag_cls":"tag-html","desc":"Dark theme, glassmorphism, animatsiya","prompt":"Web developer portfolio HTML/CSS/JS: typewriter hero, skills bars, projects glassmorphism cards, particle background, dark theme, mobile responsive"},
+            {"ico":"📊","title":"Streamlit App","tag":"code","tag_cls":"tag-code","desc":"Data dashboard, grafik, filter","prompt":"Streamlit data analytics app: CSV/Excel yuklash, pandas, Plotly Express grafiklar, dinamik filterlar, PDF eksport, dark theme"},
         ],
         "📚 Ta'lim": [
-            {"ico":"📖","title":"Dars Rejasi","tag":"word","tag_cls":"tag-word",
-             "desc":"45 daqiqalik to'liq dars konspekti",
-             "prompt":"Informatika Python asoslari 45 daqiqalik dars rejasi Word: fan, mavzu, maqsadlar, bosqichlar, savol-javob, baholash mezonlari"},
-            {"ico":"📝","title":"Test Savollari","tag":"excel","tag_cls":"tag-excel",
-             "desc":"25 ta test, 4 variant, javoblar",
-             "prompt":"Python asoslari 25 test Excel: №, savol, A-B-C-D variant, to'g'ri javob, mavzu, qiyinchilik, baho"},
-            {"ico":"🎓","title":"Baholash Jadvali","tag":"excel","tag_cls":"tag-excel",
-             "desc":"30 talaba, 6 fan, o'rtacha, reyting",
-             "prompt":"Universitet guruh baholash Excel: 30 talaba, 6 fan, 3 baho, og'irlikli o'rtacha, GPA, reyting, grant/kontrakt, davomat, formulalar"},
-            {"ico":"📚","title":"Kurs Ishi","tag":"word","tag_cls":"tag-word",
-             "desc":"15+ sahifa, 3 bob, adabiyotlar",
-             "prompt":"Kompyuter fanlari kurs ishi Word: mavzu — Sun'iy intellekt. Titul, mundarija, kirish, 3 bob, xulosa, 15 ta adabiyot, ilovalar"},
+            {"ico":"📖","title":"Dars Rejasi","tag":"word","tag_cls":"tag-word","desc":"45 daqiqalik to'liq dars konspekti","prompt":"Informatika Python asoslari 45 daqiqalik dars rejasi Word: fan, mavzu, maqsadlar, bosqichlar, savol-javob, baholash mezonlari"},
+            {"ico":"📝","title":"Test Savollari","tag":"excel","tag_cls":"tag-excel","desc":"25 ta test, 4 variant, javoblar","prompt":"Python asoslari 25 test Excel: №, savol, A-B-C-D variant, to'g'ri javob, mavzu, qiyinchilik, baho"},
+            {"ico":"🎓","title":"Baholash Jadvali","tag":"excel","tag_cls":"tag-excel","desc":"30 talaba, 6 fan, o'rtacha, reyting","prompt":"Universitet guruh baholash Excel: 30 talaba, 6 fan, 3 baho, og'irlikli o'rtacha, GPA, reyting, grant/kontrakt, davomat, formulalar"},
+            {"ico":"📚","title":"Kurs Ishi","tag":"word","tag_cls":"tag-word","desc":"15+ sahifa, 3 bob, adabiyotlar","prompt":"Kompyuter fanlari kurs ishi Word: mavzu — Sun'iy intellekt. Titul, mundarija, kirish, 3 bob, xulosa, 15 ta adabiyot, ilovalar"},
         ],
         "👤 Shaxsiy": [
-            {"ico":"📄","title":"Rezyume","tag":"word","tag_cls":"tag-word",
-             "desc":"Professional CV, zamonaviy format",
-             "prompt":"Python/Django backend dasturchi rezyume Word: ism, kontakt, xulosa, ko'nikmalar, 2 ish joyi, ta'lim, sertifikatlar, loyihalar, tillar"},
-            {"ico":"📅","title":"Haftalik Reja","tag":"excel","tag_cls":"tag-excel",
-             "desc":"7 kun, vazifalar, ustuvorlik, holat",
-             "prompt":"Haftalik vazifalar Excel: 7 kun, 8 vaqt sloti, vazifa, kategoriya, ustuvorlik, taxminiy/haqiqiy vaqt, holat, haftalik statistika"},
-            {"ico":"💰","title":"Shaxsiy Byudjet","tag":"excel","tag_cls":"tag-excel",
-             "desc":"Daromad, xarajat, jamg'arma maqsad",
-             "prompt":"Shaxsiy moliya Excel: oylik daromad, majburiy/ixtiyoriy xarajatlar, jamg'arma, xarajatlar foizi, oylik trend, tavsiyalar"},
-            {"ico":"💪","title":"Sport Rejasi","tag":"excel","tag_cls":"tag-excel",
-             "desc":"3 oylik trening, progres, ozish",
-             "prompt":"3 oylik sport rejasi Excel: haftalik trening, mashqlar, to'plamlar, takroriylik, og'irlik, ozish maqsad, kaloriya, suv, uyqu, progres foizi"},
+            {"ico":"📄","title":"Rezyume","tag":"word","tag_cls":"tag-word","desc":"Professional CV, zamonaviy format","prompt":"Python/Django backend dasturchi rezyume Word: ism, kontakt, xulosa, ko'nikmalar, 2 ish joyi, ta'lim, sertifikatlar, loyihalar, tillar"},
+            {"ico":"📅","title":"Haftalik Reja","tag":"excel","tag_cls":"tag-excel","desc":"7 kun, vazifalar, ustuvorlik, holat","prompt":"Haftalik vazifalar Excel: 7 kun, 8 vaqt sloti, vazifa, kategoriya, ustuvorlik, taxminiy/haqiqiy vaqt, holat, haftalik statistika"},
+            {"ico":"💰","title":"Shaxsiy Byudjet","tag":"excel","tag_cls":"tag-excel","desc":"Daromad, xarajat, jamg'arma maqsad","prompt":"Shaxsiy moliya Excel: oylik daromad, majburiy/ixtiyoriy xarajatlar, jamg'arma, xarajatlar foizi, oylik trend, tavsiyalar"},
+            {"ico":"💪","title":"Sport Rejasi","tag":"excel","tag_cls":"tag-excel","desc":"3 oylik trening, progres, ozish","prompt":"3 oylik sport rejasi Excel: haftalik trening, mashqlar, to'plamlar, takroriylik, og'irlik, ozish maqsad, kaloriya, suv, uyqu, progres foizi"},
         ]
     }
 
     sel = st.selectbox("📁  Kategoriya:", list(TEMPLATES.keys()), key="tmpl_sel")
     st.markdown('<hr class="somo-divider">', unsafe_allow_html=True)
 
-    avail_provs = [p for p in ["groq","gemini","cohere","mistral"] if p in ai_clients]
     items = TEMPLATES[sel]
     c1, c2 = st.columns(2)
     for i, tmpl in enumerate(items):
@@ -3059,12 +2954,6 @@ elif st.session_state.page == "analyze":
             </p>
             <h1>🔍 Hujjat <span class="g-text">Tahlili</span></h1>
             <p class="subtitle">PDF yoki Word faylni yuklang — AI xulosa chiqaradi, g'oyalarni ajratadi, savollarga javob beradi.</p>
-            <div class="hero-badges">
-                <span class="hero-badge">📄 PDF</span>
-                <span class="hero-badge">📝 DOCX</span>
-                <span class="hero-badge">🧠 AI Tahlil</span>
-                <span class="hero-badge">❓ Q&A</span>
-            </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -3077,15 +2966,13 @@ elif st.session_state.page == "analyze":
             az_prov_sel = st.selectbox("🤖 AI Provider", prov_labels, index=curr_az_idx, key="az_prov")
             st.session_state.analyze_provider = avail_provs[prov_labels.index(az_prov_sel)]
 
-        upl = st.file_uploader("PDF yoki DOCX", type=["pdf","docx"], key="az_up",
-                               label_visibility="collapsed")
+        upl = st.file_uploader("PDF yoki DOCX", type=["pdf","docx"], key="az_up", label_visibility="collapsed")
         if upl:
             with st.spinner("📄 O'qilmoqda..."):
                 txt = process_doc(upl)
                 st.session_state.uploaded_text = txt
             if txt:
-                st.markdown(f'<div class="somo-success">✅  {upl.name} — {len(txt):,} belgi, ~{len(txt.split()):,} so\'z</div>',
-                            unsafe_allow_html=True)
+                st.markdown(f'<div class="somo-success">✅  {upl.name} — {len(txt):,} belgi, ~{len(txt.split()):,} so\'z</div>', unsafe_allow_html=True)
                 with st.expander("👁  Matnni ko'rish"):
                     st.text(txt[:2000]+("..." if len(txt)>2000 else ""))
             else:
@@ -3097,7 +2984,7 @@ elif st.session_state.page == "analyze":
             az_prov = st.session_state.analyze_provider
             actions = {
                 "📝  Qisqa Xulosa":   "Hujjatni 5-7 asosiy band bilan qisqa xulosasini yoz. Har bandni ★ bilan boshlat.",
-                "🔑  Kalit G'oyalar": "Hujjatdagi 8-10 muhim g'oya, fakt va xulosalarni ro'yxat shaklida ajrat. Har birini izohlat.",
+                "🔑  Kalit G'oyalar": "Hujjatdagi 8-10 muhim g'oya, fakt va xulosalarni ro'yxat shaklida ajrat.",
                 "❓  Savol-Javob":    "Hujjat bo'yicha 10 muhim savol tuz va har biriga to'liq javob ber.",
                 "🌐  Inglizcha":      "Hujjat mazmunini professional ingliz tiliga tarjima qil.",
                 "📊  Statistika":     "Hujjatdagi barcha raqamlar, foizlar, sanalar va statistikani jadval ko'rinishida tizimlashtir.",
@@ -3111,14 +2998,9 @@ elif st.session_state.page == "analyze":
                     ]
                     result_placeholder = st.empty()
                     full_az = ""
-                    st.markdown(f'<div style="margin-bottom:6px;">{api_status_html(az_prov)}</div>',
-                                unsafe_allow_html=True)
                     for chunk, _ in call_ai_stream(az_msgs, temperature=0.4, provider=az_prov):
                         full_az += chunk
-                        result_placeholder.markdown(
-                            f"**{act_lbl}**\n\n" + full_az + '<span class="typewriter-cursor"></span>',
-                            unsafe_allow_html=True
-                        )
+                        result_placeholder.markdown(f"**{act_lbl}**\n\n" + full_az + '<span class="typewriter-cursor"></span>', unsafe_allow_html=True)
                         time.sleep(0.008)
                     result_placeholder.markdown(f"**{act_lbl}**\n\n{full_az}")
         else:
@@ -3135,24 +3017,20 @@ elif st.session_state.page == "analyze":
         st.markdown('<p class="section-label">O\'z Savolingiz</p>', unsafe_allow_html=True)
         cq, cb = st.columns([4,1])
         with cq:
-            custom_q = st.text_input("", placeholder="🔍 Hujjat haqida savolingizni yozing...",
-                                     label_visibility="collapsed", key="az_q")
+            custom_q = st.text_input("", placeholder="🔍 Hujjat haqida savolingizni yozing...", label_visibility="collapsed", key="az_q")
         with cb:
             if st.button("🔍  Qidirish", use_container_width=True, type="primary", key="az_ask"):
                 if custom_q:
                     az_prov = st.session_state.analyze_provider
                     az_msgs = [
-                        {"role":"system","content":"Hujjat asosida aniq javob ber. Hujjatda yo'q narsa haqida ixtiro qilma."},
+                        {"role":"system","content":"Hujjat asosida aniq javob ber."},
                         {"role":"user","content":f"Hujjat:\n{st.session_state.uploaded_text[:4500]}\n\nSavol: {custom_q}"}
                     ]
                     ans_placeholder = st.empty()
                     full_ans = ""
                     for chunk, _ in call_ai_stream(az_msgs, temperature=0.3, provider=az_prov):
                         full_ans += chunk
-                        ans_placeholder.markdown(
-                            "**💬 Javob:**\n\n" + full_ans + '<span class="typewriter-cursor"></span>',
-                            unsafe_allow_html=True
-                        )
+                        ans_placeholder.markdown("**💬 Javob:**\n\n" + full_ans + '<span class="typewriter-cursor"></span>', unsafe_allow_html=True)
                         time.sleep(0.008)
                     ans_placeholder.markdown(f"**💬 Javob:**\n\n{full_ans}")
 
@@ -3186,21 +3064,18 @@ elif st.session_state.page == "history":
 
         col_s, col_e1, col_e2 = st.columns([3,1,1])
         with col_s:
-            search = st.text_input("", placeholder="🔍  Xabarlarda qidirish...",
-                                   label_visibility="collapsed", key="hist_s")
+            search = st.text_input("", placeholder="🔍  Xabarlarda qidirish...", label_visibility="collapsed", key="hist_s")
         with col_e1:
             st.download_button("📥  JSON", json.dumps(msgs,ensure_ascii=False,indent=2).encode(),
                                f"somo_chat_{datetime.now():%Y%m%d}.json", use_container_width=True)
         with col_e2:
-            txt_exp = "\n\n".join([f"[{m['role'].upper()}] [{m.get('provider','?')}]\n{m['content']}" for m in msgs])
-            st.download_button("📄  TXT", txt_exp.encode(),
-                               f"somo_chat_{datetime.now():%Y%m%d}.txt", use_container_width=True)
+            txt_exp = "\n\n".join([f"[{m['role'].upper()}]\n{m['content']}" for m in msgs])
+            st.download_button("📄  TXT", txt_exp.encode(), f"somo_chat_{datetime.now():%Y%m%d}.txt", use_container_width=True)
 
         show = msgs
         if search:
             show = [m for m in msgs if search.lower() in m.get("content","").lower()]
-            st.markdown(f'<div class="somo-notify">🔍  "{search}" — {len(show)} ta natija</div>',
-                        unsafe_allow_html=True)
+            st.markdown(f'<div class="somo-notify">🔍  "{search}" — {len(show)} ta natija</div>', unsafe_allow_html=True)
 
         st.markdown('<hr class="somo-divider">', unsafe_allow_html=True)
         for msg in reversed(show[-50:]):
@@ -3252,8 +3127,7 @@ elif st.session_state.page == "feedback":
             category = st.selectbox("📂  Kategoriya:", [
                 "Umumiy fikr","Xato haqida xabar","Yangi funksiya taklifi",
                 "Dizayn taklifi","Tezlik muammosi","API haqida","Boshqa"])
-            message = st.text_area("✍️  Xabar:", height=140,
-                placeholder="Fikrlaringizni batafsil yozing (kamida 10 ta belgi)...")
+            message = st.text_area("✍️  Xabar:", height=140, placeholder="Fikrlaringizni batafsil yozing (kamida 10 ta belgi)...")
             email = st.text_input("📧  Email (ixtiyoriy):", placeholder="javob olish uchun")
             sub_fb = st.form_submit_button("📤  Yuborish", use_container_width=True, type="primary")
             if sub_fb:
@@ -3265,8 +3139,7 @@ elif st.session_state.page == "feedback":
                             st.session_state.username, rating, category,
                             message, email or "N/A", "Yangi", st.session_state.files_cnt])
                         st.balloons()
-                        st.markdown('<div class="somo-success">✅  Rahmat! Fikringiz muvaffaqiyatli yuborildi 🙏</div>',
-                                    unsafe_allow_html=True)
+                        st.markdown('<div class="somo-success">✅  Rahmat! Fikringiz muvaffaqiyatli yuborildi 🙏</div>', unsafe_allow_html=True)
                     except Exception as e:
                         st.error(f"❌  {e}")
                 else:
@@ -3289,8 +3162,7 @@ elif st.session_state.page == "feedback":
                     for fb in reversed(all_fb[-5:]):
                         stars = "⭐"*int(fb.get("Rating",5))
                         st.markdown(f"""
-                        <div style="background:rgba(100,108,255,0.05);border:1px solid rgba(100,108,255,0.1);
-                                    border-radius:12px;padding:12px;margin:6px 0;">
+                        <div style="background:rgba(100,108,255,0.05);border:1px solid rgba(100,108,255,0.1);border-radius:12px;padding:12px;margin:6px 0;">
                             <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
                                 <span style="font-size:12px;font-weight:700;color:#818cf8;font-family:'JetBrains Mono',monospace;">{str(fb.get('Username',''))}</span>
                                 <span style="font-size:12px;">{stars}</span>
@@ -3321,18 +3193,13 @@ elif st.session_state.page == "profile":
             </div>
             <h1 style="font-size:32px;">{uname}</h1>
             <p style="color:rgba(255,255,255,0.55);font-size:14px;margin-top:8px;font-family:'JetBrains Mono',monospace;">
-                🟢 ONLINE · Somo AI Ultra Pro Max · {len(avail_provs)} API aktiv
+                🟢 ONLINE · Somo AI Ultra Pro Max · {len(avail_provs)}/4 API aktiv
             </p>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    p_stats = [
-        ("💬", len(st.session_state.messages), "Xabarlar"),
-        ("📁", st.session_state.files_cnt, "Fayllar"),
-        ("⏱", mins, "Daqiqa"),
-        ("🤖", len(avail_provs), "API"),
-    ]
+    p_stats = [("💬", len(st.session_state.messages), "Xabarlar"),("📁", st.session_state.files_cnt, "Fayllar"),("⏱", mins, "Daqiqa"),("🤖", len(avail_provs), "API")]
     cols_ps = st.columns(4)
     for col,(icon,val,lbl) in zip(cols_ps,p_stats):
         with col:
@@ -3374,30 +3241,44 @@ elif st.session_state.page == "profile":
         st.markdown('<p class="section-label">API Sozlamalari</p>', unsafe_allow_html=True)
         st.markdown('<p class="section-title" style="font-size:18px;">🤖 Har Format uchun AI</p>', unsafe_allow_html=True)
 
-        prov_labels_all = [f"{API_CONFIGS[p]['icon']} {API_CONFIGS[p]['name']}" for p in avail_provs]
-        format_provs = [
-            ("chat_provider",    "💬 Chat"),
-            ("excel_provider",   "📊 Excel"),
-            ("word_provider",    "📝 Word"),
-            ("code_provider",    "💻 Kod"),
-            ("html_provider",    "🌐 HTML"),
-            ("csv_provider",     "📋 CSV"),
-            ("analyze_provider", "🔍 Tahlil"),
-        ]
-        for sess_key, label in format_provs:
-            curr_val = st.session_state.get(sess_key, "groq")
-            curr_idx = avail_provs.index(curr_val) if curr_val in avail_provs else 0
-            sel = st.selectbox(label, prov_labels_all, index=curr_idx, key=f"prof_{sess_key}")
-            st.session_state[sess_key] = avail_provs[prov_labels_all.index(sel)]
+        if avail_provs:
+            prov_labels_all = [f"{API_CONFIGS[p]['icon']} {API_CONFIGS[p]['name']}" for p in avail_provs]
+            format_provs = [
+                ("chat_provider",    "💬 Chat"),
+                ("excel_provider",   "📊 Excel"),
+                ("word_provider",    "📝 Word"),
+                ("code_provider",    "💻 Kod"),
+                ("html_provider",    "🌐 HTML"),
+                ("csv_provider",     "📋 CSV"),
+                ("analyze_provider", "🔍 Tahlil"),
+            ]
+            for sess_key, label in format_provs:
+                curr_val = st.session_state.get(sess_key, avail_provs[0])
+                curr_idx = avail_provs.index(curr_val) if curr_val in avail_provs else 0
+                sel = st.selectbox(label, prov_labels_all, index=curr_idx, key=f"prof_{sess_key}")
+                st.session_state[sess_key] = avail_provs[prov_labels_all.index(sel)]
 
         if st.button("💾  Saqlash", type="primary", key="save_style", use_container_width=True):
             st.success("✅ Sozlamalar saqlandi!")
 
+        # API qayta ulanish
         st.markdown('<hr class="somo-divider">', unsafe_allow_html=True)
-        st.markdown('<p class="section-label">Sessiya ma\'lumotlari</p>', unsafe_allow_html=True)
+        st.markdown('<p class="section-label">API Boshqaruv</p>', unsafe_allow_html=True)
+        if st.button("🔄  API Qayta Ulanish", use_container_width=True, key="prof_reconnect"):
+            _clients, _errors = init_clients()
+            st.session_state.ai_clients = _clients
+            st.session_state.api_errors = _errors
+            # Global ai_clients ni yangilash
+            ai_clients.clear()
+            ai_clients.update(_clients)
+            st.success(f"✅ {len(_clients)}/4 API ulandi")
+            if _errors:
+                for p, e in _errors.items():
+                    st.warning(f"⚠️ {p.upper()}: {e}")
+
         login_str = st.session_state.login_time.strftime('%d.%m.%Y %H:%M') if 'login_time' in st.session_state else "—"
         st.markdown(f"""
-        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:18px;">
+        <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-top:12px;">
             <div style="margin-bottom:12px;"><p style="color:var(--text-3);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;font-family:'JetBrains Mono',monospace;">Kirish vaqti</p><p style="color:var(--text-1);font-size:14px;font-weight:600;margin-top:3px;">{login_str}</p></div>
             <div style="margin-bottom:12px;"><p style="color:var(--text-3);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;font-family:'JetBrains Mono',monospace;">Sessiya</p><p style="color:var(--text-1);font-size:14px;font-weight:600;margin-top:3px;">{mins} daqiqa</p></div>
             <div><p style="color:var(--text-3);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;font-family:'JetBrains Mono',monospace;">Chat xabarlari</p><p style="color:#818cf8;font-size:14px;font-weight:600;margin-top:3px;">{len(st.session_state.messages)} ta</p></div>
