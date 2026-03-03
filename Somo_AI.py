@@ -68,7 +68,7 @@ st.set_page_config(
     page_title="Somo AI | Ultra Pro Max",
     page_icon="🌌",
     layout="wide",
-    initial_sidebar_state="auto"
+    initial_sidebar_state="expanded"
 )
 
 # ══════════════════════════════════════════════════════════════════
@@ -1159,7 +1159,7 @@ st.markdown("""
 (function() {
 
 // ── Sidebar toggle ──────────────────────────────────────
-window._somoOpen = (window.innerWidth > 768);
+window._somoOpen = true;
 
 window.somoToggleSidebar = function() {
     try {
@@ -1377,17 +1377,10 @@ def init_clients():
             k = _get_secret("GEMINI_API_KEY")
             if k:
                 genai.configure(api_key=k)
-                # Try models in order
-                for m in ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-pro"]:
-                    try:
-                        clients["gemini"] = genai.GenerativeModel(m)
-                        API_CONFIGS["gemini"]["model"] = m
-                        break
-                    except Exception:
-                        continue
+                # Store key — model created lazily in call_ai (avoids init errors)
+                clients["gemini"] = k
         except Exception:
             pass
-
     # ── Cohere ───────────────────────────────────────────
     if HAS_COHERE:
         try:
@@ -1409,9 +1402,10 @@ def init_clients():
     return clients
 
 # Cache in session state so it runs once per session (not per rerun)
-if "ai_clients" not in st.session_state:
-    st.session_state["ai_clients"] = init_clients()
-ai_clients = st.session_state["ai_clients"]
+@st.cache_resource(show_spinner=False)
+def _load_clients():
+    return init_clients()
+ai_clients = _load_clients()
 
 # ══════════════════════════════════════════════════════════════════
 # CALL AI FUNCTION — multi-API dispatcher
@@ -1445,7 +1439,11 @@ def call_ai(messages, temperature=0.6, max_tokens=3000, provider="groq"):
                 last_msg = user_msgs[-1]["content"] if user_msgs else ""
                 if sys_msg:
                     last_msg = f"[System: {sys_msg}]\n\n{last_msg}"
-                chat = ai_clients["gemini"].start_chat(history=chat_hist)
+                _gk = ai_clients["gemini"]
+                if isinstance(_gk, str):
+                    genai.configure(api_key=_gk)
+                    _gk = genai.GenerativeModel("gemini-2.0-flash")
+                chat = _gk.start_chat(history=chat_hist)
                 resp = chat.send_message(last_msg)
                 return resp.text, "gemini"
 
@@ -1514,7 +1512,11 @@ def call_ai_stream(messages, temperature=0.6, max_tokens=3000, provider="groq"):
                 last_msg = user_msgs[-1]["content"] if user_msgs else ""
                 if sys_msg:
                     last_msg = f"[System: {sys_msg}]\n\n{last_msg}"
-                chat = ai_clients["gemini"].start_chat(history=chat_hist)
+                _gk2 = ai_clients["gemini"]
+                if isinstance(_gk2, str):
+                    genai.configure(api_key=_gk2)
+                    _gk2 = genai.GenerativeModel("gemini-2.0-flash")
+                chat = _gk2.start_chat(history=chat_hist)
                 resp = chat.send_message(last_msg, stream=True)
                 for chunk in resp:
                     if chunk.text:
