@@ -1,7 +1,10 @@
 streamlit
 streamlit-cookies-manager
 groq
+cerebras-cloud-sdk
 google-generativeai
+mistralai
+cohere
 openai
 gspread
 oauth2client
