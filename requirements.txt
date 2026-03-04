@@ -1,7 +1,8 @@
+streamlit
+streamlit-cookies-manager
 groq
 google-generativeai
 openai
-streamlit-cookies-manager
 gspread
 oauth2client
 openpyxl
@@ -9,3 +10,4 @@ python-docx
 pypdf
 mammoth
 pandas
+requests
