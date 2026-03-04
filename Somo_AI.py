@@ -360,39 +360,60 @@ user_db, chat_db, fb_db = get_connections()
 # MULTI-API INITIALIZATION (session_state — no cache!)
 # ─────────────────────────────────────────────────────
 def _get_secret(*keys):
-    """Try multiple secret key formats"""
+    """
+    Streamlit Secrets'dan key o'qish.
+    Bir nechta nom sinab ko'radi (masalan: GROQ_API_KEY, groq_api_key).
+    Formatlar: tekis, kichik harf, nested bo'lim, env variable.
+    """
     for key in keys:
+        # 1. Tekis format
         try:
-            val = st.secrets.get(key)
-            if val:
-                return str(val).strip()
-        except:
-            pass
-        for section in ["api_keys", "keys", "secrets"]:
+            v = st.secrets[key]
+            if v: return str(v).strip()
+        except: pass
+        # 2. Kichik harf
+        try:
+            v = st.secrets[key.lower()]
+            if v: return str(v).strip()
+        except: pass
+        # 3. Nested bo'limlar
+        for section in ["api_keys", "keys", "secrets", "env"]:
             try:
-                val = st.secrets.get(section, {}).get(key)
-                if val:
-                    return str(val).strip()
-            except:
-                pass
+                v = st.secrets[section][key]
+                if v: return str(v).strip()
+            except: pass
+            try:
+                v = st.secrets[section][key.lower()]
+                if v: return str(v).strip()
+            except: pass
+        # 4. Environment variable
+        v = os.environ.get(key) or os.environ.get(key.lower())
+        if v: return v.strip()
     return None
 
 def init_clients():
+    """
+    3 ta bepul API ulanadi:
+      1. GROQ         — groq.com/console   → GROQ_API_KEY
+      2. GEMINI       — aistudio.google.com → GEMINI_API_KEY
+      3. OPENROUTER   — openrouter.ai       → OPENROUTER_API_KEY
+    Hammasi karta talab qilmaydi va bepul!
+    """
     clients = {}
-    errors = {}
+    errors  = {}
 
-    # 1. GROQ
+    # ── 1. GROQ (eng tez, Chat + Kod + CSV uchun) ──
     try:
         k = _get_secret("GROQ_API_KEY", "groq_api_key", "GROQ")
         if k:
-            from groq import Groq as GroqClient
-            clients["groq"] = GroqClient(api_key=k)
+            from groq import Groq as _Groq
+            clients["groq"] = _Groq(api_key=k)
         else:
-            errors["groq"] = "API key topilmadi"
+            errors["groq"] = "Secrets'da GROQ_API_KEY yo'q → groq.com/console"
     except Exception as e:
-        errors["groq"] = str(e)[:60]
+        errors["groq"] = str(e)[:80]
 
-    # 2. GEMINI
+    # ── 2. GEMINI (Excel + Word + Hujjat tahlili uchun) ──
     try:
         k = _get_secret("GEMINI_API_KEY", "gemini_api_key", "GEMINI")
         if k:
@@ -400,31 +421,28 @@ def init_clients():
             genai.configure(api_key=k)
             clients["gemini"] = genai.GenerativeModel("gemini-2.0-flash")
         else:
-            errors["gemini"] = "API key topilmadi"
+            errors["gemini"] = "Secrets'da GEMINI_API_KEY yo'q → aistudio.google.com"
     except Exception as e:
-        errors["gemini"] = str(e)[:60]
+        errors["gemini"] = str(e)[:80]
 
-    # 3. COHERE
+    # ── 3. OPENROUTER (HTML + zaxira, bepul modellar) ──
     try:
-        k = _get_secret("COHERE_API_KEY", "cohere_api_key", "COHERE")
+        k = _get_secret("OPENROUTER_API_KEY", "openrouter_api_key", "OPENROUTER")
         if k:
-            import cohere
-            clients["cohere"] = cohere.Client(k)
+            # openai paketi orqali ishlaydi (OpenRouter OpenAI-compatible)
+            try:
+                from openai import OpenAI as _OAI
+                clients["openrouter"] = _OAI(
+                    base_url="https://openrouter.ai/api/v1",
+                    api_key=k,
+                )
+            except ImportError:
+                # openai o'rnatilmagan bo'lsa requests bilan
+                clients["openrouter"] = {"type": "requests", "key": k}
         else:
-            errors["cohere"] = "API key topilmadi"
+            errors["openrouter"] = "Secrets'da OPENROUTER_API_KEY yo'q → openrouter.ai"
     except Exception as e:
-        errors["cohere"] = str(e)[:60]
-
-    # 4. MISTRAL
-    try:
-        k = _get_secret("MISTRAL_API_KEY", "mistral_api_key", "MISTRAL")
-        if k:
-            from mistralai.client import MistralClient
-            clients["mistral"] = MistralClient(api_key=k)
-        else:
-            errors["mistral"] = "API key topilmadi"
-    except Exception as e:
-        errors["mistral"] = str(e)[:60]
+        errors["openrouter"] = str(e)[:80]
 
     return clients, errors
 
@@ -454,16 +472,74 @@ def process_doc(file):
     return ""
 
 def _safe_provider():
-    for p in ["groq","gemini","mistral","cohere"]:
+    """Birinchi mavjud providerni qaytaradi"""
+    for p in ["groq","gemini","openrouter"]:
         if p in ai_clients:
             return p
     return None
 
+# ── Funksiyaga qarab eng mos providerni tanlash ──
+PROVIDER_MAP = {
+    "chat":    "groq",        # Tez, aqlli suhbat
+    "code":    "groq",        # Kod yozish — Groq eng tez
+    "csv":     "groq",        # CSV — tez va aniq
+    "excel":   "gemini",      # Excel JSON strukt. — Gemini zo'r
+    "word":    "gemini",      # Word JSON strukt. — Gemini zo'r
+    "analyze": "gemini",      # Hujjat tahlili — Gemini multimodal
+    "html":    "openrouter",  # HTML ijodiy — OpenRouter bepul
+}
+
+def best_provider(task="chat"):
+    """Vazifa uchun eng mos providerni qaytaradi (fallback bilan)"""
+    preferred = PROVIDER_MAP.get(task, "groq")
+    if preferred in ai_clients:
+        return preferred
+    # Fallback
+    return _safe_provider()
+
+def _call_openrouter(messages, temperature, max_tokens):
+    """OpenRouter orqali AI chaqiruv — openai yoki requests bilan"""
+    client = ai_clients.get("openrouter")
+    if not client:
+        raise Exception("OpenRouter ulanmagan")
+
+    # openai client (dict emas)
+    if not isinstance(client, dict):
+        resp = client.chat.completions.create(
+            model="meta-llama/llama-3.1-8b-instruct:free",
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            extra_headers={"HTTP-Referer": "https://somo-ai.streamlit.app",
+                           "X-Title": "Somo AI"}
+        )
+        return resp.choices[0].message.content
+
+    # requests fallback
+    import requests
+    headers = {
+        "Authorization": f"Bearer {client['key']}",
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://somo-ai.streamlit.app",
+        "X-Title": "Somo AI"
+    }
+    payload = {
+        "model": "meta-llama/llama-3.1-8b-instruct:free",
+        "messages": messages,
+        "temperature": temperature,
+        "max_tokens": max_tokens
+    }
+    r = requests.post("https://openrouter.ai/api/v1/chat/completions",
+                      headers=headers, json=payload, timeout=30)
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]["content"]
+
 def call_ai(messages, temperature=0.6, max_tokens=3000, provider=None):
+    """Universal AI chaqiruv — avtomatik fallback bilan"""
     if provider is None:
         provider = _safe_provider()
 
-    # GROQ
+    # GROQ — eng tez
     if provider == "groq" and "groq" in ai_clients:
         try:
             resp = ai_clients["groq"].chat.completions.create(
@@ -473,49 +549,36 @@ def call_ai(messages, temperature=0.6, max_tokens=3000, provider=None):
                 max_tokens=max_tokens
             )
             return resp.choices[0].message.content
-        except:
-            pass
+        except Exception as e:
+            pass  # fallthrough
 
-    # GEMINI
+    # GEMINI — JSON strukt. va tahlil uchun
     if provider == "gemini" and "gemini" in ai_clients:
         try:
-            prompt = "\n".join([f"{m['role']}: {m['content']}" for m in messages])
+            # Gemini uchun system + user birlashtiriladi
+            parts = []
+            for m in messages:
+                role = "MODEL" if m["role"] == "assistant" else m["role"].upper()
+                parts.append(f"[{role}]: {m['content']}")
+            prompt = "\n\n".join(parts)
             resp = ai_clients["gemini"].generate_content(prompt)
             return resp.text
-        except:
+        except Exception as e:
             pass
 
-    # MISTRAL
-    if provider == "mistral" and "mistral" in ai_clients:
+    # OPENROUTER — bepul modellar
+    if provider == "openrouter" and "openrouter" in ai_clients:
         try:
-            from mistralai.models.chat_completion import ChatMessage
-            mc = ai_clients["mistral"]
-            mm = [ChatMessage(role="user" if m["role"]=="system" else m["role"],
-                              content=m["content"]) for m in messages]
-            resp = mc.chat(model="mistral-large-latest", messages=mm,
-                           temperature=temperature, max_tokens=max_tokens)
-            return resp.choices[0].message.content
-        except:
+            return _call_openrouter(messages, temperature, max_tokens)
+        except Exception as e:
             pass
 
-    # COHERE
-    if provider == "cohere" and "cohere" in ai_clients:
-        try:
-            co = ai_clients["cohere"]
-            sys_msg = next((m["content"] for m in messages if m["role"]=="system"), "")
-            user_msg = next((m["content"] for m in reversed(messages) if m["role"]=="user"), "")
-            resp = co.chat(model="command-r-plus", message=user_msg,
-                           preamble=sys_msg, temperature=temperature, max_tokens=max_tokens)
-            return resp.text
-        except:
-            pass
-
-    # Fallback: try any available
-    for p in ["groq","gemini","mistral","cohere"]:
+    # Fallback: boshqa mavjud providerni sinab ko'r
+    for p in ["groq","gemini","openrouter"]:
         if p != provider and p in ai_clients:
             return call_ai(messages, temperature, max_tokens, provider=p)
 
-    return "❌ Hech qanday AI ulanmagan. Streamlit Secrets'da API kalitlarni tekshiring."
+    return "❌ Hech qanday AI ulanmagan. Streamlit Secrets'da API kalitlarni tekshiring:\nGROQ_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY"
 
 def save_to_db(user, role, content):
     if chat_db:
@@ -566,8 +629,10 @@ FAQAT quyidagi JSON formatida javob ber:
 }
 Kamida 10-15 satr, formulalar ishlat, faqat JSON."""
 
+    # Excel uchun Gemini eng yaxshi JSON strukt. qaytaradi
     raw = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}],
-                  temperature=temperature, max_tokens=4000)
+                  temperature=temperature, max_tokens=4000,
+                  provider=best_provider("excel"))
     raw = re.sub(r'```json|```','',raw).strip()
     match = re.search(r'\{.*\}', raw, re.DOTALL)
     if not match: return None, "AI strukturani to'g'ri qaytarmadi"
@@ -653,8 +718,10 @@ Faqat quyidagi JSON formatida javob ber:
   ]
 }
 To'liq, mazmunli kontent. Faqat JSON."""
+    # Word uchun Gemini eng yaxshi JSON strukt. qaytaradi
     raw = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}],
-                  temperature=temperature, max_tokens=4000)
+                  temperature=temperature, max_tokens=4000,
+                  provider=best_provider("word"))
     raw = re.sub(r'```json|```','',raw).strip()
     match = re.search(r'\{.*\}', raw, re.DOTALL)
     if not match: return None, "Struktura xatosi"
@@ -729,24 +796,30 @@ To'liq, mazmunli kontent. Faqat JSON."""
 
 def generate_code(prompt, temperature=0.3):
     sys_p = "Sen professional dasturchi. FAQAT Python kodi ber, izohli, ishlaydigan. Tushuntirma yozma."
+    # Groq kod yozishda eng tez va aniq
     code = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}],
-                   temperature=temperature, max_tokens=3000)
+                   temperature=temperature, max_tokens=3000,
+                   provider=best_provider("code"))
     code = re.sub(r'```python|```py|```','',code).strip()
     return code.encode('utf-8'), f"somo_code_{datetime.now().strftime('%Y%m%d_%H%M%S')}.py"
 
 
 def generate_html(prompt, temperature=0.4):
     sys_p = "Sen professional web developer. To'liq HTML/CSS/JS sahifa yarat. FAQAT HTML kod. Inline CSS va JS."
+    # HTML uchun OpenRouter (ijodiy, bepul)
     html = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}],
-                   temperature=temperature, max_tokens=4000)
+                   temperature=temperature, max_tokens=4000,
+                   provider=best_provider("html"))
     html = re.sub(r'```html|```','',html).strip()
     return html.encode('utf-8'), f"somo_page_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
 
 
 def generate_csv(prompt, temperature=0.3):
     sys_p = "Sen ma'lumotlar ekspersisan. FAQAT CSV format. Birinchi qator sarlavha. Kamida 20 satr."
+    # CSV uchun Groq — tez va aniq
     csv_data = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}],
-                       temperature=temperature, max_tokens=3000)
+                       temperature=temperature, max_tokens=3000,
+                       provider=best_provider("csv"))
     csv_data = re.sub(r'```csv|```','',csv_data).strip()
     return csv_data.encode('utf-8'), f"somo_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
 
@@ -786,9 +859,10 @@ if not st.session_state.logged_in:
 
     # Build API status badges
     api_status_html = ""
-    for name, icon in [("groq","⚡"),("gemini","✨"),("cohere","🌊"),("mistral","💫")]:
+    for name, icon in [("groq","⚡"),("gemini","✨"),("openrouter","🌐")]:
         cls = "api-badge-on" if name in ai_clients else "api-badge-off"
-        api_status_html += f"<span class='{cls}'>{icon} {name.title()}</span>"
+        label = {"groq":"Groq","gemini":"Gemini","openrouter":"OpenRouter"}.get(name,name)
+        api_status_html += f"<span class='{cls}'>{icon} {label}</span>"
 
     # Hero Banner
     st.markdown(f"""
@@ -894,10 +968,9 @@ if not st.session_state.logged_in:
             c1, c2 = st.columns(2)
             for col, (icon, name, desc, bg) in zip(
                 [c1,c2,c1,c2],
-                [("⚡","Groq + Llama 3.3","Eng tez javob","#f0f9ff"),
+                [("⚡","Groq + Llama 3.3","Eng tez, bepul","#f0f9ff"),
                  ("✨","Google Gemini","Multimodal AI","#fdf4ff"),
-                 ("🌊","Cohere","RAG & Search","#fff7ed"),
-                 ("💫","Mistral","Europa AI","#f0fdf4")]
+                 ("🔀","OpenRouter","Bepul modellar","#fff7ed")]
             ):
                 with col:
                     st.markdown(f"""
@@ -916,7 +989,7 @@ if not st.session_state.logged_in:
 
     st.markdown("""
     <div style='text-align:center;margin-top:40px;color:#94a3b8;'>
-        <p>🔒 Xavfsiz &nbsp;|&nbsp; ⚡ 24/7 Online &nbsp;|&nbsp; ♾️ 4x AI Power</p>
+        <p>🔒 Xavfsiz &nbsp;|&nbsp; ⚡ 24/7 Online &nbsp;|&nbsp; ♾️ 3x Bepul AI Power</p>
         <p style='font-size:12px;'>© 2026 Somo AI Ultra Pro Max v4.0</p>
     </div>
     """, unsafe_allow_html=True)
@@ -956,20 +1029,21 @@ with st.sidebar:
 
     # API mini status
     api_n = len(ai_clients)
-    status_color = "#10b981" if api_n >= 2 else "#f59e0b" if api_n == 1 else "#ef4444"
+    status_color = "#10b981" if api_n == 3 else "#f59e0b" if api_n >= 1 else "#ef4444"
     st.markdown(f"""
     <div style='background:rgba(16,185,129,0.08);border-radius:10px;padding:8px 12px;
                 border:1px solid rgba(16,185,129,0.2);margin-bottom:10px;'>
         <p style='margin:0;font-size:12px;font-weight:700;color:{status_color};'>
-            🔗 AI Modellar: {api_n}/4 ulangan
+            🔗 AI Modellar: {api_n}/3 ulangan
         </p>
         <div style='margin-top:4px;font-size:11px;'>
     """, unsafe_allow_html=True)
 
     api_row = ""
-    for nm, ic in [("groq","⚡"),("gemini","✨"),("cohere","🌊"),("mistral","💫")]:
+    for nm, ic in [("groq","⚡"),("gemini","✨"),("openrouter","🌐")]:
         c = "#10b981" if nm in ai_clients else "#ef4444"
-        api_row += f"<span style='color:{c};font-weight:600;margin-right:6px;'>{ic}{'✓' if nm in ai_clients else '✗'}</span>"
+        label = {"groq":"Groq","gemini":"Gemini","openrouter":"OpenRouter"}.get(nm,nm)
+        api_row += f"<span style='color:{c};font-weight:600;margin-right:6px;'>{ic}{'✓' if nm in ai_clients else '✗'}{label}</span>"
     st.markdown(api_row + "</div></div>", unsafe_allow_html=True)
 
     if st.button("🔄 API Qayta Ulanish", use_container_width=True, key="sb_reconnect"):
@@ -1537,18 +1611,29 @@ elif st.session_state.page == "profile":
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 🔗 API Holati")
-    apic = st.columns(4)
-    for i,(nm,ic,cl) in enumerate([("groq","⚡","#6366f1"),("gemini","✨","#8b5cf6"),("cohere","🌊","#3b82f6"),("mistral","💫","#10b981")]):
+
+    # API info: (key, icon, color, task description, get key link)
+    API_INFO = [
+        ("groq",       "⚡", "#6366f1", "Chat • Kod • CSV",    "groq.com/console"),
+        ("gemini",     "✨", "#8b5cf6", "Excel • Word • Tahlil","aistudio.google.com"),
+        ("openrouter", "🌐", "#f59e0b", "HTML • Zaxira",        "openrouter.ai"),
+    ]
+    apic = st.columns(3)
+    for i,(nm,ic,cl,tasks,link) in enumerate(API_INFO):
         with apic[i]:
             ok = nm in ai_clients
             bg = "#f0fdf4" if ok else "#fef2f2"
             bdr = "#86efac" if ok else "#fca5a5"
             er = api_errors.get(nm,"")
-            st.markdown(f"""<div style='background:{bg};border:2px solid {bdr};border-radius:12px;padding:14px;text-align:center;'>
+            label = {"groq":"Groq","gemini":"Gemini","openrouter":"OpenRouter"}.get(nm,nm)
+            st.markdown(f"""<div style='background:{bg};border:2px solid {bdr};border-radius:12px;
+                            padding:14px;text-align:center;'>
                 <div style='font-size:26px;'>{ic}</div>
-                <div style='font-weight:700;font-size:14px;'>{nm.title()}</div>
-                <div style='font-size:11px;margin-top:3px;'>{"✅ Ulangan" if ok else "❌ Ulanmagan"}</div>
-                {f"<div style='font-size:9px;color:#ef4444;margin-top:3px;'>{er[:35]}</div>" if er else ""}
+                <div style='font-weight:700;font-size:14px;'>{label}</div>
+                <div style='font-size:10px;color:#64748b;margin-top:2px;'>{tasks}</div>
+                <div style='font-size:11px;margin-top:4px;font-weight:600;'>{"✅ Ulangan" if ok else "❌ Ulanmagan"}</div>
+                {f"<div style='font-size:9px;color:#6366f1;margin-top:3px;'>{link}</div>" if not ok else ""}
+                {f"<div style='font-size:9px;color:#ef4444;margin-top:3px;'>{er[:40]}</div>" if er else ""}
             </div>""", unsafe_allow_html=True)
 
     if st.button("🔄 API Qayta Ulanish", type="primary", key="prof_reconnect"):
@@ -1584,7 +1669,7 @@ elif st.session_state.page == "profile":
                 <p><strong>⏱ Sessiya:</strong><br>{(datetime.now()-st.session_state.login_time).seconds//60} daqiqa</p>
                 <p><strong>💬 Xabarlar:</strong><br>{len(st.session_state.messages)} ta</p>
                 <p><strong>📁 Fayllar:</strong><br>{st.session_state.files_created} ta</p>
-                <p><strong>🔗 Ulangan AI:</strong><br>{len(ai_clients)}/4 model</p>
+                <p><strong>🔗 Ulangan AI:</strong><br>{len(ai_clients)}/3 model</p>
             </div>""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────────────
@@ -1601,7 +1686,7 @@ st.markdown("""
         📊 Excel • 📝 Word • 💻 Kod • 🌐 HTML • 📋 CSV • 🧠 Chat
     </p>
     <p style='margin:6px 0;font-size:14px;'>
-        ⚡ Groq • ✨ Gemini • 🌊 Cohere • 💫 Mistral — 4x AI Power
+        ⚡ Groq • ✨ Gemini • 🌐 OpenRouter — 3x Bepul AI
     </p>
     <p style='margin:6px 0;font-size:14px;'>
         👨‍💻 Yaratuvchi: <strong>Usmonov Sodiq</strong> &nbsp;|&nbsp;
