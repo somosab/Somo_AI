@@ -393,43 +393,81 @@ def _get_secret(*keys):
 
 def init_clients():
     """
-    3 ta bepul API ulanadi:
-      1. GROQ         — groq.com/console   → GROQ_API_KEY
-      2. GEMINI       — aistudio.google.com → GEMINI_API_KEY
-      3. OPENROUTER   — openrouter.ai       → OPENROUTER_API_KEY
-    Hammasi karta talab qilmaydi va bepul!
+    6 ta bepul API — hammasi karta talab qilmaydi!
+      1. GROQ       — groq.com/console        → GROQ_API_KEY
+      2. CEREBRAS   — cloud.cerebras.ai       → CEREBRAS_API_KEY
+      3. GEMINI     — aistudio.google.com     → GEMINI_API_KEY
+      4. MISTRAL    — console.mistral.ai      → MISTRAL_API_KEY
+      5. COHERE     — cohere.com              → COHERE_API_KEY
+      6. OPENROUTER — openrouter.ai           → OPENROUTER_API_KEY
     """
     clients = {}
     errors  = {}
 
-    # ── 1. GROQ (eng tez, Chat + Kod + CSV uchun) ──
+    # ── 1. GROQ (eng tez, llama-3.3-70b) ──
     try:
-        k = _get_secret("GROQ_API_KEY", "groq_api_key", "GROQ")
+        k = _get_secret("GROQ_API_KEY", "groq_api_key")
         if k:
             from groq import Groq as _Groq
             clients["groq"] = _Groq(api_key=k)
         else:
-            errors["groq"] = "Secrets'da GROQ_API_KEY yo'q → groq.com/console"
+            errors["groq"] = "GROQ_API_KEY yo'q → groq.com/console"
     except Exception as e:
         errors["groq"] = str(e)[:80]
 
-    # ── 2. GEMINI (Excel + Word + Hujjat tahlili uchun) ──
+    # ── 2. CEREBRAS (Groq'dan ham tez! llama-3.3-70b) ──
     try:
-        k = _get_secret("GEMINI_API_KEY", "gemini_api_key", "GEMINI")
+        k = _get_secret("CEREBRAS_API_KEY", "cerebras_api_key")
+        if k:
+            from cerebras.cloud.sdk import Cerebras as _Cerebras
+            clients["cerebras"] = _Cerebras(api_key=k)
+        else:
+            errors["cerebras"] = "CEREBRAS_API_KEY yo'q → cloud.cerebras.ai"
+    except Exception as e:
+        errors["cerebras"] = str(e)[:80]
+
+    # ── 3. GEMINI (multimodal, JSON strukt. zo'r) ──
+    try:
+        k = _get_secret("GEMINI_API_KEY", "gemini_api_key")
         if k:
             import google.generativeai as genai
             genai.configure(api_key=k)
             clients["gemini"] = genai.GenerativeModel("gemini-2.0-flash")
         else:
-            errors["gemini"] = "Secrets'da GEMINI_API_KEY yo'q → aistudio.google.com"
+            errors["gemini"] = "GEMINI_API_KEY yo'q → aistudio.google.com"
     except Exception as e:
         errors["gemini"] = str(e)[:80]
 
-    # ── 3. OPENROUTER (HTML + zaxira, bepul modellar) ──
+    # ── 4. MISTRAL (mistral-large, Yevropa AI) ──
     try:
-        k = _get_secret("OPENROUTER_API_KEY", "openrouter_api_key", "OPENROUTER")
+        k = _get_secret("MISTRAL_API_KEY", "mistral_api_key")
         if k:
-            # openai paketi orqali ishlaydi (OpenRouter OpenAI-compatible)
+            try:
+                from mistralai import Mistral as _Mistral
+                clients["mistral"] = _Mistral(api_key=k)
+            except ImportError:
+                from mistralai.client import MistralClient as _MC
+                clients["mistral"] = _MC(api_key=k)
+        else:
+            errors["mistral"] = "MISTRAL_API_KEY yo'q → console.mistral.ai"
+    except Exception as e:
+        errors["mistral"] = str(e)[:80]
+
+    # ── 5. COHERE (command-r-plus, RAG uchun zo'r) ──
+    try:
+        k = _get_secret("COHERE_API_KEY", "cohere_api_key")
+        if k:
+            import cohere as _cohere
+            clients["cohere"] = _cohere.Client(k)
+        else:
+            errors["cohere"] = "COHERE_API_KEY yo'q → cohere.com"
+    except Exception as e:
+        errors["cohere"] = str(e)[:80]
+
+    # ── 6. OPENROUTER (bepul modellar, zaxira) ──
+    try:
+        k = _get_secret("OPENROUTER_API_KEY", "openrouter_api_key")
+        if k:
             try:
                 from openai import OpenAI as _OAI
                 clients["openrouter"] = _OAI(
@@ -437,10 +475,9 @@ def init_clients():
                     api_key=k,
                 )
             except ImportError:
-                # openai o'rnatilmagan bo'lsa requests bilan
                 clients["openrouter"] = {"type": "requests", "key": k}
         else:
-            errors["openrouter"] = "Secrets'da OPENROUTER_API_KEY yo'q → openrouter.ai"
+            errors["openrouter"] = "OPENROUTER_API_KEY yo'q → openrouter.ai"
     except Exception as e:
         errors["openrouter"] = str(e)[:80]
 
@@ -472,113 +509,146 @@ def process_doc(file):
     return ""
 
 def _safe_provider():
-    """Birinchi mavjud providerni qaytaradi"""
-    for p in ["groq","gemini","openrouter"]:
+    """Birinchi mavjud providerni qaytaradi (ustuvorlik tartibi)"""
+    for p in ["cerebras","groq","gemini","mistral","cohere","openrouter"]:
         if p in ai_clients:
             return p
     return None
 
-# ── Funksiyaga qarab eng mos providerni tanlash ──
+# ── Har funksiya uchun eng mos provider ──
 PROVIDER_MAP = {
-    "chat":    "groq",        # Tez, aqlli suhbat
-    "code":    "groq",        # Kod yozish — Groq eng tez
-    "csv":     "groq",        # CSV — tez va aniq
-    "excel":   "gemini",      # Excel JSON strukt. — Gemini zo'r
-    "word":    "gemini",      # Word JSON strukt. — Gemini zo'r
-    "analyze": "gemini",      # Hujjat tahlili — Gemini multimodal
-    "html":    "openrouter",  # HTML ijodiy — OpenRouter bepul
+    "chat":    ["cerebras","groq","mistral","cohere","gemini","openrouter"],
+    "code":    ["cerebras","groq","mistral","openrouter","gemini","cohere"],
+    "csv":     ["cerebras","groq","mistral","cohere","gemini","openrouter"],
+    "excel":   ["gemini","mistral","groq","cerebras","cohere","openrouter"],
+    "word":    ["gemini","mistral","groq","cerebras","cohere","openrouter"],
+    "analyze": ["gemini","mistral","cohere","groq","cerebras","openrouter"],
+    "html":    ["openrouter","cerebras","groq","mistral","gemini","cohere"],
 }
 
 def best_provider(task="chat"):
-    """Vazifa uchun eng mos providerni qaytaradi (fallback bilan)"""
-    preferred = PROVIDER_MAP.get(task, "groq")
-    if preferred in ai_clients:
-        return preferred
-    # Fallback
+    """Vazifa uchun eng mos mavjud providerni qaytaradi"""
+    for p in PROVIDER_MAP.get(task, ["groq","cerebras","gemini"]):
+        if p in ai_clients:
+            return p
     return _safe_provider()
 
-def _call_openrouter(messages, temperature, max_tokens):
-    """OpenRouter orqali AI chaqiruv — openai yoki requests bilan"""
-    client = ai_clients.get("openrouter")
-    if not client:
-        raise Exception("OpenRouter ulanmagan")
+def _call_cerebras(messages, temperature, max_tokens):
+    resp = ai_clients["cerebras"].chat.completions.create(
+        messages=messages,
+        model="llama-3.3-70b",
+        temperature=min(temperature, 1.0),
+        max_tokens=max_tokens
+    )
+    return resp.choices[0].message.content
 
-    # openai client (dict emas)
-    if not isinstance(client, dict):
-        resp = client.chat.completions.create(
-            model="meta-llama/llama-3.1-8b-instruct:free",
+def _call_groq(messages, temperature, max_tokens):
+    resp = ai_clients["groq"].chat.completions.create(
+        messages=messages,
+        model="llama-3.3-70b-versatile",
+        temperature=temperature,
+        max_tokens=max_tokens
+    )
+    return resp.choices[0].message.content
+
+def _call_gemini(messages, temperature, max_tokens):
+    parts = []
+    for m in messages:
+        role = "MODEL" if m["role"] == "assistant" else m["role"].upper()
+        parts.append(f"[{role}]: {m['content']}")
+    resp = ai_clients["gemini"].generate_content("\n\n".join(parts))
+    return resp.text
+
+def _call_mistral(messages, temperature, max_tokens):
+    client = ai_clients["mistral"]
+    # mistralai yangi versiya
+    try:
+        resp = client.chat.complete(
+            model="mistral-small-latest",
             messages=messages,
             temperature=temperature,
-            max_tokens=max_tokens,
-            extra_headers={"HTTP-Referer": "https://somo-ai.streamlit.app",
-                           "X-Title": "Somo AI"}
+            max_tokens=max_tokens
+        )
+    except AttributeError:
+        # eski versiya
+        from mistralai.models.chat_completion import ChatMessage
+        mm = [ChatMessage(role=m["role"] if m["role"]!="system" else "user",
+                          content=m["content"]) for m in messages]
+        resp = client.chat(model="mistral-small-latest", messages=mm,
+                           temperature=temperature, max_tokens=max_tokens)
+    return resp.choices[0].message.content
+
+def _call_cohere(messages, temperature, max_tokens):
+    sys_msg = next((m["content"] for m in messages if m["role"]=="system"), "")
+    user_msg = next((m["content"] for m in reversed(messages) if m["role"]=="user"), "")
+    resp = ai_clients["cohere"].chat(
+        model="command-r-plus",
+        message=user_msg,
+        preamble=sys_msg,
+        temperature=temperature,
+        max_tokens=max_tokens
+    )
+    return resp.text
+
+def _call_openrouter(messages, temperature, max_tokens):
+    client = ai_clients.get("openrouter")
+    if isinstance(client, dict):
+        import requests
+        r = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={"Authorization": f"Bearer {client['key']}",
+                     "Content-Type": "application/json",
+                     "HTTP-Referer": "https://somo-ai.streamlit.app"},
+            json={"model":"meta-llama/llama-3.1-8b-instruct:free",
+                  "messages":messages,"temperature":temperature,"max_tokens":max_tokens},
+            timeout=30
+        )
+        r.raise_for_status()
+        return r.json()["choices"][0]["message"]["content"]
+    else:
+        resp = client.chat.completions.create(
+            model="meta-llama/llama-3.1-8b-instruct:free",
+            messages=messages, temperature=temperature, max_tokens=max_tokens,
+            extra_headers={"HTTP-Referer":"https://somo-ai.streamlit.app","X-Title":"Somo AI"}
         )
         return resp.choices[0].message.content
 
-    # requests fallback
-    import requests
-    headers = {
-        "Authorization": f"Bearer {client['key']}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://somo-ai.streamlit.app",
-        "X-Title": "Somo AI"
-    }
-    payload = {
-        "model": "meta-llama/llama-3.1-8b-instruct:free",
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_tokens
-    }
-    r = requests.post("https://openrouter.ai/api/v1/chat/completions",
-                      headers=headers, json=payload, timeout=30)
-    r.raise_for_status()
-    return r.json()["choices"][0]["message"]["content"]
-
 def call_ai(messages, temperature=0.6, max_tokens=3000, provider=None):
-    """Universal AI chaqiruv — avtomatik fallback bilan"""
+    """Universal AI chaqiruv — 6 ta provider, avtomatik fallback"""
     if provider is None:
         provider = _safe_provider()
 
-    # GROQ — eng tez
-    if provider == "groq" and "groq" in ai_clients:
+    CALLERS = {
+        "cerebras":   _call_cerebras,
+        "groq":       _call_groq,
+        "gemini":     _call_gemini,
+        "mistral":    _call_mistral,
+        "cohere":     _call_cohere,
+        "openrouter": _call_openrouter,
+    }
+
+    # Avval tanlangan providerni sinab ko'r
+    if provider and provider in ai_clients and provider in CALLERS:
         try:
-            resp = ai_clients["groq"].chat.completions.create(
-                messages=messages,
-                model="llama-3.3-70b-versatile",
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
-            return resp.choices[0].message.content
-        except Exception as e:
+            return CALLERS[provider](messages, temperature, max_tokens)
+        except Exception:
             pass  # fallthrough
 
-    # GEMINI — JSON strukt. va tahlil uchun
-    if provider == "gemini" and "gemini" in ai_clients:
-        try:
-            # Gemini uchun system + user birlashtiriladi
-            parts = []
-            for m in messages:
-                role = "MODEL" if m["role"] == "assistant" else m["role"].upper()
-                parts.append(f"[{role}]: {m['content']}")
-            prompt = "\n\n".join(parts)
-            resp = ai_clients["gemini"].generate_content(prompt)
-            return resp.text
-        except Exception as e:
-            pass
-
-    # OPENROUTER — bepul modellar
-    if provider == "openrouter" and "openrouter" in ai_clients:
-        try:
-            return _call_openrouter(messages, temperature, max_tokens)
-        except Exception as e:
-            pass
-
-    # Fallback: boshqa mavjud providerni sinab ko'r
-    for p in ["groq","gemini","openrouter"]:
+    # Boshqa provayderlarni sinab ko'r
+    for p, caller in CALLERS.items():
         if p != provider and p in ai_clients:
-            return call_ai(messages, temperature, max_tokens, provider=p)
+            try:
+                return caller(messages, temperature, max_tokens)
+            except Exception:
+                continue
 
-    return "❌ Hech qanday AI ulanmagan. Streamlit Secrets'da API kalitlarni tekshiring:\nGROQ_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY"
+    return ("❌ Hech qanday AI ulanmagan!\n\n"
+            "Streamlit Secrets'ga quyidagilardan kamida bittasini qo'shing:\n"
+            "• GROQ_API_KEY → groq.com/console\n"
+            "• CEREBRAS_API_KEY → cloud.cerebras.ai\n"
+            "• GEMINI_API_KEY → aistudio.google.com\n"
+            "• MISTRAL_API_KEY → console.mistral.ai\n"
+            "• COHERE_API_KEY → cohere.com")
 
 def save_to_db(user, role, content):
     if chat_db:
@@ -859,9 +929,11 @@ if not st.session_state.logged_in:
 
     # Build API status badges
     api_status_html = ""
-    for name, icon in [("groq","⚡"),("gemini","✨"),("openrouter","🌐")]:
+    for name, icon in [("cerebras","🧠"),("groq","⚡"),("gemini","✨"),
+                       ("mistral","💫"),("cohere","🌊"),("openrouter","🌐")]:
         cls = "api-badge-on" if name in ai_clients else "api-badge-off"
-        label = {"groq":"Groq","gemini":"Gemini","openrouter":"OpenRouter"}.get(name,name)
+        label = {"cerebras":"Cerebras","groq":"Groq","gemini":"Gemini",
+                 "mistral":"Mistral","cohere":"Cohere","openrouter":"OpenRouter"}.get(name,name)
         api_status_html += f"<span class='{cls}'>{icon} {label}</span>"
 
     # Hero Banner
@@ -1029,21 +1101,23 @@ with st.sidebar:
 
     # API mini status
     api_n = len(ai_clients)
-    status_color = "#10b981" if api_n == 3 else "#f59e0b" if api_n >= 1 else "#ef4444"
+    status_color = "#10b981" if api_n >= 3 else "#f59e0b" if api_n >= 1 else "#ef4444"
     st.markdown(f"""
     <div style='background:rgba(16,185,129,0.08);border-radius:10px;padding:8px 12px;
                 border:1px solid rgba(16,185,129,0.2);margin-bottom:10px;'>
         <p style='margin:0;font-size:12px;font-weight:700;color:{status_color};'>
-            🔗 AI Modellar: {api_n}/3 ulangan
+            🔗 AI Modellar: {api_n}/6 ulangan
         </p>
         <div style='margin-top:4px;font-size:11px;'>
     """, unsafe_allow_html=True)
 
     api_row = ""
-    for nm, ic in [("groq","⚡"),("gemini","✨"),("openrouter","🌐")]:
+    for nm, ic in [("cerebras","🧠"),("groq","⚡"),("gemini","✨"),
+                   ("mistral","💫"),("cohere","🌊"),("openrouter","🌐")]:
         c = "#10b981" if nm in ai_clients else "#ef4444"
-        label = {"groq":"Groq","gemini":"Gemini","openrouter":"OpenRouter"}.get(nm,nm)
-        api_row += f"<span style='color:{c};font-weight:600;margin-right:6px;'>{ic}{'✓' if nm in ai_clients else '✗'}{label}</span>"
+        short = {"cerebras":"Cbrs","groq":"Groq","gemini":"Gem",
+                 "mistral":"Mstr","cohere":"Cohr","openrouter":"OR"}.get(nm,nm)
+        api_row += f"<span style='color:{c};font-weight:600;margin-right:5px;font-size:10px;'>{ic}{'✓' if nm in ai_clients else '✗'}{short}</span>"
     st.markdown(api_row + "</div></div>", unsafe_allow_html=True)
 
     if st.button("🔄 API Qayta Ulanish", use_container_width=True, key="sb_reconnect"):
@@ -1610,31 +1684,38 @@ elif st.session_state.page == "profile":
             </div>""", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    st.markdown("### 🔗 API Holati")
+    st.markdown("### 🔗 API Holati (6 ta bepul model)")
 
-    # API info: (key, icon, color, task description, get key link)
     API_INFO = [
-        ("groq",       "⚡", "#6366f1", "Chat • Kod • CSV",    "groq.com/console"),
-        ("gemini",     "✨", "#8b5cf6", "Excel • Word • Tahlil","aistudio.google.com"),
-        ("openrouter", "🌐", "#f59e0b", "HTML • Zaxira",        "openrouter.ai"),
+        ("cerebras",   "🧠", "Chat • Kod • CSV",     "cloud.cerebras.ai"),
+        ("groq",       "⚡", "Chat • Kod • CSV",     "groq.com/console"),
+        ("gemini",     "✨", "Excel • Word • Tahlil","aistudio.google.com"),
+        ("mistral",    "💫", "Chat • Word • Kod",    "console.mistral.ai"),
+        ("cohere",     "🌊", "Tahlil • RAG • Chat",  "cohere.com"),
+        ("openrouter", "🌐", "HTML • Zaxira",        "openrouter.ai"),
     ]
-    apic = st.columns(3)
-    for i,(nm,ic,cl,tasks,link) in enumerate(API_INFO):
-        with apic[i]:
-            ok = nm in ai_clients
-            bg = "#f0fdf4" if ok else "#fef2f2"
-            bdr = "#86efac" if ok else "#fca5a5"
-            er = api_errors.get(nm,"")
-            label = {"groq":"Groq","gemini":"Gemini","openrouter":"OpenRouter"}.get(nm,nm)
-            st.markdown(f"""<div style='background:{bg};border:2px solid {bdr};border-radius:12px;
-                            padding:14px;text-align:center;'>
-                <div style='font-size:26px;'>{ic}</div>
-                <div style='font-weight:700;font-size:14px;'>{label}</div>
-                <div style='font-size:10px;color:#64748b;margin-top:2px;'>{tasks}</div>
-                <div style='font-size:11px;margin-top:4px;font-weight:600;'>{"✅ Ulangan" if ok else "❌ Ulanmagan"}</div>
-                {f"<div style='font-size:9px;color:#6366f1;margin-top:3px;'>{link}</div>" if not ok else ""}
-                {f"<div style='font-size:9px;color:#ef4444;margin-top:3px;'>{er[:40]}</div>" if er else ""}
-            </div>""", unsafe_allow_html=True)
+    # 3 ustunli 2 qator
+    for row_start in [0, 3]:
+        row_cols = st.columns(3)
+        for i, (nm, ic, tasks, link) in enumerate(API_INFO[row_start:row_start+3]):
+            with row_cols[i]:
+                ok  = nm in ai_clients
+                bg  = "#f0fdf4" if ok else "#fef2f2"
+                bdr = "#86efac" if ok else "#fca5a5"
+                er  = api_errors.get(nm, "")
+                label = nm.title() if nm != "openrouter" else "OpenRouter"
+                st.markdown(f"""
+                <div style='background:{bg};border:2px solid {bdr};border-radius:12px;
+                            padding:14px;text-align:center;margin-bottom:10px;'>
+                    <div style='font-size:24px;'>{ic}</div>
+                    <div style='font-weight:700;font-size:13px;'>{label}</div>
+                    <div style='font-size:10px;color:#64748b;margin-top:2px;'>{tasks}</div>
+                    <div style='font-size:11px;margin-top:4px;font-weight:600;'>
+                        {"✅ Ulangan" if ok else "❌ Ulanmagan"}
+                    </div>
+                    {f"<div style='font-size:9px;color:#6366f1;margin-top:2px;'>{link}</div>" if not ok else ""}
+                    {f"<div style='font-size:9px;color:#ef4444;margin-top:2px;'>{er[:40]}</div>" if er else ""}
+                </div>""", unsafe_allow_html=True)
 
     if st.button("🔄 API Qayta Ulanish", type="primary", key="prof_reconnect"):
         for k in ['ai_clients','api_errors']:
