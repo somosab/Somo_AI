@@ -1,6 +1,57 @@
 import streamlit as st
 from groq import Groq
 import time
+import re
+
+def md_to_html(text):
+    """Convert markdown to HTML for rendering inside custom HTML bubbles."""
+    # Protect $$ and $ math — replace temporarily
+    math_blocks = {}
+    def save_math(m):
+        key = f"MATHBLOCK{len(math_blocks)}END"
+        math_blocks[key] = m.group(0)
+        return key
+    text = re.sub(r'\$\$.+?\$\$', save_math, text, flags=re.DOTALL)
+    text = re.sub(r'\$.+?\$', save_math, text)
+
+    # Fenced code blocks
+    text = re.sub(r'```(\w*)\n?(.*?)```',
+        lambda m: f'<pre><code>{m.group(2).strip()}</code></pre>',
+        text, flags=re.DOTALL)
+    # Inline code
+    text = re.sub(r'`([^`\n]+)`', r'<code>\1</code>', text)
+    # Headers
+    text = re.sub(r'^### (.+)$', r'<h3>\1</h3>', text, flags=re.MULTILINE)
+    text = re.sub(r'^## (.+)$',  r'<h2>\1</h2>', text, flags=re.MULTILINE)
+    text = re.sub(r'^# (.+)$',   r'<h1>\1</h1>', text, flags=re.MULTILINE)
+    # Bold+italic
+    text = re.sub(r'\*\*\*(.+?)\*\*\*', r'<strong><em>\1</em></strong>', text)
+    # Bold
+    text = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', text)
+    # Italic
+    text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<em>\1</em>', text)
+    # Blockquote
+    text = re.sub(r'^> (.+)$', r'<blockquote>\1</blockquote>', text, flags=re.MULTILINE)
+    # Unordered lists
+    def replace_ul(m):
+        items = re.findall(r'^[\-\*] (.+)$', m.group(0), re.MULTILINE)
+        lis = ''.join(f'<li>{i}</li>' for i in items)
+        return f'<ul>{lis}</ul>'
+    text = re.sub(r'(^[\-\*] .+\n?)+', replace_ul, text, flags=re.MULTILINE)
+    # Ordered lists
+    def replace_ol(m):
+        items = re.findall(r'^\d+\. (.+)$', m.group(0), re.MULTILINE)
+        lis = ''.join(f'<li>{i}</li>' for i in items)
+        return f'<ol>{lis}</ol>'
+    text = re.sub(r'(\d+\. .+\n?)+', replace_ol, text, flags=re.MULTILINE)
+    # Horizontal rule
+    text = re.sub(r'^-{3,}$', '<hr>', text, flags=re.MULTILINE)
+    # Line breaks
+    text = re.sub(r'\n', '<br>', text)
+    # Restore math
+    for key, val in math_blocks.items():
+        text = text.replace(key, val)
+    return text
 
 # ─── Page Config ────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -442,7 +493,7 @@ else:
               <div class="m-av ai">✦</div>
               <div class="m-body">
                 <div class="m-name">Somo AI</div>
-                <div class="m-bubble ai">{content}</div>
+                <div class="m-bubble ai">{md_to_html(content)}</div>
                 <div class="m-time">{ts}</div>
               </div>
             </div>
@@ -512,7 +563,7 @@ if prompt and prompt.strip():
               <div class="m-av ai">✦</div>
               <div class="m-body">
                 <div class="m-name">Somo AI</div>
-                <div class="m-bubble ai">{full_response}<span class="t-cursor"></span></div>
+                <div class="m-bubble ai">{md_to_html(full_response)}<span class="t-cursor"></span></div>
               </div>
             </div>
             <script>
@@ -528,7 +579,7 @@ if prompt and prompt.strip():
           <div class="m-av ai">✦</div>
           <div class="m-body">
             <div class="m-name">Somo AI</div>
-            <div class="m-bubble ai">{full_response}</div>
+            <div class="m-bubble ai">{md_to_html(full_response)}</div>
             <div class="m-time">{get_time()}</div>
           </div>
         </div>
@@ -554,7 +605,7 @@ if prompt and prompt.strip():
           <div class="m-av ai">✦</div>
           <div class="m-body">
             <div class="m-name">Somo AI</div>
-            <div class="m-bubble ai">{full_response}</div>
+            <div class="m-bubble ai">{md_to_html(full_response)}</div>
           </div>
         </div>""", unsafe_allow_html=True)
 
