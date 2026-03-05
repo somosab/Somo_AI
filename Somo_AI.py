@@ -16,7 +16,6 @@ st.markdown("""
 
 .stApp { background: #f8f9ff !important; }
 
-/* Sidebar */
 [data-testid="stSidebar"] {
     background: #ffffff !important;
     border-right: 1px solid #e8eaf6 !important;
@@ -41,7 +40,6 @@ div[data-testid="stSidebar"] button:hover {
 
 #MainMenu, footer, header { display: none !important; }
 
-/* Chat xabarlari */
 .stChatMessage {
     background: #ffffff !important;
     border: 1px solid #eef0ff !important;
@@ -55,7 +53,6 @@ div[data-testid="stSidebar"] button:hover {
     border-color: #ddd6fe !important;
 }
 
-/* ChatGPT uslubidagi input */
 .stChatInputContainer {
     background: transparent !important;
     border: none !important;
@@ -79,9 +76,7 @@ div[data-testid="stSidebar"] button:hover {
     font-size: 15px !important;
     padding: 12px 14px !important;
 }
-[data-testid="stChatInput"] textarea::placeholder {
-    color: #a0a0b0 !important;
-}
+[data-testid="stChatInput"] textarea::placeholder { color: #a0a0b0 !important; }
 [data-testid="stChatInput"] button {
     background: #6366f1 !important;
     border-radius: 10px !important;
@@ -123,9 +118,10 @@ with st.sidebar:
     <hr style="border:none; border-top:1px solid #eef0ff; margin:12px 0;">
     """, unsafe_allow_html=True)
 
+    # Cerebras rasmiy model nomlari
     model_name = st.selectbox("Model:", [
         "llama-3.3-70b",
-        "llama3.1-8b",
+        "llama-3.1-8b",
     ], label_visibility="collapsed")
 
     st.markdown("<br>", unsafe_allow_html=True)
@@ -174,7 +170,6 @@ except Exception:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Bo'sh chat kartalar
 if not st.session_state.messages:
     st.markdown("""
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;
@@ -206,12 +201,11 @@ if not st.session_state.messages:
     </div>
     """, unsafe_allow_html=True)
 
-# Xabarlarni ko'rsatish
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# ── Input va javob ───────────────────────────────────
+# ── Input ────────────────────────────────────────────
 if prompt := st.chat_input("Somo AI ga xabar yuboring..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -232,7 +226,6 @@ if prompt := st.chat_input("Somo AI ga xabar yuboring..."):
                 max_tokens=1024,
             )
 
-            # ── Animatsiyali yozuv ──
             for chunk in stream:
                 delta = chunk.choices[0].delta.content or ""
                 for char in delta:
@@ -246,8 +239,6 @@ if prompt := st.chat_input("Somo AI ga xabar yuboring..."):
             err = str(e)
             if "api_key" in err.lower() or "auth" in err.lower():
                 full_response = "❌ API kalit noto'g'ri. CEREBRAS_API_KEY ni tekshiring."
-            elif "model" in err.lower():
-                full_response = f"❌ Model topilmadi: `{model_name}`."
             else:
                 full_response = f"❌ Xatolik: {err}"
             placeholder.markdown(full_response)
