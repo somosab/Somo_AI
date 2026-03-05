@@ -23,7 +23,7 @@ st.caption("🚀 Tezkor va aqlli sun'iy intellekt yordamchisi")
 
 # 2. Xavfsizlik: API Kalitni Streamlit Secrets'dan olish
 # DIQQAT: API kalit kod ichida yozilmagan!
-client = Groq(api_key=st.secrets["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"])
+client = Groq(api_key=st.secrets["......" streamlite secretdan olinadigan qil"])
 
 # 3. Chat tarixini boshqarish
 if "messages" not in st.session_state:
@@ -58,4 +58,5 @@ if prompt := st.chat_input("Savolingizni bu yerga yozing..."):
         message_placeholder.markdown(full_response)
     
     st.session_state.messages.append({"role": "assistant", "content": full_response})
+
 
