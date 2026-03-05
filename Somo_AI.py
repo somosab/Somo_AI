@@ -1,14 +1,14 @@
 import streamlit as st
 from groq import Groq
 
-# 1. Sahifa sozlamalari va Dizayn
+# 1. Sahifa sozlamalari
 st.set_page_config(
     page_title="Somo AI | Aqlli Yordamchi",
     page_icon="🤖",
     layout="centered"
 )
 
-# Sidebar (Yon panel) dizayni
+# Sidebar
 with st.sidebar:
     st.image("https://img.freepik.com/free-vector/ai-technology-brain-background_53876-90611.jpg")
     st.title("Somo AI Sozlamalari")
@@ -21,9 +21,8 @@ with st.sidebar:
 st.title("🤖 Somo AI")
 st.caption("🚀 Tezkor va aqlli sun'iy intellekt yordamchisi")
 
-# 2. Xavfsizlik: API Kalitni Streamlit Secrets'dan olish
-# DIQQAT: API kalit kod ichida yozilmagan!
-client = Groq(api_key=st.secrets["......" streamlite secretdan olinadigan qil"])
+# 2. API kalitni Streamlit Secrets'dan olish
+client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 # 3. Chat tarixini boshqarish
 if "messages" not in st.session_state:
@@ -43,21 +42,17 @@ if prompt := st.chat_input("Savolingizni bu yerga yozing..."):
     with st.chat_message("assistant"):
         message_placeholder = st.empty()
         full_response = ""
-        
-        # Groq modelidan javob olish
+
         completion = client.chat.completions.create(
             model="llama3-8b-8192",
             messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages],
             stream=True,
         )
-        
+
         for chunk in completion:
             full_response += (chunk.choices[0].delta.content or "")
             message_placeholder.markdown(full_response + "▌")
-        
+
         message_placeholder.markdown(full_response)
-    
+
     st.session_state.messages.append({"role": "assistant", "content": full_response})
-
-
-
