@@ -2,8 +2,7 @@ import streamlit as st
 from cerebras.cloud.sdk import Cerebras
 import time
 import json
-import requests
-from datetime import datetime, timedelta
+from datetime import datetime
 
 st.set_page_config(
     page_title="Somo AI | Aqlli Yordamchi",
@@ -65,29 +64,6 @@ div[data-testid="stSidebar"] button:hover {
 }
 label { color: #6b7280 !important; font-size: 13px !important; font-weight: 500 !important; }
 p, span, li { color: #1e1e2e !important; }
-
-/* Taklif kartasi */
-.suggestion-card {
-    background: linear-gradient(135deg, #f0f4ff, #faf0ff);
-    border: 1.5px solid #c7d2fe;
-    border-radius: 16px;
-    padding: 16px 18px;
-    margin: 8px 0;
-    position: relative;
-}
-.suggestion-title {
-    font-size: 13px; font-weight: 700;
-    color: #4f46e5 !important;
-    text-transform: uppercase; letter-spacing: 0.5px;
-    margin-bottom: 6px;
-}
-.suggestion-text {
-    font-size: 14px; color: #374151 !important; line-height: 1.6;
-}
-.suggestion-source {
-    font-size: 11px; color: #9ca3af !important; margin-top: 8px;
-}
-
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: #f1f1f1; }
 ::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 3px; }
@@ -96,12 +72,25 @@ p, span, li { color: #1e1e2e !important; }
 """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
-# CREATOR PASSWORD — faqat yaratuvchi ko'radi
+# CONFIG
 # ══════════════════════════════════════════════
 CREATOR_PASSWORD = st.secrets.get("CREATOR_PASSWORD", "somo2026")
 
+CURRENT_FEATURES = """
+Hozirgi Somo AI funksiyalari:
+- Cerebras AI (llama-3.3-70b / llama3.1-8b) bilan oddiy chat
+- Animatsiyali streaming javoblar (harfma-harf)
+- Model tanlash (sidebar)
+- Chat tarixi tozalash
+- Yaratuvchi paneli (parol bilan)
+- Sessiya statistikasi
+
+Dastur texnologiyasi: Python + Streamlit + Cerebras API
+Foydalanuvchilar: O'zbek va rus tilida so'zlashuvchilar
+"""
+
 # ══════════════════════════════════════════════
-# AI CLIENTS
+# AI CLIENT
 # ══════════════════════════════════════════════
 @st.cache_resource
 def get_client():
@@ -111,113 +100,128 @@ try:
     client = get_client()
 except Exception:
     st.error("❌ CEREBRAS_API_KEY topilmadi.")
-    st.code('CEREBRAS_API_KEY = "csk-xxxx"\nCREATOR_PASSWORD = "sizning_parolingiz"', language="toml")
+    st.code('CEREBRAS_API_KEY = "csk-xxxx"\nCREATOR_PASSWORD = "parolingiz"', language="toml")
     st.stop()
 
 # ══════════════════════════════════════════════
-# INTERNET YANGILIKLARI OLISH
+# AI CALL (stream=False)
 # ══════════════════════════════════════════════
-def fetch_ai_news():
-    """AI va tech yangiliklar RSS orqali olish"""
-    feeds = [
-        "https://techcrunch.com/feed/",
-        "https://feeds.feedburner.com/oreilly/radar",
-        "https://huggingface.co/blog/feed.xml",
-    ]
-    articles = []
-    for url in feeds:
+def ask_ai(prompt, system="Sen foydali yordamchisan.", max_tokens=2000):
+    for model in ["llama-3.3-70b", "llama3.1-8b"]:
         try:
-            r = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
-            if r.status_code == 200:
-                # RSS dan sarlavhalarni oddiy parse qilish
-                import re
-                titles = re.findall(r'<title><!\[CDATA\[(.*?)\]\]></title>', r.text)
-                if not titles:
-                    titles = re.findall(r'<title>(.*?)</title>', r.text)
-                titles = [t.strip() for t in titles[1:6] if t.strip()]  # birinchisi feed nomi
-                source = url.split('/')[2].replace('www.', '').replace('feeds.', '')
-                for t in titles:
-                    articles.append({"title": t, "source": source})
-        except:
-            continue
-    return articles[:12]  # max 12 ta yangilik
+            r = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": prompt}
+                ],
+                stream=False,
+                max_tokens=max_tokens,
+            )
+            return r.choices[0].message.content
+        except Exception as e:
+            if "404" in str(e) or "not_found" in str(e):
+                continue
+            return f"Xatolik: {e}"
+    return "Hech qanday model javob bermadi."
 
-def generate_suggestions(articles, current_features, client):
-    """AI yordamida funksiya takliflari yaratish"""
-    if not articles:
-        news_text = "Internet yangiliklari mavjud emas (tarmoq xatosi)."
-    else:
-        news_text = "\n".join([f"- {a['title']} ({a['source']})" for a in articles])
+# ══════════════════════════════════════════════
+# SMART SUGGESTIONS GENERATOR
+# ══════════════════════════════════════════════
+def generate_smart_suggestions(chat_history):
+    # Chat tarixidan foydalanuvchi so'ragan narsalarni ajratib olish
+    user_msgs = [m["content"] for m in chat_history if m["role"] == "user"]
+    user_context = ""
+    if user_msgs:
+        user_context = f"\nFoydalanuvchilar so'ragan narsalar (oxirgi {len(user_msgs)} ta savol):\n"
+        user_context += "\n".join([f"- {m[:100]}" for m in user_msgs[-10:]])
 
-    prompt = f"""Sen Somo AI dasturining tahlilchisisan.
-    
-Hozirgi dastur funksiyalari:
-{current_features}
+    system = """Sen Somo AI dasturining strategik tahlilchisisan.
+Sen AI/tech sohasida chuqur bilimga egasan.
+Faqat JSON formatida javob berasan. Hech qanday izoh yoki matn yozma."""
 
-Internetdan olingan so'nggi AI/tech yangiliklar:
-{news_text}
+    prompt = f"""Quyidagi AI chatbot dasturini tahlil qil va unga QO'SHISH MUMKIN bo'lgan 6 ta JUDA QIZIQARLI va REAL funksiya taklif qil.
 
-Ushbu yangiliklarni tahlil qilib, dasturga QO'SHISH MUMKIN bo'lgan 5 ta yangi funksiya taklif qil.
-Har bir taklif uchun:
-1. Funksiya nomi
-2. Nima uchun kerak (yangilikka asoslanib)
-3. Qanday qo'shish mumkin (texnik jihat)
+{CURRENT_FEATURES}
+{user_context}
 
-JSON formatida qaytarasan:
+Muhim talablar:
+1. Takliflar FAQAT AI chatbot/dastur uchun mantiqli bo'lsin
+2. Har bir taklif texnik jihatdan AMALGA OSHIRILISHI MUMKIN bo'lsin
+3. Foydalanuvchiga REAL FOYDA bersin
+4. Qiziqarli, original va ZAMONAVIY g'oyalar bo'lsin
+5. O'zbek foydalanuvchilar uchun mos bo'lsin
+
+Takliflar kategoriyalari (har biridan bir-ikkitadan):
+- UX/UI yaxshilash
+- Yangi AI qobiliyatlar
+- Mahsuldorlik vositalari
+- O'zbek tili uchun maxsus
+- Integratsiyalar
+
+JSON formatda qaytarasan:
 [
   {{
-    "name": "Funksiya nomi",
-    "reason": "Nima uchun kerak",
-    "how": "Qanday amalga oshirish",
+    "name": "Funksiya nomi (qisqa, jozibali)",
+    "emoji": "mos emoji",
+    "category": "UX/AI/Mahsuldorlik/O'zbek/Integratsiya",
+    "description": "Nima qiladi - 1-2 jumlada tushunarli tushuntirish",
+    "why_cool": "Nima uchun bu JUDA qiziqarli va foydali",
+    "how_to_build": "Texnik jihatdan qanday qurish (konkret: qaysi API, kutubxona)",
+    "difficulty": "oson/o'rta/qiyin",
     "priority": "yuqori/o'rta/past",
-    "source": "qaysi yangilikdan ilhomlangan"
+    "wow_factor": 1-10
   }}
-]
-Faqat JSON. Hech qanday izoh yozma."""
+]"""
 
-    try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=1500,
-            stream=False,
-        )
-        text = response.choices[0].message.content
-        import re
-        match = re.search(r'\[.*\]', text, re.DOTALL)
-        if match:
-            return json.loads(match.group())
-    except:
-        # fallback: llama3.1-8b
+    raw = ask_ai(prompt, system, max_tokens=2500)
+
+    import re
+    match = re.search(r'\[.*\]', raw, re.DOTALL)
+    if match:
         try:
-            response = client.chat.completions.create(
-                model="llama3.1-8b",
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=1500,
-                stream=False,
-            )
-            text = response.choices[0].message.content
-            import re
-            match = re.search(r'\[.*\]', text, re.DOTALL)
-            if match:
-                return json.loads(match.group())
+            return json.loads(match.group())
         except:
             pass
-    return []
+
+    # Fallback: manual takliflar
+    return [
+        {
+            "name": "Ovozli chat",
+            "emoji": "🎙️",
+            "category": "AI",
+            "description": "Foydalanuvchi mikrofondan gapiradi, AI javob beradi",
+            "why_cool": "Qo'l bilan yozmasdan, xuddi odamga gaplashgandek",
+            "how_to_build": "Streamlit audio input + Whisper API (OpenAI) + Cerebras",
+            "difficulty": "o'rta",
+            "priority": "yuqori",
+            "wow_factor": 9
+        },
+        {
+            "name": "O'zbek tili tekshirgich",
+            "emoji": "📝",
+            "category": "O'zbek",
+            "description": "Yozgan matnidagi grammatika xatolarini topib tuzatadi",
+            "why_cool": "O'zbek tilida bunday vosita deyarli yo'q",
+            "how_to_build": "Cerebras ga maxsus o'zbek grammatika prompti",
+            "difficulty": "oson",
+            "priority": "yuqori",
+            "wow_factor": 8
+        },
+    ]
 
 # ══════════════════════════════════════════════
-# SESSION STATE
+# SESSION
 # ══════════════════════════════════════════════
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "is_creator" not in st.session_state:
-    st.session_state.is_creator = False
-if "suggestions" not in st.session_state:
-    st.session_state.suggestions = []
-if "last_scan" not in st.session_state:
-    st.session_state.last_scan = None
-if "show_creator_panel" not in st.session_state:
-    st.session_state.show_creator_panel = False
+defaults = {
+    "messages": [],
+    "is_creator": False,
+    "suggestions": [],
+    "last_scan": None,
+}
+for k, v in defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 # ══════════════════════════════════════════════
 # SIDEBAR
@@ -225,15 +229,15 @@ if "show_creator_panel" not in st.session_state:
 with st.sidebar:
     st.markdown("""
     <div style="text-align:center; padding:20px 0 10px;">
-        <div style="font-size:52px; margin-bottom:8px;">✨</div>
+        <div style="font-size:48px; margin-bottom:8px;">✨</div>
         <h2 style="font-size:22px; font-weight:700; color:#4f46e5 !important; margin:0;">Somo AI</h2>
         <p style="font-size:12px; color:#9ca3af !important; margin:4px 0 0;">Cerebras · Aqlli yordamchi</p>
     </div>
-    <hr style="border:none; border-top:1px solid #eef0ff; margin:12px 0;">
+    <hr style="border:none; border-top:1px solid #eef0ff; margin:10px 0;">
     """, unsafe_allow_html=True)
 
-    model_name = st.selectbox("Model:", ["llama-3.3-70b", "llama3.1-8b"], label_visibility="collapsed")
-
+    model_name = st.selectbox("⚡ Model:", ["llama-3.3-70b", "llama3.1-8b"],
+                               label_visibility="visible")
     st.markdown("<br>", unsafe_allow_html=True)
 
     if st.button("🗑️ Chatni tozalash", use_container_width=True):
@@ -241,164 +245,218 @@ with st.sidebar:
         st.rerun()
 
     # ── Yaratuvchi paneli ──
-    st.markdown("<hr style='border:none;border-top:1px solid #eef0ff;margin:16px 0;'>", unsafe_allow_html=True)
+    st.markdown("<hr style='border:none;border-top:1px solid #eef0ff;margin:14px 0;'>",
+                unsafe_allow_html=True)
 
     if not st.session_state.is_creator:
-        st.markdown("<p style='font-size:12px;color:#9ca3af !important;text-align:center;'>🔐 Yaratuvchi paneli</p>",
+        st.markdown("<p style='font-size:12px;color:#9ca3af !important;text-align:center;margin-bottom:8px;'>🔐 Yaratuvchi</p>",
                     unsafe_allow_html=True)
-        creator_pw = st.text_input("Parol:", type="password", placeholder="••••••••",
-                                    label_visibility="collapsed")
+        pw = st.text_input("Parol:", type="password", placeholder="••••••••",
+                            label_visibility="collapsed")
         if st.button("Kirish", use_container_width=True):
-            if creator_pw == CREATOR_PASSWORD:
+            if pw == CREATOR_PASSWORD:
                 st.session_state.is_creator = True
                 st.rerun()
             else:
                 st.error("❌ Noto'g'ri parol")
     else:
         st.markdown("""
-        <div style="background:linear-gradient(135deg,#f0f4ff,#faf0ff);border:1px solid #c7d2fe;
-                    border-radius:12px;padding:12px;text-align:center;margin-bottom:12px;">
-            <span style="font-size:20px;">👑</span>
-            <p style="font-size:13px;font-weight:700;color:#4f46e5 !important;margin:4px 0 0;">
+        <div style="background:linear-gradient(135deg,#f0f4ff,#faf0ff);
+                    border:1px solid #c7d2fe;border-radius:12px;
+                    padding:10px;text-align:center;margin-bottom:10px;">
+            <span style="font-size:18px;">👑</span>
+            <p style="font-size:13px;font-weight:700;color:#4f46e5 !important;margin:2px 0 0;">
                 Yaratuvchi rejimi</p>
         </div>
         """, unsafe_allow_html=True)
 
-        if st.button("🔍 Internetni skanerlash", use_container_width=True, type="primary"):
-            with st.spinner("Yangiliklar tekshirilmoqda..."):
-                articles = fetch_ai_news()
-                current_features = """
-                - Cerebras AI bilan oddiy chat
-                - Streaming animatsiyali javoblar
-                - Model tanlash (70b / 8b)
-                - Chat tarixi tozalash
-                - Yaratuvchi paneli
-                """
-                suggestions = generate_suggestions(articles, current_features, client)
-                st.session_state.suggestions = suggestions
+        if st.button("🧠 Taklif yaratish", use_container_width=True, type="primary"):
+            with st.spinner("AI o'zi haqida o'ylamoqda..."):
+                suggs = generate_smart_suggestions(st.session_state.messages)
+                st.session_state.suggestions = suggs
                 st.session_state.last_scan = datetime.now()
             st.rerun()
 
         if st.session_state.last_scan:
-            elapsed = datetime.now() - st.session_state.last_scan
             st.markdown(f"""
-            <p style="font-size:11px;color:#9ca3af !important;text-align:center;margin-top:8px;">
-                🕐 Oxirgi skan: {st.session_state.last_scan.strftime('%H:%M')}
-                ({elapsed.seconds // 60} daqiqa oldin)
-            </p>
-            """, unsafe_allow_html=True)
+            <p style="font-size:11px;color:#9ca3af !important;text-align:center;margin:6px 0;">
+                🕐 {st.session_state.last_scan.strftime('%H:%M')} da yaratildi
+            </p>""", unsafe_allow_html=True)
 
         if st.button("🚪 Chiqish", use_container_width=True):
             st.session_state.is_creator = False
             st.session_state.suggestions = []
             st.rerun()
 
-    # Statistika
+    # Stat
     msg_count = len(st.session_state.messages)
     st.markdown(f"""
-    <div style="margin-top:16px;background:#f8f8ff;border:1px solid #eef0ff;
-                border-radius:12px;padding:14px 16px;">
-        <p style="font-size:11px;color:#9ca3af !important;margin:0 0 8px;
-                  font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Sessiya</p>
+    <div style="margin-top:14px;background:#f8f8ff;border:1px solid #eef0ff;
+                border-radius:12px;padding:12px 14px;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
             <span style="font-size:13px;color:#6b7280 !important;">💬 Xabarlar</span>
             <span style="font-size:15px;font-weight:700;color:#4f46e5 !important;">{msg_count}</span>
         </div>
     </div>
-    <div style="padding-top:24px;text-align:center;">
+    <div style="padding-top:20px;text-align:center;">
         <p style="font-size:11px;color:#d1d5db !important;">© 2026 Somo AI</p>
     </div>
     """, unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
-# ASOSIY KONTENT
+# ASOSIY SAHIFA
 # ══════════════════════════════════════════════
 st.markdown("""
-<div style="text-align:center; padding:32px 0 16px;">
-    <h1 style="font-size:30px; font-weight:700; color:#1e1e2e; letter-spacing:-0.8px; margin:0;">
+<div style="text-align:center; padding:28px 0 14px;">
+    <h1 style="font-size:30px;font-weight:700;color:#1e1e2e;letter-spacing:-0.8px;margin:0;">
         ✨ Somo <span style="color:#6366f1;">AI</span>
     </h1>
-    <p style="font-size:14px; color:#9ca3af; margin:8px 0 0;">
+    <p style="font-size:14px;color:#9ca3af;margin:6px 0 0;">
         Savolingizni yozing — javob shu zahoti keladi
     </p>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Yaratuvchi: takliflar paneli ──────────────────────
+# ══════════════════════════════════════════════
+# YARATUVCHI: TAKLIFLAR
+# ══════════════════════════════════════════════
 if st.session_state.is_creator and st.session_state.suggestions:
-    st.markdown("""
-    <div style="background:linear-gradient(135deg,#667eea15,#764ba215);
-                border:1.5px solid #c7d2fe;border-radius:20px;padding:20px 22px;margin-bottom:24px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-            <span style="font-size:24px;">🤖</span>
+
+    diff_color = {"oson": "#10b981", "o'rta": "#f59e0b", "qiyin": "#ef4444"}
+    diff_icon  = {"oson": "🟢", "o'rta": "🟡", "qiyin": "🔴"}
+    pri_color  = {"yuqori": "#ef4444", "o'rta": "#f59e0b", "past": "#6b7280"}
+    cat_bg     = {
+        "UX": "#eff6ff", "AI": "#f5f0ff", "Mahsuldorlik": "#f0fdf4",
+        "O'zbek": "#fff7ed", "Integratsiya": "#fdf2f8"
+    }
+    cat_bc     = {
+        "UX": "#bfdbfe", "AI": "#ddd6fe", "Mahsuldorlik": "#bbf7d0",
+        "O'zbek": "#fed7aa", "Integratsiya": "#fbcfe8"
+    }
+
+    st.markdown(f"""
+    <div style="background:linear-gradient(135deg,#667eea18,#764ba218);
+                border:1.5px solid #c7d2fe;border-radius:20px;
+                padding:18px 20px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+            <span style="font-size:22px;">🧠</span>
             <div>
                 <p style="font-size:15px;font-weight:700;color:#4f46e5 !important;margin:0;">
                     AI Taklif Tizimi</p>
                 <p style="font-size:12px;color:#9ca3af !important;margin:0;">
-                    Internet yangiliklari asosida yangi funksiyalar</p>
+                    {len(st.session_state.suggestions)} ta taklif · 
+                    {st.session_state.last_scan.strftime('%d.%m.%Y %H:%M') if st.session_state.last_scan else ''}
+                </p>
             </div>
         </div>
+    </div>
     """, unsafe_allow_html=True)
 
-    priority_colors = {"yuqori": "#ef4444", "o'rta": "#f59e0b", "past": "#10b981"}
-    priority_icons  = {"yuqori": "🔴", "o'rta": "🟡", "past": "🟢"}
+    for i, s in enumerate(st.session_state.suggestions):
+        cat   = s.get("category", "AI")
+        diff  = s.get("difficulty", "o'rta")
+        pri   = s.get("priority", "o'rta")
+        wow   = s.get("wow_factor", 7)
+        bg    = cat_bg.get(cat, "#f8f8ff")
+        bc    = cat_bc.get(cat, "#e0e0ff")
+        dc    = diff_color.get(diff, "#6b7280")
+        di    = diff_icon.get(diff, "🔵")
+        pc    = pri_color.get(pri, "#6b7280")
+        wow_stars = "⭐" * min(int(wow // 2), 5)
 
-    for i, sug in enumerate(st.session_state.suggestions):
-        p = sug.get("priority", "o'rta")
-        pc = priority_colors.get(p, "#6366f1")
-        pi = priority_icons.get(p, "🔵")
         st.markdown(f"""
-        <div style="background:white;border:1px solid #eef0ff;border-left:4px solid {pc};
-                    border-radius:12px;padding:14px 16px;margin:8px 0;">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-                <p style="font-size:14px;font-weight:700;color:#1e1e2e !important;margin:0;">
-                    {i+1}. {sug.get('name','')}</p>
-                <span style="font-size:11px;color:{pc} !important;font-weight:600;
-                             background:{pc}15;padding:2px 8px;border-radius:20px;">
-                    {pi} {p.upper()}</span>
+        <div style="background:{bg};border:1.5px solid {bc};border-radius:16px;
+                    padding:16px 18px;margin:10px 0;position:relative;overflow:hidden;">
+
+            <!-- Wow factor bar -->
+            <div style="position:absolute;top:0;left:0;height:3px;width:{wow*10}%;
+                        background:linear-gradient(90deg,#6366f1,#a855f7);border-radius:2px;"></div>
+
+            <!-- Header -->
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:24px;">{s.get('emoji','💡')}</span>
+                    <div>
+                        <p style="font-size:15px;font-weight:700;color:#1e1e2e !important;margin:0;">
+                            {s.get('name','')}</p>
+                        <span style="font-size:11px;color:{pc} !important;font-weight:600;
+                                     background:{pc}18;padding:1px 7px;border-radius:20px;">
+                            {pri.upper()}</span>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <p style="font-size:11px;color:#9ca3af !important;margin:0;">{cat}</p>
+                    <p style="font-size:13px;margin:2px 0 0;">{wow_stars} {wow}/10</p>
+                </div>
             </div>
-            <p style="font-size:13px;color:#374151 !important;margin:8px 0 4px;line-height:1.5;">
-                📌 <b>Nima uchun:</b> {sug.get('reason','')}</p>
-            <p style="font-size:13px;color:#374151 !important;margin:4px 0;line-height:1.5;">
-                🔧 <b>Qanday:</b> {sug.get('how','')}</p>
-            <p style="font-size:11px;color:#9ca3af !important;margin:8px 0 0;">
-                💡 Manba: {sug.get('source','internet')}</p>
+
+            <!-- Description -->
+            <p style="font-size:14px;color:#374151 !important;margin:0 0 8px;line-height:1.6;">
+                {s.get('description','')}
+            </p>
+
+            <!-- Why cool -->
+            <div style="background:rgba(99,102,241,0.07);border-radius:10px;padding:10px 12px;margin:8px 0;">
+                <p style="font-size:12px;font-weight:700;color:#4f46e5 !important;margin:0 0 3px;">
+                    ✨ Nima uchun qiziqarli:</p>
+                <p style="font-size:13px;color:#374151 !important;margin:0;">
+                    {s.get('why_cool','')}</p>
+            </div>
+
+            <!-- How to build -->
+            <div style="background:rgba(16,185,129,0.07);border-radius:10px;padding:10px 12px;margin:8px 0;">
+                <p style="font-size:12px;font-weight:700;color:#059669 !important;margin:0 0 3px;">
+                    🔧 Qanday qurish:</p>
+                <p style="font-size:13px;color:#374151 !important;margin:0;">
+                    {s.get('how_to_build','')}</p>
+            </div>
+
+            <!-- Footer -->
+            <div style="display:flex;gap:8px;margin-top:6px;">
+                <span style="font-size:11px;color:{dc} !important;background:{dc}15;
+                             padding:3px 10px;border-radius:20px;font-weight:600;">
+                    {di} {diff.upper()}</span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    # Export
-    col1, col2 = st.columns(2)
-    with col1:
+    # Export tugmalari
+    st.markdown("<br>", unsafe_allow_html=True)
+    c1, c2 = st.columns(2)
+    with c1:
         st.download_button(
-            "📥 JSON yuklab olish",
+            "📥 JSON",
             data=json.dumps(st.session_state.suggestions, ensure_ascii=False, indent=2),
-            file_name=f"somo_suggestions_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
+            file_name=f"somo_ideas_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
             mime="application/json",
             use_container_width=True
         )
-    with col2:
-        # Oddiy matn formatida
-        text_report = f"SOMO AI — FUNKSIYA TAKLIFLARI\n{datetime.now().strftime('%d.%m.%Y %H:%M')}\n\n"
-        for i, s in enumerate(st.session_state.suggestions):
-            text_report += f"{i+1}. {s.get('name','')}\n"
-            text_report += f"   Nima uchun: {s.get('reason','')}\n"
-            text_report += f"   Qanday: {s.get('how','')}\n"
-            text_report += f"   Muhimlik: {s.get('priority','')}\n\n"
+    with c2:
+        report = f"SOMO AI — FUNKSIYA G'OYALAR\n{'='*40}\n{datetime.now().strftime('%d.%m.%Y %H:%M')}\n\n"
+        for i, s in enumerate(st.session_state.suggestions, 1):
+            report += f"{i}. {s.get('emoji','')} {s.get('name','')}\n"
+            report += f"   Kategoriya: {s.get('category','')} | Muhimlik: {s.get('priority','')} | Wow: {s.get('wow_factor','')}/10\n"
+            report += f"   {s.get('description','')}\n"
+            report += f"   ✨ {s.get('why_cool','')}\n"
+            report += f"   🔧 {s.get('how_to_build','')}\n\n"
         st.download_button(
-            "📄 TXT yuklab olish",
-            data=text_report.encode("utf-8"),
-            file_name=f"somo_suggestions_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
+            "📄 TXT",
+            data=report.encode("utf-8"),
+            file_name=f"somo_ideas_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
             mime="text/plain",
             use_container_width=True
         )
 
-# ── Bo'sh chat kartalar ───────────────────────────────
+    st.markdown("<hr style='border:none;border-top:1px solid #eef0ff;margin:16px 0;'>",
+                unsafe_allow_html=True)
+
+# ══════════════════════════════════════════════
+# CHAT
+# ══════════════════════════════════════════════
 if not st.session_state.messages:
     st.markdown("""
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;
-                max-width:500px; margin:10px auto 28px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;
+                max-width:500px;margin:10px auto 24px;">
         <div style="background:#fff;border:1px solid #eef0ff;border-radius:14px;padding:16px;
                     box-shadow:0 2px 8px rgba(99,102,241,0.06);">
             <span style="font-size:22px;">💡</span>
@@ -426,14 +484,10 @@ if not st.session_state.messages:
     </div>
     """, unsafe_allow_html=True)
 
-# Xabarlar
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-# ══════════════════════════════════════════════
-# CHAT INPUT
-# ══════════════════════════════════════════════
 if prompt := st.chat_input("Somo AI ga xabar yuboring..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -442,10 +496,7 @@ if prompt := st.chat_input("Somo AI ga xabar yuboring..."):
     with st.chat_message("assistant"):
         placeholder = st.empty()
         full_response = ""
-
-        models_to_try = [model_name]
-        if model_name != "llama3.1-8b":
-            models_to_try.append("llama3.1-8b")
+        models_to_try = [model_name, "llama3.1-8b"] if model_name != "llama3.1-8b" else ["llama3.1-8b"]
 
         for try_model in models_to_try:
             try:
@@ -468,14 +519,9 @@ if prompt := st.chat_input("Somo AI ga xabar yuboring..."):
                 err = str(e)
                 if "404" in err or "not_found" in err:
                     continue
-                elif "api_key" in err.lower() or "auth" in err.lower():
-                    full_response = "❌ API kalit noto'g'ri."
-                    placeholder.markdown(full_response)
-                    break
-                else:
-                    full_response = f"❌ Xatolik: {err}"
-                    placeholder.markdown(full_response)
-                    break
+                full_response = f"❌ Xatolik: {err}"
+                placeholder.markdown(full_response)
+                break
 
         if not full_response:
             full_response = "❌ Model javob bermadi."
