@@ -60,3 +60,4 @@ if prompt := st.chat_input("Savolingizni bu yerga yozing..."):
     st.session_state.messages.append({"role": "assistant", "content": full_response})
 
 
+
