@@ -27,17 +27,17 @@ st.markdown("""
 
 <style>
   :root {
-    --bg:        #0a0a0f;
-    --bg2:       #0f0f18;
-    --bg3:       #1a1a26;
-    --border:    #252535;
-    --accent:    #7c6af7;
-    --accent2:   #c084fc;
-    --text:      #e8e8f0;
-    --muted:     #5a5a72;
-    --user-bg:   #1c1a38;
-    --ai-bg:     #111120;
-    --green:     #34d399;
+    --bg:        #faf8f4;
+    --bg2:       #f3f0ea;
+    --bg3:       #ede9e0;
+    --border:    #ddd8cc;
+    --accent:    #6c5ce7;
+    --accent2:   #a855f7;
+    --text:      #1a1814;
+    --muted:     #8a8070;
+    --user-bg:   #ede9ff;
+    --ai-bg:     #ffffff;
+    --green:     #059669;
     --font-head: 'Syne', sans-serif;
     --font-mono: 'Space Mono', monospace;
   }
@@ -97,7 +97,7 @@ st.markdown("""
     justify-content: space-between;
     padding: 0.9rem 2rem;
     border-bottom: 1px solid var(--border);
-    background: rgba(10,10,15,0.96);
+    background: rgba(250,248,244,0.96);
     position: sticky; top: 0; z-index: 999;
     backdrop-filter: blur(12px);
   }
@@ -132,7 +132,7 @@ st.markdown("""
   }
   .w-glyph {
     font-size: 3rem; margin-bottom: 1.2rem;
-    filter: drop-shadow(0 0 24px rgba(124,106,247,0.6));
+    filter: drop-shadow(0 0 24px rgba(108,92,231,0.35));
     animation: float 3s ease-in-out infinite;
   }
   @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
@@ -184,7 +184,7 @@ st.markdown("""
   }
   .m-bubble.user {
     background: var(--user-bg);
-    border: 1px solid rgba(124,106,247,0.25);
+    border: 1px solid rgba(108,92,231,0.3);
     border-top-right-radius: 4px;
   }
   .m-bubble.ai {
@@ -193,18 +193,18 @@ st.markdown("""
     border-top-left-radius: 4px;
   }
   .m-bubble code {
-    background: rgba(124,106,247,0.13);
-    border: 1px solid rgba(124,106,247,0.22);
+    background: rgba(108,92,231,0.08);
+    border: 1px solid rgba(108,92,231,0.18);
     padding: 0.12rem 0.38rem; border-radius: 4px;
     font-size: 0.8rem; color: var(--accent2);
   }
   .m-bubble pre {
-    background: #080812; border: 1px solid var(--border);
+    background: #f0ece3; border: 1px solid var(--border);
     border-radius: 8px; padding: 1rem; overflow-x: auto; margin: 0.6rem 0;
   }
-  .m-bubble pre code { background:none; border:none; padding:0; color:#a8b9ff; font-size:0.78rem; }
+  .m-bubble pre code { background:none; border:none; padding:0; color:#4c3d99; font-size:0.78rem; }
   .m-bubble strong { color: var(--accent2); }
-  .m-bubble em { color: #94a3b8; }
+  .m-bubble em { color: #6b7280; }
   .m-bubble h1,.m-bubble h2,.m-bubble h3 {
     font-family: var(--font-head) !important;
     color: var(--text); margin: 0.7rem 0 0.3rem;
@@ -221,7 +221,7 @@ st.markdown("""
     border: 1px solid var(--border); color: var(--accent2); font-weight: 600;
   }
   .m-bubble td { padding: 0.4rem 0.75rem; border: 1px solid var(--border); }
-  .m-bubble tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+  .m-bubble tr:nth-child(even) { background: rgba(0,0,0,0.02); }
   .m-time {
     font-size: 0.6rem; color: var(--muted); margin-top: 0.3rem; opacity: 0.5;
   }
@@ -245,7 +245,7 @@ st.markdown("""
   }
   [data-testid="stChatInput"]:focus-within {
     border-color: var(--accent) !important;
-    box-shadow: 0 0 0 2px rgba(124,106,247,0.15) !important;
+    box-shadow: 0 0 0 2px rgba(108,92,231,0.15) !important;
   }
   [data-testid="stChatInput"] textarea {
     background: transparent !important;
@@ -292,7 +292,7 @@ st.markdown("""
   .katex-display { overflow-x: auto; padding: 0.4rem 0; }
   ::-webkit-scrollbar { width: 3px; height: 3px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb { background: #c8c0b0; border-radius: 2px; }
 </style>
 """, unsafe_allow_html=True)
 
