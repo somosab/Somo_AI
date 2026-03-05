@@ -1,512 +1,721 @@
 import streamlit as st
-from cerebras.cloud.sdk import Cerebras
+from groq import Groq
 import time
-import json
-from datetime import datetime
+import re
 
+# ─── Page Config ────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Somo AI | Aqlli Yordamchi",
-    page_icon="✨",
+    page_title="Somo AI",
+    page_icon="✦",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
+# ─── CSS ────────────────────────────────────────────────────────────────────
 st.markdown("""
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body, {
+    delimiters: [
+      {left: '$$', right: '$$', display: true},
+      {left: '$', right: '$', display: false},
+      {left: '\\\\(', right: '\\\\)', display: false},
+      {left: '\\\\[', right: '\\\\]', display: true}
+    ]
+  });"></script>
+
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-* { font-family: 'Inter', sans-serif; }
-.stApp { background: #f8f9ff !important; }
+  :root {
+    --bg:        #0a0a0f;
+    --bg2:       #111118;
+    --bg3:       #1a1a24;
+    --border:    #2a2a3a;
+    --accent:    #7c6af7;
+    --accent2:   #c084fc;
+    --text:      #e8e8f0;
+    --muted:     #6b6b80;
+    --user-bg:   #1e1b3a;
+    --ai-bg:     #141420;
+    --green:     #34d399;
+    --font-head: 'Syne', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+  }
 
-/* ── Sidebar toggle tugmasi DOIM ko'rinsin ── */
-[data-testid="collapsedControl"] {
-    display: flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    background: #ffffff !important;
-    border: 1px solid #e0e0ff !important;
-    border-radius: 0 10px 10px 0 !important;
-    box-shadow: 2px 0 8px rgba(99,102,241,0.15) !important;
-    z-index: 999 !important;
-}
-[data-testid="collapsedControl"] svg { color: #6366f1 !important; }
+  /* ── Global reset ── */
+  html, body, [data-testid="stAppViewContainer"] {
+    background: var(--bg) !important;
+    color: var(--text) !important;
+    font-family: var(--font-mono) !important;
+  }
 
-/* Sidebar */
-[data-testid="stSidebar"] {
-    background: #ffffff !important;
-    border-right: 1px solid #e8eaf6 !important;
-    box-shadow: 2px 0 12px rgba(99,102,241,0.06) !important;
-    min-width: 260px !important;
-}
-[data-testid="stSidebar"] * { color: #1e1e2e !important; }
-[data-testid="stSidebarNav"] { display: none !important; }
+  /* Hide Streamlit branding */
+  #MainMenu, footer, header,
+  [data-testid="stToolbar"],
+  [data-testid="stDecoration"],
+  [data-testid="stStatusWidget"] { display: none !important; }
 
-div[data-testid="stSidebar"] button {
-    background: #f1f0ff !important; color: #4f46e5 !important;
-    border: 1px solid #e0e0ff !important; border-radius: 10px !important;
-    font-weight: 600 !important; transition: all 0.2s !important;
-}
-div[data-testid="stSidebar"] button:hover {
-    background: #4f46e5 !important; color: white !important;
-    border-color: transparent !important;
-}
+  /* ── Sidebar ── */
+  [data-testid="stSidebar"] {
+    background: var(--bg2) !important;
+    border-right: 1px solid var(--border) !important;
+    padding: 0 !important;
+  }
+  [data-testid="stSidebar"] > div:first-child { padding: 1.5rem 1.2rem !important; }
 
-#MainMenu, footer, header { display: none !important; }
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 2rem;
+    padding-bottom: 1.2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-logo .icon {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .sidebar-logo .brand {
+    font-family: var(--font-head);
+    font-size: 1.3rem;
+    font-weight: 800;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+  }
+  .sidebar-logo .version {
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-top: -2px;
+  }
 
-/* Asosiy kontent kengligi */
-.main .block-container {
-    max-width: 780px !important;
-    margin: 0 auto !important;
-    padding: 0 20px !important;
-}
+  .sidebar-section-title {
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 1.5rem 0 0.6rem 0;
+  }
 
-/* Chat */
-.stChatMessage {
-    background: #ffffff !important;
-    border: 1px solid #eef0ff !important;
-    border-radius: 16px !important;
-    box-shadow: 0 2px 8px rgba(99,102,241,0.07) !important;
-    padding: 14px 18px !important;
-    margin: 8px 0 !important;
-}
-[data-testid="stChatMessage"]:has([data-testid="chatAvatarIcon-user"]) {
-    background: linear-gradient(135deg, #eef2ff, #f5f0ff) !important;
-    border-color: #ddd6fe !important;
-}
+  /* Selectbox */
+  [data-testid="stSelectbox"] label { display: none !important; }
+  [data-testid="stSelectbox"] > div > div {
+    background: var(--bg3) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    color: var(--text) !important;
+    font-family: var(--font-mono) !important;
+    font-size: 0.78rem !important;
+  }
 
-/* Input */
-.stChatInputContainer {
+  /* Slider */
+  [data-testid="stSlider"] label { color: var(--muted) !important; font-size: 0.75rem !important; }
+  [data-testid="stSlider"] [data-testid="stTickBarMin"],
+  [data-testid="stSlider"] [data-testid="stTickBarMax"] { color: var(--muted) !important; font-size: 0.7rem !important; }
+
+  /* Clear button */
+  .clear-btn {
+    width: 100%;
+    padding: 0.55rem 0;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 0.5rem;
+    letter-spacing: 1px;
+  }
+  .clear-btn:hover {
+    border-color: #e05c6a;
+    color: #e05c6a;
+    background: rgba(224,92,106,0.06);
+  }
+
+  .sidebar-stats {
+    margin-top: auto;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+  }
+  .stat-row span:last-child { color: var(--text); }
+
+  /* ── Main area ── */
+  [data-testid="stMainBlockContainer"] {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+  .block-container {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* ── Header ── */
+  .chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 2.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+  }
+  .chat-header-left { display: flex; align-items: center; gap: 12px; }
+  .header-avatar {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .header-title {
+    font-family: var(--font-head);
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .header-subtitle { font-size: 0.68rem; color: var(--green); letter-spacing: 1px; }
+  .header-model-badge {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  /* ── Chat area ── */
+  .chat-area {
+    padding: 2rem 2.5rem;
+    min-height: calc(100vh - 200px);
+  }
+
+  .welcome-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5rem 2rem;
+    text-align: center;
+  }
+  .welcome-glyph {
+    font-size: 3.5rem;
+    margin-bottom: 1.5rem;
+    filter: drop-shadow(0 0 30px rgba(124,106,247,0.5));
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  .welcome-title {
+    font-family: var(--font-head);
+    font-size: 2.2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.8rem;
+  }
+  .welcome-sub {
+    color: var(--muted);
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 2.5rem;
+  }
+  .welcome-chips {
+    display: flex;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .chip {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.45rem 1rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── Messages ── */
+  .msg-wrapper {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 1.8rem;
+    animation: fadeSlide 0.3s ease-out;
+  }
+  @keyframes fadeSlide {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .msg-wrapper.user { flex-direction: row-reverse; }
+
+  .msg-avatar {
+    width: 34px; height: 34px; min-width: 34px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .msg-avatar.user { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+  .msg-avatar.ai   { background: var(--bg3); border: 1px solid var(--border); }
+
+  .msg-body { max-width: 72%; }
+  .msg-name {
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-bottom: 0.35rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .msg-wrapper.user .msg-name { text-align: right; }
+
+  .msg-bubble {
+    padding: 0.9rem 1.2rem;
+    border-radius: 14px;
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: var(--text);
+    position: relative;
+  }
+  .msg-bubble.user {
+    background: var(--user-bg);
+    border: 1px solid rgba(124,106,247,0.3);
+    border-top-right-radius: 4px;
+  }
+  .msg-bubble.ai {
+    background: var(--ai-bg);
+    border: 1px solid var(--border);
+    border-top-left-radius: 4px;
+  }
+
+  .msg-bubble code {
+    background: rgba(124,106,247,0.12);
+    border: 1px solid rgba(124,106,247,0.2);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.82rem;
+    color: var(--accent2);
+  }
+  .msg-bubble pre {
+    background: #0d0d18;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    margin: 0.7rem 0;
+  }
+  .msg-bubble pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #a8b9ff;
+    font-size: 0.8rem;
+  }
+  .msg-bubble strong { color: var(--accent2); }
+  .msg-bubble em { color: #94a3b8; }
+  .msg-bubble h1, .msg-bubble h2, .msg-bubble h3 {
+    font-family: var(--font-head);
+    color: var(--text);
+    margin: 0.8rem 0 0.4rem;
+  }
+  .msg-bubble ul, .msg-bubble ol {
+    padding-left: 1.3rem;
+    margin: 0.4rem 0;
+  }
+  .msg-bubble li { margin-bottom: 0.3rem; }
+  .msg-bubble blockquote {
+    border-left: 3px solid var(--accent);
+    padding-left: 1rem;
+    color: var(--muted);
+    margin: 0.5rem 0;
+    font-style: italic;
+  }
+  .msg-bubble table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.7rem 0;
+    font-size: 0.8rem;
+  }
+  .msg-bubble th {
+    background: var(--bg3);
+    padding: 0.5rem 0.8rem;
+    border: 1px solid var(--border);
+    text-align: left;
+    color: var(--accent2);
+    font-weight: 600;
+  }
+  .msg-bubble td {
+    padding: 0.45rem 0.8rem;
+    border: 1px solid var(--border);
+  }
+  .msg-bubble tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+
+  .msg-time {
+    font-size: 0.62rem;
+    color: var(--muted);
+    margin-top: 0.35rem;
+    opacity: 0.6;
+  }
+  .msg-wrapper.user .msg-time { text-align: right; }
+
+  /* Typing cursor */
+  .typing-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--accent);
+    margin-left: 2px;
+    vertical-align: middle;
+    animation: blink 0.7s steps(1) infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ── Input area ── */
+  .input-area {
+    position: sticky;
+    bottom: 0;
+    background: linear-gradient(to top, var(--bg) 80%, transparent);
+    padding: 1.2rem 2.5rem 1.8rem;
+  }
+  .input-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 0.6rem 0.6rem 0.6rem 1rem;
+    transition: border-color 0.2s;
+  }
+  .input-wrapper:focus-within { border-color: var(--accent); }
+
+  /* Override streamlit text_area */
+  [data-testid="stTextArea"] { flex: 1; }
+  [data-testid="stTextArea"] label { display: none !important; }
+  [data-testid="stTextArea"] textarea {
     background: transparent !important;
     border: none !important;
-    padding: 12px 0 20px !important;
-}
-[data-testid="stChatInput"] {
-    background: #ffffff !important;
-    border: 1.5px solid #e0e0ff !important;
-    border-radius: 16px !important;
-    box-shadow: 0 4px 20px rgba(99,102,241,0.10) !important;
-    transition: all 0.2s !important;
-}
-[data-testid="stChatInput"]:focus-within {
-    border-color: #6366f1 !important;
-    box-shadow: 0 4px 24px rgba(99,102,241,0.18) !important;
-}
-[data-testid="stChatInput"] textarea {
-    background: transparent !important; border: none !important;
-    color: #1e1e2e !important; font-size: 15px !important; padding: 12px 14px !important;
-}
-[data-testid="stChatInput"] textarea::placeholder { color: #a0a0b0 !important; }
-[data-testid="stChatInput"] button {
-    background: #6366f1 !important; border-radius: 10px !important;
-    border: none !important; margin: 4px !important; transition: all 0.2s !important;
-}
-[data-testid="stChatInput"] button:hover {
-    background: #4f46e5 !important; transform: scale(1.05) !important;
-}
+    outline: none !important;
+    box-shadow: none !important;
+    color: var(--text) !important;
+    font-family: var(--font-mono) !important;
+    font-size: 0.85rem !important;
+    resize: none !important;
+    min-height: 24px !important;
+    padding: 4px 0 !important;
+  }
+  [data-testid="stTextArea"] textarea::placeholder { color: var(--muted) !important; }
 
-.stSelectbox > div > div {
-    background: #f8f8ff !important; border: 1.5px solid #e0e0ff !important;
+  /* Send button */
+  [data-testid="stButton"] > button {
+    background: linear-gradient(135deg, var(--accent), var(--accent2)) !important;
+    color: white !important;
+    border: none !important;
     border-radius: 10px !important;
-}
+    padding: 0.55rem 1.2rem !important;
+    font-family: var(--font-mono) !important;
+    font-size: 0.78rem !important;
+    cursor: pointer !important;
+    transition: opacity 0.2s !important;
+    white-space: nowrap !important;
+  }
+  [data-testid="stButton"] > button:hover { opacity: 0.85 !important; }
 
-label { color: #6b7280 !important; font-size: 13px !important; font-weight: 500 !important; }
-p, span, li { color: #1e1e2e !important; }
+  /* KaTeX styling */
+  .katex { font-size: 1em !important; color: var(--text) !important; }
+  .katex-display { overflow-x: auto; padding: 0.5rem 0; }
 
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: #f1f1f1; }
-::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #6366f1; }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 </style>
 """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════
-# CONFIG
-# ══════════════════════════════════════════════
-CREATOR_PASSWORD = st.secrets.get("CREATOR_PASSWORD", "somo2026")
-
-SYSTEM_PROMPT = """Sen Somo AI — o'zbek va rus tillarida gaplasha oladigan aqlli, madaniyatli va foydali yordamchisan.
-
-QOIDALAR:
-- Har doim hurmatli va madaniyatli bo'l
-- Haqorat, so'kinish yoki nojo'ya so'zlar HECH QACHON ishlatma
-- Agar foydalanuvchi haqorat qilsa, muloyimlik bilan murojaat qil
-- Aniq, qisqa va foydali javob ber
-- O'zbek yoki rus tilida so'rasalar — o'sha tilda javob ber"""
-
-CURRENT_FEATURES = """
-Somo AI hozirgi funksiyalari:
-- Cerebras AI (llama-3.3-70b / llama3.1-8b) bilan chat
-- Animatsiyali streaming javoblar
-- Model tanlash
-- Chat tarixi tozalash
-- Yaratuvchi paneli (parol himoyali)
-- Madaniyatli javob tizimi
-
-Texnologiya: Python + Streamlit + Cerebras API
-Auditoriya: O'zbek va rus tilida so'zlashuvchilar
-"""
-
-# ══════════════════════════════════════════════
-# CLIENT
-# ══════════════════════════════════════════════
-@st.cache_resource
-def get_client():
-    return Cerebras(api_key=st.secrets["CEREBRAS_API_KEY"])
-
+# ─── Groq Client ─────────────────────────────────────────────────────────────
 try:
-    client = get_client()
+    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except Exception:
-    st.error("❌ CEREBRAS_API_KEY topilmadi.")
-    st.code('CEREBRAS_API_KEY = "csk-xxxx"\nCREATOR_PASSWORD = "parolingiz"', language="toml")
+    st.error("❌ GROQ_API_KEY topilmadi. Streamlit Secrets ga qo'shing.")
     st.stop()
 
-def ask_ai(prompt, system=SYSTEM_PROMPT, max_tokens=2000):
-    for model in ["llama-3.3-70b", "llama3.1-8b"]:
-        try:
-            r = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": prompt}
-                ],
-                stream=False, max_tokens=max_tokens,
-            )
-            return r.choices[0].message.content
-        except Exception as e:
-            if "404" in str(e) or "not_found" in str(e):
-                continue
-            return f"Xatolik: {e}"
-    return "Model javob bermadi."
+# ─── Session State ────────────────────────────────────────────────────────────
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "input_key" not in st.session_state:
+    st.session_state.input_key = 0
+if "pending_input" not in st.session_state:
+    st.session_state.pending_input = ""
 
-# ══════════════════════════════════════════════
-# SUGGESTIONS
-# ══════════════════════════════════════════════
-def generate_suggestions(chat_history):
-    user_msgs = [m["content"] for m in chat_history if m["role"] == "user"]
-    ctx = ""
-    if user_msgs:
-        ctx = f"\nFoydalanuvchilar so'ragan mavzular:\n" + "\n".join([f"- {m[:80]}" for m in user_msgs[-8:]])
-
-    system = "Sen AI mahsulot strategist va dasturchi. Faqat JSON qaytarasan. Hech qanday izoh yozma."
-
-    prompt = f"""Somo AI chatbot uchun 6 ta ORIGINAL va JUDA QIZIQARLI yangi funksiya taklif qil.
-
-{CURRENT_FEATURES}{ctx}
-
-Talablar:
-- Faqat AI chatbot uchun mantiqli funksiyalar
-- Texnik jihatdan haqiqatan MUMKIN bo'lsin
-- O'zbek foydalanuvchilar uchun REAL FOYDA
-- Qiziqarli va zamonaviy g'oyalar
-
-JSON:
-[{{
-  "name": "qisqa nom",
-  "emoji": "emoji",
-  "category": "UX/AI/Mahsuldorlik/O'zbek/Integratsiya",
-  "description": "nima qiladi - 1 jumla",
-  "why_cool": "nima uchun juda foydali va qiziqarli",
-  "how_to_build": "qaysi API/kutubxona ishlatish",
-  "difficulty": "oson/o'rta/qiyin",
-  "priority": "yuqori/o'rta/past",
-  "wow_factor": 1-10
-}}]"""
-
-    raw = ask_ai(prompt, system, 2500)
-    import re
-    m = re.search(r'\[.*\]', raw, re.DOTALL)
-    if m:
-        try:
-            return json.loads(m.group())
-        except:
-            pass
-    return [
-        {"name": "Ovozli chat", "emoji": "🎙️", "category": "AI",
-         "description": "Mikrofondan gapiring, AI javob bersin",
-         "why_cool": "Qo'l bilan yozmasdan, tezroq va qulay",
-         "how_to_build": "Whisper API + Cerebras", "difficulty": "o'rta",
-         "priority": "yuqori", "wow_factor": 9},
-        {"name": "O'zbek grammatika", "emoji": "📝", "category": "O'zbek",
-         "description": "Yozgan matnidagi xatolarni topib tuzatadi",
-         "why_cool": "O'zbek tilida bunday vosita deyarli yo'q",
-         "how_to_build": "Cerebras + maxsus prompt", "difficulty": "oson",
-         "priority": "yuqori", "wow_factor": 8},
-    ]
-
-# ══════════════════════════════════════════════
-# SESSION
-# ══════════════════════════════════════════════
-for k, v in [("messages", []), ("is_creator", False),
-              ("suggestions", []), ("last_scan", None)]:
-    if k not in st.session_state:
-        st.session_state[k] = v
-
-# ══════════════════════════════════════════════
-# SIDEBAR
-# ══════════════════════════════════════════════
+# ─── Sidebar ─────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("""
-    <div style="text-align:center;padding:20px 0 10px;">
-        <div style="font-size:46px;margin-bottom:6px;">✨</div>
-        <h2 style="font-size:21px;font-weight:700;color:#4f46e5 !important;margin:0;">Somo AI</h2>
-        <p style="font-size:12px;color:#9ca3af !important;margin:4px 0 0;">Cerebras · Aqlli yordamchi</p>
+    <div class="sidebar-logo">
+      <div class="icon">✦</div>
+      <div>
+        <div class="brand">Somo AI</div>
+        <div class="version">v2.0 · Groq</div>
+      </div>
     </div>
-    <hr style="border:none;border-top:1px solid #eef0ff;margin:10px 0;">
     """, unsafe_allow_html=True)
 
-    model_name = st.selectbox("⚡ Model:", ["llama-3.3-70b", "llama3.1-8b"])
+    st.markdown('<div class="sidebar-section-title">Model</div>', unsafe_allow_html=True)
+    model = st.selectbox("Model", [
+        "llama-3.3-70b-versatile",
+        "llama3-70b-8192",
+        "llama3-8b-8192",
+        "mixtral-8x7b-32768",
+        "gemma2-9b-it",
+    ], label_visibility="collapsed")
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-section-title">Temperature</div>', unsafe_allow_html=True)
+    temperature = st.slider("Temp", 0.0, 1.5, 0.7, 0.05, label_visibility="collapsed")
 
-    if st.button("🗑️ Chatni tozalash", use_container_width=True):
+    st.markdown('<div class="sidebar-section-title">Max Tokens</div>', unsafe_allow_html=True)
+    max_tokens = st.slider("Tokens", 256, 4096, 1024, 128, label_visibility="collapsed")
+
+    if st.button("⟳  Clear chat", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 
-    st.markdown("<hr style='border:none;border-top:1px solid #eef0ff;margin:14px 0;'>",
-                unsafe_allow_html=True)
-
-    if not st.session_state.is_creator:
-        st.markdown("<p style='font-size:12px;color:#9ca3af !important;text-align:center;margin-bottom:8px;'>🔐 Yaratuvchi paneli</p>",
-                    unsafe_allow_html=True)
-        pw = st.text_input("Parol:", type="password", placeholder="••••••••",
-                            label_visibility="collapsed")
-        if st.button("Kirish", use_container_width=True):
-            if pw == CREATOR_PASSWORD:
-                st.session_state.is_creator = True
-                st.rerun()
-            else:
-                st.error("❌ Noto'g'ri parol")
-    else:
-        st.markdown("""
-        <div style="background:linear-gradient(135deg,#f0f4ff,#faf0ff);
-                    border:1px solid #c7d2fe;border-radius:12px;
-                    padding:10px;text-align:center;margin-bottom:10px;">
-            <span style="font-size:18px;">👑</span>
-            <p style="font-size:13px;font-weight:700;color:#4f46e5 !important;margin:4px 0 0;">
-                Yaratuvchi rejimi</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-        if st.button("🧠 Taklif yaratish", use_container_width=True, type="primary"):
-            with st.spinner("AI o'zi haqida o'ylamoqda..."):
-                st.session_state.suggestions = generate_suggestions(st.session_state.messages)
-                st.session_state.last_scan = datetime.now()
-            st.rerun()
-
-        if st.session_state.last_scan:
-            st.markdown(f"<p style='font-size:11px;color:#9ca3af !important;text-align:center;'>"
-                        f"🕐 {st.session_state.last_scan.strftime('%H:%M')}</p>",
-                        unsafe_allow_html=True)
-
-        if st.button("🚪 Chiqish", use_container_width=True):
-            st.session_state.is_creator = False
-            st.session_state.suggestions = []
-            st.rerun()
-
-    msg_count = len(st.session_state.messages)
+    msg_count = len([m for m in st.session_state.messages if m["role"] == "user"])
     st.markdown(f"""
-    <div style="margin-top:14px;background:#f8f8ff;border:1px solid #eef0ff;
-                border-radius:12px;padding:12px 14px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:13px;color:#6b7280 !important;">💬 Xabarlar</span>
-            <span style="font-size:15px;font-weight:700;color:#4f46e5 !important;">{msg_count}</span>
-        </div>
-    </div>
-    <div style="padding-top:20px;text-align:center;">
-        <p style="font-size:11px;color:#d1d5db !important;">© 2026 Somo AI</p>
+    <div class="sidebar-stats">
+      <div class="stat-row"><span>Messages</span><span>{msg_count}</span></div>
+      <div class="stat-row"><span>Model</span><span>{model.split('-')[0]}</span></div>
+      <div class="stat-row"><span>Temp</span><span>{temperature}</span></div>
     </div>
     """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════
-# MAIN
-# ══════════════════════════════════════════════
-st.markdown("""
-<div style="text-align:center;padding:28px 0 14px;">
-    <h1 style="font-size:30px;font-weight:700;color:#1e1e2e;letter-spacing:-0.8px;margin:0;">
-        ✨ Somo <span style="color:#6366f1;">AI</span>
-    </h1>
-    <p style="font-size:14px;color:#9ca3af;margin:6px 0 0;">
-        Savolingizni yozing — javob shu zahoti keladi
-    </p>
+# ─── System Prompt ────────────────────────────────────────────────────────────
+SYSTEM_PROMPT = """You are Somo AI, a highly intelligent, multilingual assistant. 
+
+LANGUAGE RULES:
+- Default language: English
+- CRITICAL: Detect the user's language and ALWAYS respond in the SAME language they used
+- If user writes in Uzbek → respond in Uzbek
+- If user writes in Russian → respond in Russian  
+- If user writes in Spanish → respond in Spanish
+- And so on for any language
+
+FORMATTING RULES:
+- Use emojis naturally and contextually throughout your responses 🎯
+- Use **bold** for emphasis and important terms
+- Use *italics* for nuance or examples
+- Use `code` for technical terms, commands, variable names
+- Use proper markdown: headers (##, ###), lists, tables, blockquotes
+- For math: ALWAYS use LaTeX notation wrapped in $ for inline ($x^2$) or $$ for display ($$E=mc^2$$)
+- Format mathematical expressions beautifully: fractions, powers, integrals, etc.
+- Use code blocks with language tags for programming
+
+PERSONALITY:
+- Friendly, precise, and genuinely helpful 🤝
+- Use natural conversational flow
+- Be enthusiastic about complex topics
+- Show personality with appropriate humor when suitable
+- Always structure longer answers with clear sections
+
+MATH/SCIENCE:
+- Always render math with LaTeX: $2^2 = 4$, $$\\int_0^\\infty e^{-x} dx = 1$$
+- Explain steps clearly
+- Use tables for comparisons"""
+
+# ─── Header ──────────────────────────────────────────────────────────────────
+model_short = model.replace("llama-3.3-", "").replace("-versatile", "").replace("llama3-", "").replace("-8192", "").replace("-32768", "").upper()
+st.markdown(f"""
+<div class="chat-header">
+  <div class="chat-header-left">
+    <div class="header-avatar">✦</div>
+    <div>
+      <div class="header-title">Somo AI</div>
+      <div class="header-subtitle">● ONLINE</div>
+    </div>
+  </div>
+  <div class="header-model-badge">{model_short}</div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Yaratuvchi takliflari ──
-if st.session_state.is_creator and st.session_state.suggestions:
-    diff_c = {"oson": "#10b981", "o'rta": "#f59e0b", "qiyin": "#ef4444"}
-    diff_i = {"oson": "🟢", "o'rta": "🟡", "qiyin": "🔴"}
-    pri_c  = {"yuqori": "#ef4444", "o'rta": "#f59e0b", "past": "#6b7280"}
-    cat_bg = {"UX": "#eff6ff", "AI": "#f5f0ff", "Mahsuldorlik": "#f0fdf4",
-              "O'zbek": "#fff7ed", "Integratsiya": "#fdf2f8"}
-    cat_bc = {"UX": "#bfdbfe", "AI": "#ddd6fe", "Mahsuldorlik": "#bbf7d0",
-              "O'zbek": "#fed7aa", "Integratsiya": "#fbcfe8"}
-
-    st.markdown(f"""
-    <div style="background:linear-gradient(135deg,#667eea18,#764ba218);
-                border:1.5px solid #c7d2fe;border-radius:20px;
-                padding:16px 20px;margin-bottom:20px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-size:22px;">🧠</span>
-            <div>
-                <p style="font-size:15px;font-weight:700;color:#4f46e5 !important;margin:0;">
-                    AI Taklif Tizimi — {len(st.session_state.suggestions)} ta g'oya</p>
-                <p style="font-size:12px;color:#9ca3af !important;margin:0;">
-                    {st.session_state.last_scan.strftime('%d.%m.%Y %H:%M') if st.session_state.last_scan else ''}</p>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    for i, s in enumerate(st.session_state.suggestions):
-        cat  = s.get("category", "AI")
-        diff = s.get("difficulty", "o'rta")
-        pri  = s.get("priority", "o'rta")
-        wow  = s.get("wow_factor", 7)
-        bg   = cat_bg.get(cat, "#f8f8ff")
-        bc   = cat_bc.get(cat, "#e0e0ff")
-        dc   = diff_c.get(diff, "#6b7280")
-        di   = diff_i.get(diff, "🔵")
-        pc   = pri_c.get(pri, "#6b7280")
-        stars = "⭐" * min(int(wow // 2), 5)
-
-        st.markdown(f"""
-        <div style="background:{bg};border:1.5px solid {bc};border-radius:16px;
-                    padding:16px 18px;margin:10px 0;position:relative;overflow:hidden;">
-            <div style="position:absolute;top:0;left:0;height:3px;
-                        width:{wow*10}%;background:linear-gradient(90deg,#6366f1,#a855f7);"></div>
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
-                <div style="display:flex;align-items:center;gap:8px;">
-                    <span style="font-size:24px;">{s.get('emoji','💡')}</span>
-                    <div>
-                        <p style="font-size:15px;font-weight:700;color:#1e1e2e !important;margin:0;">
-                            {s.get('name','')}</p>
-                        <span style="font-size:11px;color:{pc} !important;font-weight:600;
-                                     background:{pc}18;padding:1px 7px;border-radius:20px;">
-                            {pri.upper()}</span>
-                    </div>
-                </div>
-                <div style="text-align:right;">
-                    <p style="font-size:11px;color:#9ca3af !important;margin:0;">{cat}</p>
-                    <p style="font-size:13px;margin:2px 0 0;">{stars} {wow}/10</p>
-                </div>
-            </div>
-            <p style="font-size:14px;color:#374151 !important;margin:0 0 8px;line-height:1.6;">
-                {s.get('description','')}</p>
-            <div style="background:rgba(99,102,241,0.07);border-radius:10px;padding:10px 12px;margin:8px 0;">
-                <p style="font-size:12px;font-weight:700;color:#4f46e5 !important;margin:0 0 3px;">
-                    ✨ Nima uchun qiziqarli:</p>
-                <p style="font-size:13px;color:#374151 !important;margin:0;">{s.get('why_cool','')}</p>
-            </div>
-            <div style="background:rgba(16,185,129,0.07);border-radius:10px;padding:10px 12px;margin:8px 0;">
-                <p style="font-size:12px;font-weight:700;color:#059669 !important;margin:0 0 3px;">
-                    🔧 Qanday qurish:</p>
-                <p style="font-size:13px;color:#374151 !important;margin:0;">{s.get('how_to_build','')}</p>
-            </div>
-            <span style="font-size:11px;color:{dc} !important;background:{dc}15;
-                         padding:3px 10px;border-radius:20px;font-weight:600;">
-                {di} {diff.upper()}</span>
+# ─── Chat Display ─────────────────────────────────────────────────────────────
+chat_container = st.container()
+with chat_container:
+    if not st.session_state.messages:
+        st.markdown("""
+        <div class="welcome-screen">
+          <div class="welcome-glyph">✦</div>
+          <div class="welcome-title">Somo AI</div>
+          <div class="welcome-sub">Multilingual · Smart · Fast</div>
+          <div class="welcome-chips">
+            <div class="chip">🧮 Solve math problems</div>
+            <div class="chip">💬 Chat in any language</div>
+            <div class="chip">💻 Write & debug code</div>
+            <div class="chip">📊 Analyze data</div>
+            <div class="chip">✍️ Creative writing</div>
+          </div>
         </div>
         """, unsafe_allow_html=True)
+    else:
+        import datetime
+        for msg in st.session_state.messages:
+            role = msg["role"]
+            content = msg["content"]
+            ts = msg.get("time", "")
+            if role == "user":
+                st.markdown(f"""
+                <div class="msg-wrapper user">
+                  <div class="msg-avatar user">👤</div>
+                  <div class="msg-body">
+                    <div class="msg-name">You</div>
+                    <div class="msg-bubble user">{content}</div>
+                    <div class="msg-time">{ts}</div>
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="msg-wrapper ai">
+                  <div class="msg-avatar ai">✦</div>
+                  <div class="msg-body">
+                    <div class="msg-name">Somo AI</div>
+                    <div class="msg-bubble ai" id="msg-{len(st.session_state.messages)}">{content}</div>
+                    <div class="msg-time">{ts}</div>
+                  </div>
+                </div>
+                <script>
+                  if(typeof renderMathInElement !== 'undefined') {{
+                    renderMathInElement(document.body);
+                  }}
+                </script>
+                """, unsafe_allow_html=True)
 
-    c1, c2 = st.columns(2)
-    with c1:
-        st.download_button("📥 JSON", 
-            data=json.dumps(st.session_state.suggestions, ensure_ascii=False, indent=2),
-            file_name=f"somo_ideas_{datetime.now().strftime('%Y%m%d_%H%M')}.json",
-            mime="application/json", use_container_width=True)
-    with c2:
-        txt = f"SOMO AI — FUNKSIYA G'OYALAR\n{'='*40}\n{datetime.now().strftime('%d.%m.%Y %H:%M')}\n\n"
-        for i, s in enumerate(st.session_state.suggestions, 1):
-            txt += f"{i}. {s.get('emoji','')} {s.get('name','')}\n"
-            txt += f"   {s.get('description','')}\n"
-            txt += f"   ✨ {s.get('why_cool','')}\n"
-            txt += f"   🔧 {s.get('how_to_build','')}\n\n"
-        st.download_button("📄 TXT", data=txt.encode("utf-8"),
-            file_name=f"somo_ideas_{datetime.now().strftime('%Y%m%d_%H%M')}.txt",
-            mime="text/plain", use_container_width=True)
+# ─── Input Area ───────────────────────────────────────────────────────────────
+st.markdown('<div class="input-area">', unsafe_allow_html=True)
 
-    st.markdown("<hr style='border:none;border-top:1px solid #eef0ff;margin:16px 0;'>",
-                unsafe_allow_html=True)
+col1, col2 = st.columns([11, 1])
+with col1:
+    user_input = st.text_area(
+        "Message",
+        placeholder="Message Somo AI... (any language)",
+        key=f"input_{st.session_state.input_key}",
+        height=52,
+        label_visibility="collapsed"
+    )
+with col2:
+    send = st.button("↑", use_container_width=True)
 
-# ── Bo'sh chat kartalar ──
-if not st.session_state.messages:
-    st.markdown("""
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;
-                max-width:520px;margin:10px auto 24px;">
-        <div style="background:#fff;border:1px solid #eef0ff;border-radius:14px;padding:16px;
-                    box-shadow:0 2px 8px rgba(99,102,241,0.06);">
-            <span style="font-size:22px;">💡</span>
-            <p style="font-size:13px;font-weight:600;color:#1e1e2e;margin:8px 0 2px;">Savol bering</p>
-            <p style="font-size:12px;color:#9ca3af;margin:0;">Istalgan mavzu haqida</p>
+st.markdown('</div>', unsafe_allow_html=True)
+
+# ─── Handle Send ─────────────────────────────────────────────────────────────
+def get_time():
+    return time.strftime("%H:%M")
+
+def process_message(prompt):
+    import datetime
+
+    st.session_state.messages.append({
+        "role": "user",
+        "content": prompt,
+        "time": get_time()
+    })
+
+    messages_for_api = [{"role": "system", "content": SYSTEM_PROMPT}]
+    for m in st.session_state.messages:
+        messages_for_api.append({"role": m["role"], "content": m["content"]})
+
+    # Typing animation placeholder
+    typing_placeholder = st.empty()
+    typing_placeholder.markdown("""
+    <div class="msg-wrapper ai">
+      <div class="msg-avatar ai">✦</div>
+      <div class="msg-body">
+        <div class="msg-name">Somo AI</div>
+        <div class="msg-bubble ai">
+          <span class="typing-cursor"></span>
         </div>
-        <div style="background:#fff;border:1px solid #eef0ff;border-radius:14px;padding:16px;
-                    box-shadow:0 2px 8px rgba(99,102,241,0.06);">
-            <span style="font-size:22px;">✍️</span>
-            <p style="font-size:13px;font-weight:600;color:#1e1e2e;margin:8px 0 2px;">Matn yozdiring</p>
-            <p style="font-size:12px;color:#9ca3af;margin:0;">Maqola, xat, rezyume</p>
-        </div>
-        <div style="background:#fff;border:1px solid #eef0ff;border-radius:14px;padding:16px;
-                    box-shadow:0 2px 8px rgba(99,102,241,0.06);">
-            <span style="font-size:22px;">🔍</span>
-            <p style="font-size:13px;font-weight:600;color:#1e1e2e;margin:8px 0 2px;">Tushuntirish</p>
-            <p style="font-size:12px;color:#9ca3af;margin:0;">Murakkab mavzular</p>
-        </div>
-        <div style="background:#fff;border:1px solid #eef0ff;border-radius:14px;padding:16px;
-                    box-shadow:0 2px 8px rgba(99,102,241,0.06);">
-            <span style="font-size:22px;">💻</span>
-            <p style="font-size:13px;font-weight:600;color:#1e1e2e;margin:8px 0 2px;">Kod yozdiring</p>
-            <p style="font-size:12px;color:#9ca3af;margin:0;">Python, JS va boshqa</p>
-        </div>
+      </div>
     </div>
     """, unsafe_allow_html=True)
 
-# Xabarlar
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+    full_response = ""
+    try:
+        completion = client.chat.completions.create(
+            model=model,
+            messages=messages_for_api,
+            stream=True,
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        for chunk in completion:
+            delta = chunk.choices[0].delta.content or ""
+            full_response += delta
+            # Animated typing display
+            typing_placeholder.markdown(f"""
+            <div class="msg-wrapper ai">
+              <div class="msg-avatar ai">✦</div>
+              <div class="msg-body">
+                <div class="msg-name">Somo AI</div>
+                <div class="msg-bubble ai">{full_response}<span class="typing-cursor"></span></div>
+              </div>
+            </div>
+            <script>
+              if(typeof renderMathInElement !== 'undefined') {{
+                renderMathInElement(document.body);
+              }}
+            </script>
+            """, unsafe_allow_html=True)
 
-# ── Chat input ──
-if prompt := st.chat_input("Somo AI ga xabar yuboring..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
+        # Final render without cursor
+        typing_placeholder.empty()
 
-    with st.chat_message("assistant"):
-        placeholder = st.empty()
-        full_response = ""
-        models_to_try = [model_name]
-        if model_name != "llama3.1-8b":
-            models_to_try.append("llama3.1-8b")
+    except Exception as e:
+        err = str(e)
+        if "rate_limit" in err.lower():
+            full_response = "⏳ Too many requests. Please wait a moment and try again."
+        elif "model" in err.lower():
+            full_response = f"❌ Model not found: `{model}`. Please select a different model."
+        elif "auth" in err.lower() or "api_key" in err.lower():
+            full_response = "❌ Invalid API key. Please check your GROQ_API_KEY."
+        else:
+            full_response = f"❌ Error: {err}"
+        typing_placeholder.empty()
 
-        for try_model in models_to_try:
-            try:
-                stream = client.chat.completions.create(
-                    model=try_model,
-                    messages=[
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        *[{"role": m["role"], "content": m["content"]}
-                          for m in st.session_state.messages]
-                    ],
-                    stream=True,
-                    max_tokens=1024,
-                )
-                for chunk in stream:
-                    delta = chunk.choices[0].delta.content or ""
-                    for char in delta:
-                        full_response += char
-                        placeholder.markdown(full_response + "▌")
-                        time.sleep(0.007)
-                placeholder.markdown(full_response)
-                break
-            except Exception as e:
-                err = str(e)
-                if "404" in err or "not_found" in err:
-                    continue
-                full_response = f"❌ Xatolik: {err}"
-                placeholder.markdown(full_response)
-                break
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": full_response,
+        "time": get_time()
+    })
 
-        if not full_response:
-            full_response = "❌ Model javob bermadi."
-            placeholder.markdown(full_response)
-
-    st.session_state.messages.append({"role": "assistant", "content": full_response})
+if send and user_input and user_input.strip():
+    prompt = user_input.strip()
+    st.session_state.input_key += 1
+    process_message(prompt)
+    st.rerun()
