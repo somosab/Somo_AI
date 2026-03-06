@@ -86,6 +86,31 @@ st.markdown("""
   .block-container,
   [data-testid="stMainBlockContainer"] { padding: 0 !important; max-width: 100% !important; }
 
+  /* ══ SIDEBAR TOGGLE (>>) BUTTON ══ */
+  [data-testid="collapsedControl"] {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 28px !important;
+    height: 28px !important;
+    background: linear-gradient(135deg, var(--amber), var(--orange)) !important;
+    border-radius: 8px !important;
+    border: none !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 8px rgba(245,158,11,0.35) !important;
+    position: fixed !important;
+    top: 14px !important;
+    left: 10px !important;
+    z-index: 9999 !important;
+    transition: opacity 0.2s !important;
+  }
+  [data-testid="collapsedControl"]:hover { opacity: 0.85 !important; }
+  [data-testid="collapsedControl"] svg {
+    fill: white !important;
+    width: 16px !important;
+    height: 16px !important;
+  }
+
   /* ══ SIDEBAR ══ */
   [data-testid="stSidebar"] {
     background: var(--warm) !important;
@@ -464,8 +489,7 @@ st.markdown("""
 
   /* ══ MOBILE ══ */
   @media (max-width: 768px) {
-    [data-testid="stSidebar"],
-    [data-testid="collapsedControl"] { display: none !important; }
+    [data-testid="stSidebar"] { display: none !important; }
     [data-testid="stMain"], .main,
     [data-testid="stAppViewContainer"] { width: 100% !important; }
     .block-container, [data-testid="stMainBlockContainer"] {
