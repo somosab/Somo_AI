@@ -90,13 +90,61 @@ st.markdown("""
   [data-testid="stSidebar"] {
     background: var(--warm) !important;
     border-right: 2px solid var(--border) !important;
-    min-width: 270px !important; max-width: 290px !important;
+    min-width: 270px !important;
+    max-width: 290px !important;
   }
-  [data-testid="stSidebar"] > div { padding: 1.5rem 1.2rem !important; }
-  [data-testid="stSidebarContent"] { background: var(--warm) !important; }
+  [data-testid="stSidebar"] > div,
+  [data-testid="stSidebar"] section,
+  [data-testid="stSidebarContent"] {
+    background: var(--warm) !important;
+    padding: 1.4rem 1.1rem !important;
+  }
+
+  /* All text inside sidebar */
+  [data-testid="stSidebar"] *,
   [data-testid="stSidebar"] p,
   [data-testid="stSidebar"] span,
-  [data-testid="stSidebar"] div { color: var(--text) !important; font-family: var(--fb) !important; }
+  [data-testid="stSidebar"] div,
+  [data-testid="stSidebar"] label {
+    color: var(--text) !important;
+    font-family: var(--fb) !important;
+  }
+
+  /* Sidebar buttons — mode switchers */
+  [data-testid="stSidebar"] button {
+    background: var(--cream) !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: 10px !important;
+    font-family: var(--fb) !important;
+    font-size: 0.82rem !important;
+    font-weight: 500 !important;
+    color: var(--text) !important;
+    text-align: left !important;
+    padding: 0.55rem 0.9rem !important;
+    transition: all 0.18s !important;
+    width: 100% !important;
+    margin-bottom: 0.3rem !important;
+  }
+  [data-testid="stSidebar"] button:hover {
+    background: var(--card) !important;
+    border-color: var(--amber) !important;
+    color: var(--orange) !important;
+    box-shadow: 0 2px 8px rgba(245,158,11,0.18) !important;
+  }
+  [data-testid="stSidebar"] button p {
+    color: inherit !important;
+    font-family: var(--fb) !important;
+    font-size: 0.82rem !important;
+    margin: 0 !important;
+  }
+
+  /* Active button highlight */
+  [data-testid="stSidebar"] button[kind="secondary"],
+  [data-testid="stSidebar"] button[data-testid="baseButton-secondary"] {
+    background: var(--cream) !important;
+  }
+
+  /* Selectbox */
   [data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div {
     background: var(--cream) !important;
     border: 1.5px solid var(--border) !important;
@@ -105,17 +153,24 @@ st.markdown("""
     font-size: 0.8rem !important;
     font-family: var(--fb) !important;
   }
+  [data-testid="stSidebar"] [data-testid="stSelectbox"] svg { fill: var(--muted) !important; }
+
+  /* Slider */
   [data-testid="stSidebar"] [data-testid="stSlider"] label { display: none !important; }
-  [data-testid="stSidebar"] button {
-    background: var(--cream) !important;
-    border: 1.5px solid var(--border) !important;
-    color: var(--muted) !important;
-    border-radius: 10px !important;
-    font-family: var(--fb) !important;
-    font-size: 0.8rem !important;
-    transition: all 0.2s !important;
+  [data-testid="stSidebar"] [data-testid="stSlider"] [data-baseweb="slider"] [role="slider"] {
+    background: var(--amber) !important;
   }
-  [data-testid="stSidebar"] button:hover {
+  [data-testid="stSidebar"] [data-testid="stSlider"] div[data-testid="stThumbValue"] {
+    color: var(--orange) !important;
+    font-size: 0.72rem !important;
+  }
+
+  /* Clear button — special red style */
+  [data-testid="stSidebar"] button[key="clear_btn"],
+  [data-testid="stSidebar"] div:last-child button {
+    color: var(--muted) !important;
+  }
+  [data-testid="stSidebar"] div:last-child button:hover {
     border-color: var(--rose) !important;
     color: var(--rose) !important;
     background: rgba(225,29,72,0.06) !important;
