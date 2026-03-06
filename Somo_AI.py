@@ -39,14 +39,14 @@ def md_to_html(text):
 st.set_page_config(
     page_title="EduCreate AI",
     page_icon="✏️",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="centered",
+    initial_sidebar_state="collapsed"
 )
 
 # ─── CSS ─────────────────────────────────────────────────────────────────────
 st.markdown("""
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
@@ -56,402 +56,358 @@ st.markdown("""
 
 <style>
   :root {
-    --cream:   #fdf6e3;
-    --warm:    #f5ead0;
-    --card:    #fffef8;
-    --border:  #e8dfc8;
+    --ink:     #1a1208;
+    --paper:   #fef9f0;
+    --warm:    #fdf3dc;
+    --card:    #fffcf5;
+    --border:  #ecdfc4;
     --amber:   #f59e0b;
     --orange:  #ea580c;
-    --forest:  #15803d;
-    --sky:     #0369a1;
+    --muted:   #8a7455;
+    --light:   #c4a97a;
+    --green:   #15803d;
     --rose:    #e11d48;
-    --text:    #1c1408;
-    --muted:   #7c6d52;
-    --light:   #a89878;
     --fh: 'Fraunces', serif;
-    --fb: 'DM Sans', sans-serif;
+    --fb: 'Plus Jakarta Sans', sans-serif;
   }
 
-  html, body { background: var(--cream) !important; margin: 0; padding: 0; }
+  html, body {
+    background: var(--paper) !important;
+    margin: 0; padding: 0;
+    -webkit-font-smoothing: antialiased;
+  }
   * { box-sizing: border-box; }
 
   [data-testid="stAppViewContainer"],
-  [data-testid="stMain"], .main { background: var(--cream) !important; }
+  [data-testid="stMain"], .main {
+    background: var(--paper) !important;
+  }
 
+  /* Hide ALL Streamlit chrome */
   #MainMenu, footer, header,
   [data-testid="stToolbar"],
   [data-testid="stDecoration"],
-  [data-testid="stStatusWidget"] { display: none !important; }
+  [data-testid="stStatusWidget"],
+  [data-testid="stSidebar"],
+  [data-testid="collapsedControl"] { display: none !important; }
 
   .block-container,
-  [data-testid="stMainBlockContainer"] { padding: 0 !important; max-width: 100% !important; }
-
-  /* ══ SIDEBAR TOGGLE (>>) BUTTON ══ */
-  [data-testid="collapsedControl"] {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 28px !important;
-    height: 28px !important;
-    background: linear-gradient(135deg, var(--amber), var(--orange)) !important;
-    border-radius: 8px !important;
-    border: none !important;
-    cursor: pointer !important;
-    box-shadow: 0 2px 8px rgba(245,158,11,0.35) !important;
-    position: fixed !important;
-    top: 14px !important;
-    left: 10px !important;
-    z-index: 9999 !important;
-    transition: opacity 0.2s !important;
-  }
-  [data-testid="collapsedControl"]:hover { opacity: 0.85 !important; }
-  [data-testid="collapsedControl"] svg {
-    fill: white !important;
-    width: 16px !important;
-    height: 16px !important;
+  [data-testid="stMainBlockContainer"] {
+    padding: 0 !important;
+    max-width: 100% !important;
   }
 
-  /* ══ SIDEBAR ══ */
-  [data-testid="stSidebar"] {
-    background: var(--warm) !important;
-    border-right: 2px solid var(--border) !important;
-    min-width: 270px !important;
-    max-width: 290px !important;
-  }
-  [data-testid="stSidebar"] > div,
-  [data-testid="stSidebar"] section,
-  [data-testid="stSidebarContent"] {
-    background: var(--warm) !important;
-    padding: 1.4rem 1.1rem !important;
-  }
-
-  /* All text inside sidebar */
-  [data-testid="stSidebar"] *,
-  [data-testid="stSidebar"] p,
-  [data-testid="stSidebar"] span,
-  [data-testid="stSidebar"] div,
-  [data-testid="stSidebar"] label {
-    color: var(--text) !important;
-    font-family: var(--fb) !important;
-  }
-
-  /* Sidebar buttons — mode switchers */
-  [data-testid="stSidebar"] button {
-    background: var(--cream) !important;
-    border: 1.5px solid var(--border) !important;
-    border-radius: 10px !important;
-    font-family: var(--fb) !important;
-    font-size: 0.82rem !important;
-    font-weight: 500 !important;
-    color: var(--text) !important;
-    text-align: left !important;
-    padding: 0.55rem 0.9rem !important;
-    transition: all 0.18s !important;
-    width: 100% !important;
-    margin-bottom: 0.3rem !important;
-  }
-  [data-testid="stSidebar"] button:hover {
-    background: var(--card) !important;
-    border-color: var(--amber) !important;
-    color: var(--orange) !important;
-    box-shadow: 0 2px 8px rgba(245,158,11,0.18) !important;
-  }
-  [data-testid="stSidebar"] button p {
-    color: inherit !important;
-    font-family: var(--fb) !important;
-    font-size: 0.82rem !important;
-    margin: 0 !important;
-  }
-
-  /* Active button highlight */
-  [data-testid="stSidebar"] button[kind="secondary"],
-  [data-testid="stSidebar"] button[data-testid="baseButton-secondary"] {
-    background: var(--cream) !important;
-  }
-
-  /* Selectbox */
-  [data-testid="stSidebar"] [data-testid="stSelectbox"] > div > div {
-    background: var(--cream) !important;
-    border: 1.5px solid var(--border) !important;
-    border-radius: 10px !important;
-    color: var(--text) !important;
-    font-size: 0.8rem !important;
-    font-family: var(--fb) !important;
-  }
-  [data-testid="stSidebar"] [data-testid="stSelectbox"] svg { fill: var(--muted) !important; }
-
-  /* Slider */
-  [data-testid="stSidebar"] [data-testid="stSlider"] label { display: none !important; }
-  [data-testid="stSidebar"] [data-testid="stSlider"] [data-baseweb="slider"] [role="slider"] {
-    background: var(--amber) !important;
-  }
-  [data-testid="stSidebar"] [data-testid="stSlider"] div[data-testid="stThumbValue"] {
-    color: var(--orange) !important;
-    font-size: 0.72rem !important;
-  }
-
-  /* Clear button — special red style */
-  [data-testid="stSidebar"] button[key="clear_btn"],
-  [data-testid="stSidebar"] div:last-child button {
-    color: var(--muted) !important;
-  }
-  [data-testid="stSidebar"] div:last-child button:hover {
-    border-color: var(--rose) !important;
-    color: var(--rose) !important;
-    background: rgba(225,29,72,0.06) !important;
-  }
-
-  /* Sidebar custom */
-  .sb-logo {
-    display: flex; align-items: center; gap: 10px;
-    padding-bottom: 1.2rem; margin-bottom: 1.4rem;
-    border-bottom: 2px dashed var(--border);
-  }
-  .sb-icon {
-    width: 40px; height: 40px;
-    background: linear-gradient(135deg, var(--amber), var(--orange));
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px;
-    box-shadow: 0 3px 10px rgba(245,158,11,0.35);
-  }
-  .sb-brand {
-    font-family: var(--fh) !important;
-    font-size: 1.25rem; font-weight: 900;
-    color: var(--text) !important;
-    line-height: 1.1;
-  }
-  .sb-brand span { color: var(--orange); }
-  .sb-tagline { font-size: 0.6rem; color: var(--light) !important; letter-spacing: 1.5px; text-transform: uppercase; font-family: var(--fb) !important; }
-
-  .sb-sec {
-    font-family: var(--fb) !important;
-    font-size: 0.6rem; letter-spacing: 2.5px; text-transform: uppercase;
-    color: var(--light) !important; margin: 1.2rem 0 0.5rem;
-  }
-
-  /* Mode cards in sidebar */
-  .mode-card {
-    display: flex; align-items: center; gap: 10px;
-    padding: 0.6rem 0.8rem;
-    border-radius: 10px;
-    border: 1.5px solid transparent;
-    cursor: pointer;
-    transition: all 0.18s;
-    margin-bottom: 0.4rem;
-    background: transparent;
-  }
-  .mode-card:hover { background: var(--cream); border-color: var(--border); }
-  .mode-card.active { background: var(--card); border-color: var(--amber); box-shadow: 0 2px 8px rgba(245,158,11,0.18); }
-  .mode-icon { font-size: 1.2rem; }
-  .mode-label { font-family: var(--fb) !important; font-size: 0.8rem; font-weight: 500; color: var(--text) !important; }
-  .mode-desc  { font-family: var(--fb) !important; font-size: 0.65rem; color: var(--light) !important; }
-
-  .sb-divider { height: 1px; background: var(--border); margin: 1.2rem 0; border: none; }
-
-  .sb-stats { padding-top: 0.5rem; }
-  .sb-row { display: flex; justify-content: space-between; font-size: 0.7rem; margin-bottom: 0.4rem; font-family: var(--fb) !important; }
-  .sb-row .k { color: var(--light) !important; }
-  .sb-row .v { color: var(--text) !important; font-weight: 600; }
-
-  /* ══ HEADER ══ */
-  .chat-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0.9rem 2rem;
-    border-bottom: 2px solid var(--border);
-    background: rgba(253,246,227,0.96);
+  /* ══════════════════════════════════
+     TOP NAV BAR
+  ══════════════════════════════════ */
+  .topnav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.8rem;
+    background: rgba(254,249,240,0.96);
+    border-bottom: 1.5px solid var(--border);
     position: sticky; top: 0; z-index: 999;
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(16px);
   }
-  .chat-header-left { display: flex; align-items: center; gap: 12px; }
-  .h-avatar {
-    width: 38px; height: 38px;
+  .nav-brand {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .nav-logo {
+    width: 36px; height: 36px;
     background: linear-gradient(135deg, var(--amber), var(--orange));
-    border-radius: 11px;
+    border-radius: 10px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 18px; flex-shrink: 0;
-    box-shadow: 0 3px 12px rgba(245,158,11,0.3);
+    font-size: 17px;
+    box-shadow: 0 3px 10px rgba(245,158,11,0.3);
+    flex-shrink: 0;
   }
-  .h-title {
+  .nav-title {
     font-family: var(--fh) !important;
-    font-size: 1.1rem; font-weight: 900;
-    color: var(--text);
+    font-size: 1.15rem; font-weight: 900;
+    color: var(--ink);
+    line-height: 1;
   }
-  .h-title span { color: var(--orange); }
-  .h-mode {
-    font-size: 0.62rem; color: var(--muted);
-    letter-spacing: 1px; margin-top: 1px;
+  .nav-title em { color: var(--orange); font-style: italic; }
+  .nav-sub {
     font-family: var(--fb) !important;
+    font-size: 0.6rem; color: var(--light);
+    letter-spacing: 1.5px; text-transform: uppercase;
+    margin-top: 2px;
   }
-  .h-right { display: flex; align-items: center; gap: 10px; }
-  .h-badge {
-    background: var(--warm); border: 1.5px solid var(--border);
-    border-radius: 20px; padding: 0.28rem 0.75rem;
-    font-size: 0.62rem; color: var(--muted);
-    letter-spacing: 1px; font-family: var(--fb) !important;
+  .nav-right {
+    display: flex; align-items: center; gap: 8px;
   }
-  .h-lang-badge {
-    background: linear-gradient(135deg, var(--forest), #16a34a);
-    border-radius: 20px; padding: 0.28rem 0.75rem;
-    font-size: 0.62rem; color: white;
-    letter-spacing: 1px; font-family: var(--fb) !important;
+  .nav-mode-pill {
+    background: var(--warm);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 0.25rem 0.75rem;
+    font-family: var(--fb) !important;
+    font-size: 0.65rem; color: var(--muted);
+    display: flex; align-items: center; gap: 5px;
+  }
+  .nav-lang-pill {
+    background: linear-gradient(135deg, var(--green), #16a34a);
+    border-radius: 20px;
+    padding: 0.25rem 0.65rem;
+    font-family: var(--fb) !important;
+    font-size: 0.65rem; color: white;
   }
 
-  /* ══ MESSAGES ══ */
-  .msgs-area { padding: 2rem 2rem 1rem; }
+  /* ══════════════════════════════════
+     MODE SELECTOR BAR
+  ══════════════════════════════════ */
+  .mode-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.8rem;
+    overflow-x: auto;
+    background: var(--warm);
+    border-bottom: 1.5px solid var(--border);
+    scrollbar-width: none;
+  }
+  .mode-bar::-webkit-scrollbar { display: none; }
+  .mode-pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 0.4rem 0.9rem;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    font-family: var(--fb) !important;
+    font-size: 0.72rem; font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.18s;
+    flex-shrink: 0;
+  }
+  .mode-pill:hover {
+    border-color: var(--amber);
+    color: var(--orange);
+    background: #fff8ee;
+  }
+  .mode-pill.active {
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 3px 10px rgba(245,158,11,0.3);
+    font-weight: 600;
+  }
 
-  /* Welcome */
+  /* ══════════════════════════════════
+     CHAT AREA
+  ══════════════════════════════════ */
+  .chat-wrap {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 6rem;
+    min-height: calc(100vh - 180px);
+  }
+
+  /* ── WELCOME SCREEN ── */
   .welcome {
     display: flex; flex-direction: column;
     align-items: center; text-align: center;
-    padding: 3rem 2rem;
+    padding: 2.5rem 0 3rem;
   }
-  .welcome-badge {
+  .w-badge {
+    display: inline-flex; align-items: center; gap: 6px;
     background: linear-gradient(135deg, var(--amber), var(--orange));
-    color: white; font-family: var(--fb) !important;
-    font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase;
-    padding: 0.3rem 1rem; border-radius: 20px; margin-bottom: 1.2rem;
-    box-shadow: 0 3px 12px rgba(245,158,11,0.3);
-  }
-  .w-title {
-    font-family: var(--fh) !important;
-    font-size: 2.6rem; font-weight: 900;
-    color: var(--text); line-height: 1.1;
-    margin-bottom: 0.6rem;
-  }
-  .w-title span { color: var(--orange); font-style: italic; }
-  .w-sub {
-    color: var(--muted); font-size: 0.85rem;
-    max-width: 420px; line-height: 1.6; margin-bottom: 2.5rem;
+    color: white; border-radius: 30px;
+    padding: 0.35rem 1.1rem;
     font-family: var(--fb) !important;
+    font-size: 0.65rem; font-weight: 600;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 14px rgba(245,158,11,0.35);
+    animation: badgePop 0.6s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes badgePop { from{opacity:0;transform:scale(0.7)} to{opacity:1;transform:scale(1)} }
+
+  .w-headline {
+    font-family: var(--fh) !important;
+    font-size: clamp(2.2rem, 6vw, 3.5rem);
+    font-weight: 900;
+    color: var(--ink);
+    line-height: 1.1;
+    margin-bottom: 0.3rem;
+    animation: slideUp 0.5s ease-out 0.1s both;
+  }
+  .w-headline em {
+    color: var(--orange);
+    font-style: italic;
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  @keyframes slideUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+  .w-sub {
+    font-family: var(--fb) !important;
+    font-size: clamp(0.82rem, 2.2vw, 0.95rem);
+    color: var(--muted); line-height: 1.7;
+    max-width: 480px; margin: 0.8rem auto 2.5rem;
+    animation: slideUp 0.5s ease-out 0.2s both;
   }
 
-  /* Mode grid */
+  /* Mode cards grid */
   .mode-grid {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 0.8rem; width: 100%; max-width: 600px; margin-bottom: 2rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    width: 100%; max-width: 580px;
+    margin-bottom: 2rem;
+    animation: slideUp 0.5s ease-out 0.3s both;
   }
-  .mode-tile {
+  .m-card {
     background: var(--card);
     border: 1.5px solid var(--border);
-    border-radius: 14px; padding: 1.1rem 0.8rem;
-    text-align: center; cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    border-radius: 16px;
+    padding: 1.1rem 0.7rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    position: relative; overflow: hidden;
   }
-  .mode-tile:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.1);
-    border-color: var(--amber);
+  .m-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(245,158,11,0.06), rgba(234,88,12,0.06));
+    opacity: 0; transition: opacity 0.2s;
   }
-  .mode-tile .t-icon { font-size: 1.6rem; margin-bottom: 0.4rem; }
-  .mode-tile .t-name {
+  .m-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.1); border-color: var(--amber); }
+  .m-card:hover::before { opacity: 1; }
+  .m-card .mc-icon { font-size: 1.7rem; margin-bottom: 0.5rem; display: block; }
+  .m-card .mc-name {
     font-family: var(--fb) !important;
-    font-size: 0.75rem; font-weight: 600;
-    color: var(--text);
+    font-size: 0.75rem; font-weight: 700;
+    color: var(--ink); margin-bottom: 0.2rem;
   }
-  .mode-tile .t-hint {
+  .m-card .mc-hint {
     font-family: var(--fb) !important;
-    font-size: 0.62rem; color: var(--light); margin-top: 0.2rem;
+    font-size: 0.62rem; color: var(--light);
   }
 
-  /* Example prompts */
-  .ex-prompts { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+  /* Example chips */
+  .ex-row {
+    display: flex; gap: 0.5rem; flex-wrap: wrap;
+    justify-content: center;
+    animation: slideUp 0.5s ease-out 0.4s both;
+  }
   .ex-chip {
-    background: var(--warm); border: 1.5px solid var(--border);
-    border-radius: 20px; padding: 0.4rem 0.9rem;
-    font-size: 0.7rem; color: var(--muted);
+    background: var(--warm);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 0.38rem 0.85rem;
     font-family: var(--fb) !important;
+    font-size: 0.7rem; color: var(--muted);
     cursor: pointer; transition: all 0.15s;
   }
-  .ex-chip:hover { border-color: var(--amber); color: var(--orange); }
+  .ex-chip:hover { border-color: var(--amber); color: var(--orange); background: #fff8ee; }
 
-  /* Messages */
+  /* ── MESSAGES ── */
   .msg-row {
-    display: flex; gap: 12px; margin-bottom: 1.5rem;
-    animation: fadeUp 0.25s ease-out;
+    display: flex; gap: 11px; margin-bottom: 1.4rem;
+    animation: msgIn 0.3s cubic-bezier(0.34,1.2,0.64,1);
   }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes msgIn { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
   .msg-row.user { flex-direction: row-reverse; }
 
   .m-av {
-    width: 34px; height: 34px; min-width: 34px;
+    width: 32px; height: 32px; min-width: 32px;
     border-radius: 10px; display: flex;
     align-items: center; justify-content: center;
-    font-size: 15px; flex-shrink: 0; align-self: flex-start;
+    font-size: 14px; flex-shrink: 0;
+    align-self: flex-start; margin-top: 2px;
   }
-  .m-av.user { background: linear-gradient(135deg, var(--sky), #0ea5e9); }
-  .m-av.ai   { background: linear-gradient(135deg, var(--amber), var(--orange)); box-shadow: 0 2px 8px rgba(245,158,11,0.3); }
+  .m-av.user {
+    background: linear-gradient(135deg, #3b82f6, #6366f1);
+    box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+  }
+  .m-av.ai {
+    background: linear-gradient(135deg, var(--amber), var(--orange));
+    box-shadow: 0 2px 8px rgba(245,158,11,0.3);
+  }
 
-  .m-body { max-width: 72%; }
+  .m-body { max-width: 78%; }
   .m-name {
-    font-size: 0.62rem; color: var(--light);
-    margin-bottom: 0.3rem; letter-spacing: 1px;
-    text-transform: uppercase; font-family: var(--fb) !important;
+    font-family: var(--fb) !important;
+    font-size: 0.6rem; color: var(--light);
+    margin-bottom: 0.28rem; letter-spacing: 1px; text-transform: uppercase;
   }
   .msg-row.user .m-name { text-align: right; }
 
   .m-bubble {
-    padding: 0.9rem 1.15rem; border-radius: 14px;
-    font-size: 0.85rem; line-height: 1.75;
-    color: var(--text); word-break: break-word;
+    padding: 0.85rem 1.1rem;
+    border-radius: 14px;
     font-family: var(--fb) !important;
+    font-size: 0.875rem; line-height: 1.75;
+    color: var(--ink); word-break: break-word;
   }
   .m-bubble.user {
-    background: #dbeafe;
-    border: 1.5px solid #bfdbfe;
+    background: linear-gradient(135deg, #eff6ff, #eef2ff);
+    border: 1.5px solid #c7d2fe;
     border-top-right-radius: 4px;
   }
   .m-bubble.ai {
     background: var(--card);
     border: 1.5px solid var(--border);
     border-top-left-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
   }
+
+  /* Bubble content */
   .m-bubble strong { color: var(--orange); font-weight: 700; }
-  .m-bubble em { color: var(--muted); font-style: italic; }
+  .m-bubble em { color: var(--muted); }
   .m-bubble h1,.m-bubble h2,.m-bubble h3 {
     font-family: var(--fh) !important;
-    color: var(--text); margin: 0.8rem 0 0.3rem;
+    color: var(--ink); margin: 0.8rem 0 0.3rem; font-weight: 700;
   }
   .m-bubble code {
     background: rgba(245,158,11,0.1);
-    border: 1px solid rgba(245,158,11,0.25);
-    padding: 0.1rem 0.4rem; border-radius: 5px;
+    border: 1px solid rgba(245,158,11,0.22);
+    padding: 0.1rem 0.38rem; border-radius: 5px;
     font-size: 0.8rem; color: var(--orange);
-    font-family: monospace !important;
+    font-family: 'Courier New', monospace !important;
   }
   .m-bubble pre {
     background: var(--warm); border: 1.5px solid var(--border);
-    border-radius: 10px; padding: 1rem; overflow-x: auto; margin: 0.6rem 0;
+    border-radius: 10px; padding: 0.9rem; overflow-x: auto; margin: 0.6rem 0;
   }
-  .m-bubble pre code { background:none; border:none; padding:0; color:var(--forest); font-size:0.78rem; }
+  .m-bubble pre code { background:none; border:none; padding:0; color: var(--green); font-size:0.78rem; }
   .m-bubble ul,.m-bubble ol { padding-left: 1.2rem; margin: 0.35rem 0; }
-  .m-bubble li { margin-bottom: 0.25rem; }
+  .m-bubble li { margin-bottom: 0.22rem; }
   .m-bubble blockquote {
-    border-left: 3px solid var(--amber); padding-left: 0.9rem;
+    border-left: 3px solid var(--amber);
+    background: rgba(245,158,11,0.06);
+    padding: 0.5rem 0.9rem; border-radius: 0 8px 8px 0;
     color: var(--muted); margin: 0.5rem 0; font-style: italic;
-    background: rgba(245,158,11,0.05); border-radius: 0 8px 8px 0; padding: 0.5rem 0.9rem;
   }
   .m-bubble table { border-collapse: collapse; width: 100%; margin: 0.6rem 0; font-size: 0.8rem; }
   .m-bubble th {
-    background: var(--warm); padding: 0.45rem 0.75rem;
+    background: var(--warm); padding: 0.4rem 0.7rem;
     border: 1.5px solid var(--border); color: var(--orange); font-weight: 700;
   }
-  .m-bubble td { padding: 0.4rem 0.75rem; border: 1px solid var(--border); }
+  .m-bubble td { padding: 0.35rem 0.7rem; border: 1px solid var(--border); }
   .m-bubble tr:nth-child(even) { background: rgba(0,0,0,0.02); }
 
-  .m-time { font-size: 0.58rem; color: var(--light); margin-top: 0.3rem; opacity: 0.7; font-family: var(--fb) !important; }
-  .msg-row.user .m-time { text-align: right; }
-
-  /* Mode tag on bubble */
-  .m-mode-tag {
+  /* Mode tag */
+  .m-tag {
     display: inline-block;
+    font-family: var(--fb) !important;
     font-size: 0.58rem; letter-spacing: 1.5px; text-transform: uppercase;
     background: linear-gradient(135deg, var(--amber), var(--orange));
-    color: white; padding: 0.15rem 0.5rem; border-radius: 10px;
-    margin-bottom: 0.4rem; font-family: var(--fb) !important;
+    color: white; padding: 0.15rem 0.55rem; border-radius: 10px;
+    margin-bottom: 0.45rem; font-weight: 600;
   }
+  .m-time {
+    font-family: var(--fb) !important;
+    font-size: 0.58rem; color: var(--light);
+    margin-top: 0.28rem; opacity: 0.7;
+  }
+  .msg-row.user .m-time { text-align: right; }
 
   /* Typing cursor */
   .t-cursor {
@@ -462,104 +418,153 @@ st.markdown("""
   }
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
-  /* ══ CHAT INPUT ══ */
+  /* ══════════════════════════════════
+     SETTINGS PANEL (modal)
+  ══════════════════════════════════ */
+  .settings-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(26,18,8,0.4);
+    backdrop-filter: blur(4px);
+    z-index: 2000;
+  }
+  .settings-overlay.open { display: block; }
+  .settings-panel {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.92);
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 1.8rem;
+    width: min(420px, 92vw);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    z-index: 2001;
+    opacity: 0; pointer-events: none;
+    transition: all 0.25s cubic-bezier(0.34,1.4,0.64,1);
+  }
+  .settings-panel.open {
+    opacity: 1; pointer-events: all;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  .sp-title {
+    font-family: var(--fh) !important;
+    font-size: 1.3rem; font-weight: 900;
+    color: var(--ink); margin-bottom: 1.2rem;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .sp-close {
+    width: 28px; height: 28px;
+    background: var(--warm); border: 1.5px solid var(--border);
+    border-radius: 8px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: all 0.15s;
+  }
+  .sp-close:hover { background: var(--rose); color: white; border-color: var(--rose); }
+  .sp-sec {
+    font-family: var(--fb) !important;
+    font-size: 0.6rem; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--light); margin: 1rem 0 0.5rem;
+  }
+  .sp-model-grid {
+    display: flex; flex-direction: column; gap: 0.35rem;
+  }
+  .sp-model-item {
+    padding: 0.55rem 0.9rem;
+    background: var(--warm); border: 1.5px solid var(--border);
+    border-radius: 10px; cursor: pointer;
+    font-family: var(--fb) !important;
+    font-size: 0.78rem; color: var(--ink);
+    transition: all 0.15s;
+  }
+  .sp-model-item:hover { border-color: var(--amber); background: #fff8ee; }
+  .sp-model-item.sel { background: #fff3e0; border-color: var(--orange); color: var(--orange); font-weight: 600; }
+  .sp-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.5rem 0; border-bottom: 1px solid var(--border);
+    font-family: var(--fb) !important; font-size: 0.8rem;
+  }
+  .sp-row .sk { color: var(--muted); }
+  .sp-row .sv { color: var(--ink); font-weight: 600; }
+  .sp-clear {
+    width: 100%; padding: 0.7rem; margin-top: 1.2rem;
+    background: transparent; border: 1.5px solid var(--rose);
+    border-radius: 12px; color: var(--rose);
+    font-family: var(--fb) !important; font-size: 0.82rem; font-weight: 600;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .sp-clear:hover { background: var(--rose); color: white; }
+
+  /* ══════════════════════════════════
+     BOTTOM INPUT BAR
+  ══════════════════════════════════ */
   [data-testid="stChatInput"] {
     background: var(--card) !important;
     border: 2px solid var(--border) !important;
-    border-radius: 16px !important;
-    margin: 0 2rem 1.5rem !important;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.07) !important;
+    border-radius: 18px !important;
+    margin: 0 1rem 1rem !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
   }
   [data-testid="stChatInput"]:focus-within {
     border-color: var(--amber) !important;
-    box-shadow: 0 0 0 3px rgba(245,158,11,0.15) !important;
+    box-shadow: 0 0 0 4px rgba(245,158,11,0.12), 0 4px 20px rgba(0,0,0,0.08) !important;
   }
   [data-testid="stChatInput"] textarea {
-    background: transparent !important; color: var(--text) !important;
-    font-size: 0.85rem !important; font-family: var(--fb) !important;
+    background: transparent !important;
+    color: var(--ink) !important;
+    font-size: 0.88rem !important;
+    font-family: var(--fb) !important;
     border: none !important; outline: none !important; box-shadow: none !important;
   }
   [data-testid="stChatInput"] textarea::placeholder { color: var(--light) !important; }
   [data-testid="stChatInput"] button {
     background: linear-gradient(135deg, var(--amber), var(--orange)) !important;
-    border: none !important; border-radius: 11px !important;
-    box-shadow: 0 3px 10px rgba(245,158,11,0.3) !important;
+    border: none !important; border-radius: 12px !important;
+    box-shadow: 0 3px 10px rgba(245,158,11,0.35) !important;
+    transition: opacity 0.15s !important;
   }
+  [data-testid="stChatInput"] button:hover { opacity: 0.85 !important; }
   [data-testid="stChatInput"] button svg { fill: white !important; }
 
-  /* ══ MOBILE ══ */
-  @media (max-width: 768px) {
-    [data-testid="stSidebar"] { display: none !important; }
-    [data-testid="stMain"], .main,
-    [data-testid="stAppViewContainer"] { width: 100% !important; }
-    .block-container, [data-testid="stMainBlockContainer"] {
-      padding: 0 !important; padding-bottom: 70px !important;
-    }
-    .chat-header { padding: 0.75rem 1rem; }
-    .h-title { font-size: 0.95rem; }
-    .msgs-area { padding: 1rem 0.85rem 0.5rem; }
-    .m-body { max-width: 86%; }
-    .m-bubble { font-size: 0.82rem; }
-    .mode-grid { grid-template-columns: repeat(2, 1fr); max-width: 100%; }
-    .w-title { font-size: 1.8rem; }
-    [data-testid="stChatInput"] { margin: 0 0.75rem 0.75rem !important; }
-    .mobile-bar { display: flex !important; }
+  /* Bottom bar wrapper */
+  .input-wrap {
+    position: sticky; bottom: 0;
+    background: linear-gradient(to top, var(--paper) 70%, transparent);
+    padding: 0.5rem 0 0;
+  }
+  .input-hint {
+    text-align: center;
+    font-family: var(--fb) !important;
+    font-size: 0.58rem; color: var(--light);
+    padding-bottom: 0.4rem; letter-spacing: 0.5px;
   }
 
-  /* Mobile bar */
-  .mobile-bar {
-    display: none; position: fixed;
-    bottom: 0; left: 0; right: 0; height: 58px;
-    background: rgba(253,246,227,0.97);
-    border-top: 2px solid var(--border);
-    backdrop-filter: blur(12px); z-index: 1000;
-    align-items: center; justify-content: space-around;
-  }
-  .mob-btn {
-    display: flex; flex-direction: column; align-items: center;
-    gap: 2px; background: none; border: none; cursor: pointer;
-    padding: 0.3rem 0.8rem; border-radius: 10px;
-    color: var(--light); font-size: 0.55rem; letter-spacing: 0.5px;
-    text-transform: uppercase; font-family: var(--fb) !important;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .mob-btn .icon { font-size: 1.2rem; }
-  .mob-btn.active { color: var(--orange); }
-
-  .mob-overlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,0.25); z-index: 1999;
-  }
-  .mob-overlay.open { display: block; }
-
-  .mob-drawer {
-    display: none; position: fixed;
-    bottom: 0; left: 0; right: 0;
-    background: var(--warm);
-    border-top: 2px solid var(--border);
-    border-radius: 20px 20px 0 0;
-    z-index: 2000; padding: 1.2rem 1.5rem 2.5rem;
-    transform: translateY(100%);
-    transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1);
-    box-shadow: 0 -8px 32px rgba(0,0,0,0.12);
-  }
-  .mob-drawer.open { transform: translateY(0); }
-  .mob-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 1.2rem; }
-  .mob-drawer-title { font-family: var(--fh) !important; font-size: 1.1rem; font-weight: 900; color: var(--text); margin-bottom: 1rem; }
-  .mob-info-row { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--border); font-family: var(--fb) !important; font-size: 0.78rem; }
-  .mob-info-row .mk { color: var(--light); }
-  .mob-info-row .mv { color: var(--text); font-weight: 600; }
-  .mob-close {
-    width: 100%; padding: 0.75rem; margin-top: 1.2rem;
-    background: linear-gradient(135deg, var(--amber), var(--orange));
-    color: white; border: none; border-radius: 12px;
-    font-size: 0.85rem; font-family: var(--fb) !important;
-    cursor: pointer; font-weight: 600;
-    box-shadow: 0 3px 12px rgba(245,158,11,0.3);
+  /* ══════════════════════════════════
+     RESPONSIVE — MOBILE
+  ══════════════════════════════════ */
+  @media (max-width: 640px) {
+    .topnav { padding: 0.75rem 1rem; }
+    .nav-title { font-size: 1rem; }
+    .nav-sub { display: none; }
+    .mode-bar { padding: 0.6rem 1rem; gap: 0.4rem; }
+    .mode-pill { font-size: 0.68rem; padding: 0.35rem 0.75rem; }
+    .chat-wrap { padding: 1.2rem 1rem 5.5rem; }
+    .w-headline { font-size: clamp(1.8rem, 8vw, 2.5rem); }
+    .w-sub { font-size: 0.82rem; }
+    .mode-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; }
+    .m-card { padding: 0.9rem 0.5rem; }
+    .m-card .mc-icon { font-size: 1.4rem; }
+    .m-card .mc-name { font-size: 0.7rem; }
+    .m-body { max-width: 88%; }
+    .m-bubble { font-size: 0.83rem; padding: 0.75rem 0.9rem; }
+    .ex-chip { font-size: 0.67rem; padding: 0.32rem 0.7rem; }
+    [data-testid="stChatInput"] { margin: 0 0.6rem 0.7rem !important; border-radius: 14px !important; }
   }
 
-  .katex { font-size: 1em !important; }
-  .katex-display { overflow-x: auto; padding: 0.4rem 0; }
+  /* KaTeX */
+  .katex { font-size: 1em !important; color: var(--ink) !important; }
+  .katex-display { overflow-x: auto; padding: 0.3rem 0; }
+
+  /* Scrollbar */
   ::-webkit-scrollbar { width: 3px; height: 3px; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 </style>
@@ -569,187 +574,168 @@ st.markdown("""
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except Exception:
-    st.error("❌ GROQ_API_KEY topilmadi.")
+    st.error("❌ GROQ_API_KEY topilmadi. Streamlit Secrets ga qo'shing.")
     st.stop()
 
 # ─── Session State ────────────────────────────────────────────────────────────
-if "messages"    not in st.session_state: st.session_state.messages    = []
-if "mode"        not in st.session_state: st.session_state.mode        = "esse"
-if "lang"        not in st.session_state: st.session_state.lang        = "uz"
+if "messages" not in st.session_state: st.session_state.messages = []
+if "mode"     not in st.session_state: st.session_state.mode     = "esse"
+if "lang"     not in st.session_state: st.session_state.lang     = "uz"
+if "model"    not in st.session_state: st.session_state.model    = "llama-3.3-70b-versatile"
+if "temp"     not in st.session_state: st.session_state.temp     = 0.85
 
 MODES = {
-    "esse":    {"icon": "✍️",  "label": "Esse / Referat",   "desc": "Maqola yozish",     "color": "#ea580c"},
-    "story":   {"icon": "📖",  "label": "Hikoya / She'r",   "desc": "Ijodiy yozuv",      "color": "#7c3aed"},
-    "speech":  {"icon": "🎤",  "label": "Nutq / Taqdimot",  "desc": "Chiqish matni",     "color": "#0369a1"},
-    "ideas":   {"icon": "🧠",  "label": "G'oya generatsiya","desc": "Beyin fırtınası",   "color": "#15803d"},
-    "translate":{"icon":"🌍",  "label": "Tarjimon",         "desc": "UZ ↔ RU ↔ EN",     "color": "#b45309"},
-    "summary": {"icon": "📋",  "label": "Xulosa / Tahlil",  "desc": "Matnni tahlil qil", "color": "#be123c"},
+    "esse":     {"icon": "✍️",  "label": "Esse",      "full": "Esse / Referat",   "hint": "Maqola yozish"},
+    "story":    {"icon": "📖",  "label": "Hikoya",    "full": "Hikoya / She'r",   "hint": "Ijodiy yozuv"},
+    "speech":   {"icon": "🎤",  "label": "Nutq",      "full": "Nutq / Taqdimot",  "hint": "Chiqish matni"},
+    "ideas":    {"icon": "🧠",  "label": "G'oyalar",  "full": "G'oya generatsiya","hint": "Beyin fırtınası"},
+    "translate":{"icon": "🌍",  "label": "Tarjima",   "full": "Tarjimon",         "hint": "UZ↔RU↔EN"},
+    "summary":  {"icon": "📋",  "label": "Xulosa",    "full": "Xulosa / Tahlil",  "hint": "Tahlil qilish"},
 }
-
 LANGS = {"uz": "🇺🇿 UZ", "ru": "🇷🇺 RU", "en": "🇬🇧 EN"}
+MODELS = [
+    "llama-3.3-70b-versatile",
+    "llama3-70b-8192",
+    "llama3-8b-8192",
+    "mixtral-8x7b-32768",
+    "gemma2-9b-it",
+]
 
-# ─── Sidebar ─────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("""
-    <div class="sb-logo">
-      <div class="sb-icon">✏️</div>
-      <div>
-        <div class="sb-brand">Edu<span>Create</span> AI</div>
-        <div class="sb-tagline">Ijodiy AI Yordamchi</div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+# ─── System Prompt ────────────────────────────────────────────────────────────
+IDENTITY = """
+IDENTITY (never change, never fabricate):
+- Your name: EduCreate AI
+- Created by: Usmonov Sodiq (Somo_AI)
+- Built on: Groq infrastructure
+- NOT made by OpenAI, Google, Anthropic, Metamorf, or any other company
+- If asked who created you: say "Men Usmonov Sodiq (Somo_AI) tomonidan yaratilganman"
+"""
 
-    st.markdown('<div class="sb-sec">✨ Yaratish Rejimi</div>', unsafe_allow_html=True)
-    for key, m in MODES.items():
-        active_class = "active" if st.session_state.mode == key else ""
-        if st.button(f"{m['icon']}  {m['label']}", key=f"mode_{key}", use_container_width=True):
-            st.session_state.mode = key
-            st.rerun()
-
-    st.markdown('<hr class="sb-divider">', unsafe_allow_html=True)
-    st.markdown('<div class="sb-sec">🌍 Til / Language</div>', unsafe_allow_html=True)
-    lang_options = list(LANGS.keys())
-    lang_labels  = list(LANGS.values())
-    selected_lang = st.selectbox("Til", lang_labels,
-        index=lang_options.index(st.session_state.lang),
-        label_visibility="collapsed")
-    st.session_state.lang = lang_options[lang_labels.index(selected_lang)]
-
-    st.markdown('<div class="sb-sec">⚙️ Model Sozlamalari</div>', unsafe_allow_html=True)
-    model = st.selectbox("Model", [
-        "llama-3.3-70b-versatile",
-        "llama3-70b-8192",
-        "llama3-8b-8192",
-        "mixtral-8x7b-32768",
-        "gemma2-9b-it",
-    ], label_visibility="collapsed")
-
-    temperature = st.slider("Temp", 0.0, 1.5, 0.85, 0.05, label_visibility="collapsed")
-    max_tokens  = st.slider("Tokens", 256, 4096, 2048, 128, label_visibility="collapsed")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    if st.button("🗑️  Chatni tozalash", use_container_width=True):
-        st.session_state.messages = []
-        st.rerun()
-
-    msg_count = len([m for m in st.session_state.messages if m["role"] == "user"])
-    cur_mode  = MODES[st.session_state.mode]
-    st.markdown(f"""
-    <hr class="sb-divider">
-    <div class="sb-stats">
-      <div class="sb-row"><span class="k">Rejim</span><span class="v">{cur_mode['icon']} {cur_mode['label']}</span></div>
-      <div class="sb-row"><span class="k">Til</span><span class="v">{LANGS[st.session_state.lang]}</span></div>
-      <div class="sb-row"><span class="k">So'rovlar</span><span class="v">{msg_count}</span></div>
-      <div class="sb-row"><span class="k">Creativity</span><span class="v">{temperature}</span></div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ─── System Prompts per mode ──────────────────────────────────────────────────
-LANG_INSTR = {
-    "uz": "ALWAYS respond in Uzbek (O'zbek tilida javob ber).",
-    "ru": "ALWAYS respond in Russian (Всегда отвечай на русском языке).",
+LANG_MAP = {
+    "uz": "ALWAYS respond in Uzbek.",
+    "ru": "ALWAYS respond in Russian.",
     "en": "ALWAYS respond in English.",
 }
 
-IDENTITY = """
-IDENTITY — who you are (CRITICAL, never change this):
-- Your name is EduCreate AI
-- You were created by Somo_AI (the developer's username/brand)
-- You are built on Groq infrastructure using large language models
-- You are NOT made by "Metamorf AI", OpenAI, Google, Anthropic, or any other company
-- If asked who made you, always say: "Men Somo_AI tomonidan yaratilganman" (or in the user's language)
-- Never invent organizations, teams, or backstories about your creation
-- Keep identity answers short and honest
-"""
-
-MODE_PROMPTS = {
-    "esse": """You are EduCreate AI — a creative writing expert for students, created by Somo_AI.
-Help write essays, reports, and academic articles. Structure them with intro, body, conclusion.
-Use rich formatting: headers, bullet points, quotes. Make content engaging and educational.""",
-
-    "story": """You are EduCreate AI — a creative storytelling assistant for students, created by Somo_AI.
-Help write stories, poems, fairy tales, and creative texts. Be imaginative and vivid.
-Use beautiful language, metaphors, and narrative techniques. Bring characters to life.""",
-
-    "speech": """You are EduCreate AI — a public speaking coach for students, created by Somo_AI.
-Help write speeches, presentations, and performance texts. Make them persuasive and memorable.
-Structure with strong opening, key points, powerful closing. Include rhetorical devices.""",
-
-    "ideas": """You are EduCreate AI — a brainstorming and ideation expert for students, created by Somo_AI.
-Generate creative ideas, mind maps, project concepts. Think outside the box.
-Present ideas in organized lists with explanations. Inspire and motivate.""",
-
-    "translate": """You are EduCreate AI — a multilingual translation expert, created by Somo_AI.
-Translate accurately between Uzbek, Russian, and English. Preserve meaning and style.
-For student texts, also explain key vocabulary and grammar points.""",
-
-    "summary": """You are EduCreate AI — an analysis and summarization expert for students, created by Somo_AI.
-Summarize texts, analyze literature, explain concepts clearly.
-Use tables, bullet points, and structured formats. Make complex ideas simple.""",
+MODE_MAP = {
+    "esse":     "You are EduCreate AI, an expert essay and academic writing assistant for students. Help write well-structured essays with intro, body, conclusion. Use rich formatting.",
+    "story":    "You are EduCreate AI, a creative storytelling assistant. Help write vivid stories, poems, fairy tales. Use beautiful language and literary techniques.",
+    "speech":   "You are EduCreate AI, a public speaking coach. Help write powerful speeches and presentations with strong openings and memorable closings.",
+    "ideas":    "You are EduCreate AI, a brainstorming expert. Generate creative, original ideas in organized lists with explanations. Inspire and motivate.",
+    "translate":"You are EduCreate AI, a multilingual translation expert. Translate accurately between Uzbek, Russian, and English. Explain key vocabulary when helpful.",
+    "summary":  "You are EduCreate AI, an analysis expert. Summarize and analyze texts clearly using tables, lists, and structured formats.",
 }
 
-GENERAL_RULES = """
-FORMATTING — always use rich markdown:
-- Use emojis naturally throughout 🎯✨📚
-- **bold** for key terms, *italics* for emphasis
-- Headers (##, ###) for structure
+RULES = """
+FORMATTING:
+- Use emojis naturally 🎯✨📚
+- **bold** key terms, *italics* for nuance
+- Headers ## ### for structure
 - Lists, tables, blockquotes as needed
-- For math: $inline$ and $$display$$ LaTeX
+- Math: $inline$ and $$display$$ LaTeX
 
 PERSONALITY:
 - Warm, encouraging, student-friendly 🌟
-- Celebrate creativity and effort
-- Explain clearly with examples
-- Be enthusiastic about learning"""
+- Enthusiastic about creativity and learning
+- Concise but thorough
+"""
 
-def get_system_prompt():
-    lang_instr = LANG_INSTR.get(st.session_state.lang, LANG_INSTR["uz"])
-    mode_instr = MODE_PROMPTS.get(st.session_state.mode, MODE_PROMPTS["esse"])
-    return f"{IDENTITY}\n{mode_instr}\n\nLANGUAGE: {lang_instr}\n{GENERAL_RULES}"
+def get_system():
+    return f"{IDENTITY}\n{MODE_MAP[st.session_state.mode]}\nLANGUAGE: {LANG_MAP[st.session_state.lang]}\n{RULES}"
 
-# ─── Header ──────────────────────────────────────────────────────────────────
-cur_mode = MODES[st.session_state.mode]
-m_badge = model.replace("llama-3.3-","L3.3-").replace("-versatile","").replace("llama3-","L3-").replace("-8192","").replace("-32768","").upper()
+def get_time():
+    return time.strftime("%H:%M")
+
+# ─── TOP NAV ─────────────────────────────────────────────────────────────────
+cur = MODES[st.session_state.mode]
+model_short = st.session_state.model.replace("llama-3.3-","L3.3-").replace("-versatile","").replace("llama3-","L3-").replace("-8192","").replace("-32768","").upper()
 
 st.markdown(f"""
-<div class="chat-header">
-  <div class="chat-header-left">
-    <div class="h-avatar">✏️</div>
+<div class="topnav">
+  <div class="nav-brand">
+    <div class="nav-logo">✏️</div>
     <div>
-      <div class="h-title">Edu<span>Create</span> AI</div>
-      <div class="h-mode">{cur_mode['icon']} {cur_mode['label']} rejimida</div>
+      <div class="nav-title">Edu<em>Create</em> AI</div>
+      <div class="nav-sub">by Usmonov Sodiq · Somo_AI</div>
     </div>
   </div>
-  <div class="h-right">
-    <div class="h-lang-badge">{LANGS[st.session_state.lang]}</div>
-    <div class="h-badge">{m_badge}</div>
+  <div class="nav-right">
+    <div class="nav-mode-pill">{cur['icon']} {cur['label']}</div>
+    <div class="nav-lang-pill">{LANGS[st.session_state.lang]}</div>
+    <div class="nav-mode-pill" style="cursor:pointer" onclick="openSettings()">⚙️</div>
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ─── Messages ────────────────────────────────────────────────────────────────
-st.markdown('<div class="msgs-area">', unsafe_allow_html=True)
+# ─── MODE BAR ────────────────────────────────────────────────────────────────
+mode_pills = ""
+for k, m in MODES.items():
+    active = "active" if st.session_state.mode == k else ""
+    mode_pills += f'<div class="mode-pill {active}" onclick="setMode(\'{k}\')">{m["icon"]} {m["label"]}</div>'
+
+st.markdown(f'<div class="mode-bar">{mode_pills}</div>', unsafe_allow_html=True)
+
+# Handle mode changes via Streamlit buttons (hidden, triggered by JS)
+cols = st.columns(len(MODES))
+for i, (k, m) in enumerate(MODES.items()):
+    with cols[i]:
+        if st.button(m["icon"], key=f"mb_{k}", help=m["full"], use_container_width=True):
+            st.session_state.mode = k
+            st.rerun()
+
+# Hide the actual streamlit buttons (we use the HTML pills above)
+st.markdown("""
+<style>
+  /* Hide the functional buttons but keep them clickable via JS workaround */
+  div[data-testid="stHorizontalBlock"] { display: none !important; }
+</style>
+<script>
+function setMode(mode) {
+  // Find and click the hidden streamlit button
+  const btns = window.parent.document.querySelectorAll('button');
+  for(let b of btns) {
+    if(b.getAttribute('data-testid') === 'baseButton-secondary' && b.title === {
+      'esse': 'Esse / Referat', 'story': "Hikoya / She'r",
+      'speech': 'Nutq / Taqdimot', 'ideas': "G'oya generatsiya",
+      'translate': 'Tarjimon', 'summary': 'Xulosa / Tahlil'
+    }[mode]) { b.click(); break; }
+  }
+}
+function openSettings() {
+  document.getElementById('settingsOverlay').classList.add('open');
+  document.getElementById('settingsPanel').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settingsOverlay').classList.remove('open');
+  document.getElementById('settingsPanel').classList.remove('open');
+}
+</script>
+""", unsafe_allow_html=True)
+
+# ─── MESSAGES ────────────────────────────────────────────────────────────────
+st.markdown('<div class="chat-wrap">', unsafe_allow_html=True)
 
 if not st.session_state.messages:
     st.markdown(f"""
     <div class="welcome">
-      <div class="welcome-badge">✨ O'quvchilar uchun AI Yordamchi</div>
-      <div class="w-title">Ijodingizni<br><span>kuchlaytiring</span></div>
-      <div class="w-sub">Esse, hikoya, nutq, g'oyalar va tarjima — barchasi bir joyda.
-      O'z tilida, o'z uslubida. 🚀</div>
-      <div class="mode-grid">
-        <div class="mode-tile"><div class="t-icon">✍️</div><div class="t-name">Esse / Referat</div><div class="t-hint">Maqola yozish</div></div>
-        <div class="mode-tile"><div class="t-icon">📖</div><div class="t-name">Hikoya / She'r</div><div class="t-hint">Ijodiy yozuv</div></div>
-        <div class="mode-tile"><div class="t-icon">🎤</div><div class="t-name">Nutq</div><div class="t-hint">Taqdimot matni</div></div>
-        <div class="mode-tile"><div class="t-icon">🧠</div><div class="t-name">G'oyalar</div><div class="t-hint">Beyin fırtınası</div></div>
-        <div class="mode-tile"><div class="t-icon">🌍</div><div class="t-name">Tarjimon</div><div class="t-hint">UZ ↔ RU ↔ EN</div></div>
-        <div class="mode-tile"><div class="t-icon">📋</div><div class="t-name">Xulosa</div><div class="t-hint">Tahlil qilish</div></div>
+      <div class="w-badge">✨ O'quvchilar uchun AI Yordamchi</div>
+      <div class="w-headline">Ijodingizni<br><em>kuchlaytiring</em></div>
+      <div class="w-sub">
+        Esse, hikoya, nutq, g'oyalar va tarjima — barchasi bir joyda.<br>
+        O'z tilida, o'z uslubida. 🚀
       </div>
-      <div class="ex-prompts">
+      <div class="mode-grid">
+        <div class="m-card"><span class="mc-icon">✍️</span><div class="mc-name">Esse / Referat</div><div class="mc-hint">Maqola yozish</div></div>
+        <div class="m-card"><span class="mc-icon">📖</span><div class="mc-name">Hikoya / She'r</div><div class="mc-hint">Ijodiy yozuv</div></div>
+        <div class="m-card"><span class="mc-icon">🎤</span><div class="mc-name">Nutq</div><div class="mc-hint">Taqdimot matni</div></div>
+        <div class="m-card"><span class="mc-icon">🧠</span><div class="mc-name">G'oyalar</div><div class="mc-hint">Beyin fırtınası</div></div>
+        <div class="m-card"><span class="mc-icon">🌍</span><div class="mc-name">Tarjimon</div><div class="mc-hint">UZ↔RU↔EN</div></div>
+        <div class="m-card"><span class="mc-icon">📋</span><div class="mc-name">Xulosa</div><div class="mc-hint">Tahlil qilish</div></div>
+      </div>
+      <div class="ex-row">
         <div class="ex-chip">📝 "Vatan haqida esse yoz"</div>
         <div class="ex-chip">🌹 "Bahor haqida she'r"</div>
-        <div class="ex-chip">🎤 "Maktab hayoti haqida nutq"</div>
+        <div class="ex-chip">🎤 "Yoshlar haqida nutq"</div>
         <div class="ex-chip">💡 "Biznes g'oyalar ber"</div>
       </div>
     </div>
@@ -759,7 +745,9 @@ else:
         role    = msg["role"]
         content = msg["content"]
         ts      = msg.get("time", "")
-        msg_mode = msg.get("mode", "")
+        m_mode  = msg.get("mode", st.session_state.mode)
+        mode_info = MODES.get(m_mode, cur)
+
         if role == "user":
             st.markdown(f"""
             <div class="msg-row user">
@@ -771,85 +759,96 @@ else:
               </div>
             </div>""", unsafe_allow_html=True)
         else:
-            mode_info = MODES.get(msg_mode, cur_mode)
             st.markdown(f"""
             <div class="msg-row ai">
               <div class="m-av ai">✏️</div>
               <div class="m-body">
                 <div class="m-name">EduCreate AI</div>
                 <div class="m-bubble ai">
-                  <div class="m-mode-tag">{mode_info['icon']} {mode_info['label']}</div><br>
+                  <div class="m-tag">{mode_info['icon']} {mode_info['label']}</div><br>
                   {md_to_html(content)}
                 </div>
                 <div class="m-time">{ts}</div>
               </div>
             </div>
-            <script>setTimeout(function(){{if(typeof renderMathInElement!=='undefined')renderMathInElement(document.body);}},100);</script>
+            <script>setTimeout(()=>{{if(typeof renderMathInElement!=='undefined')renderMathInElement(document.body);}},100);</script>
             """, unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ─── Chat Input ───────────────────────────────────────────────────────────────
-placeholders = {
-    "esse":    "Esse mavzusini yozing... (masalan: 'Ekologiya haqida esse')",
-    "story":   "Hikoya yoki she'r so'rang... (masalan: 'Bahor haqida she'r yoz')",
-    "speech":  "Nutq mavzusini kiriting... (masalan: 'Yoshlar haqida nutq')",
-    "ideas":   "G'oya so'rang... (masalan: 'Maktab gazetasi uchun g'oyalar')",
-    "translate":"Tarjima qilish uchun matn kiriting...",
-    "summary": "Tahlil qilmoqchi bo'lgan matnni kiriting...",
-}
-prompt = st.chat_input(placeholders.get(st.session_state.mode, "Yozing..."))
-
-# ─── Mobile Bar ──────────────────────────────────────────────────────────────
+# ─── SETTINGS MODAL ──────────────────────────────────────────────────────────
 msg_count = len([m for m in st.session_state.messages if m["role"] == "user"])
+models_html = ""
+for mdl in MODELS:
+    sel = "sel" if mdl == st.session_state.model else ""
+    short = mdl.replace("llama-3.3-","L3.3-").replace("-versatile","").replace("llama3-","L3-").replace("-8192","").replace("-32768","").upper()
+    models_html += f'<div class="sp-model-item {sel}">{short} <span style="color:var(--light);font-size:0.65rem">({mdl})</span></div>'
+
+lang_btns = ""
+for lk, lv in LANGS.items():
+    active_style = "background:linear-gradient(135deg,var(--amber),var(--orange));color:white;border-color:transparent;" if lk == st.session_state.lang else ""
+    lang_btns += f'<div class="sp-model-item" style="{active_style}">{lv}</div>'
+
 st.markdown(f"""
-<div class="mobile-bar">
-  <button class="mob-btn active" onclick="window.scrollTo({{top:document.body.scrollHeight,behavior:'smooth'}})">
-    <span class="icon">💬</span>Chat
-  </button>
-  <button class="mob-btn" onclick="openMobDrawer()">
-    <span class="icon">{cur_mode['icon']}</span>Rejim
-  </button>
-  <button class="mob-btn" onclick="openSettingsDrawer()">
-    <span class="icon">⚙️</span>Sozlama
-  </button>
-</div>
-
-<div class="mob-overlay" id="mobOv" onclick="closeAll()"></div>
-
-<div class="mob-drawer" id="settingsDrawer">
-  <div class="mob-handle"></div>
-  <div class="mob-drawer-title">⚙️ Sozlamalar</div>
-  <div class="mob-info-row"><span class="mk">Rejim</span><span class="mv">{cur_mode['icon']} {cur_mode['label']}</span></div>
-  <div class="mob-info-row"><span class="mk">Til</span><span class="mv">{LANGS[st.session_state.lang]}</span></div>
-  <div class="mob-info-row"><span class="mk">Model</span><span class="mv">{m_badge}</span></div>
-  <div class="mob-info-row"><span class="mk">Creativity</span><span class="mv">{temperature}</span></div>
-  <div class="mob-info-row"><span class="mk">So'rovlar</span><span class="mv">{msg_count}</span></div>
-  <div style="color:#a89878;font-size:0.68rem;margin-top:0.8rem;font-family:'DM Sans',sans-serif;line-height:1.6;">
-    💡 Rejim va tilni o'zgartirish uchun desktop versiyadan foydalaning.
+<div class="settings-overlay" id="settingsOverlay" onclick="closeSettings()"></div>
+<div class="settings-panel" id="settingsPanel">
+  <div class="sp-title">
+    ⚙️ Sozlamalar
+    <div class="sp-close" onclick="closeSettings()">✕</div>
   </div>
-  <button class="mob-close" onclick="closeAll()">✓ Yopish</button>
-</div>
 
-<script>
-function openSettingsDrawer(){{
-  document.getElementById('settingsDrawer').classList.add('open');
-  document.getElementById('mobOv').classList.add('open');
-}}
-function closeAll(){{
-  document.querySelectorAll('.mob-drawer').forEach(d=>d.classList.remove('open'));
-  document.getElementById('mobOv').classList.remove('open');
-}}
-</script>
+  <div class="sp-sec">📊 Statistika</div>
+  <div class="sp-row"><span class="sk">So'rovlar</span><span class="sv">{msg_count}</span></div>
+  <div class="sp-row"><span class="sk">Joriy rejim</span><span class="sv">{cur['icon']} {cur['full']}</span></div>
+  <div class="sp-row"><span class="sk">Til</span><span class="sv">{LANGS[st.session_state.lang]}</span></div>
+  <div class="sp-row"><span class="sk">Model</span><span class="sv">{model_short}</span></div>
+  <div class="sp-row"><span class="sk">Creativity</span><span class="sv">{st.session_state.temp}</span></div>
+
+  <div class="sp-sec">ℹ️ Dastur haqida</div>
+  <div class="sp-row"><span class="sk">Nomi</span><span class="sv">EduCreate AI</span></div>
+  <div class="sp-row"><span class="sk">Yaratuvchi</span><span class="sv">Usmonov Sodiq</span></div>
+  <div class="sp-row"><span class="sk">Brand</span><span class="sv">Somo_AI</span></div>
+  <div class="sp-row"><span class="sk">Versiya</span><span class="sv">v3.0 · Groq</span></div>
+
+  <div style="background:rgba(245,158,11,0.08);border:1.5px solid rgba(245,158,11,0.2);border-radius:10px;padding:0.7rem 0.9rem;margin-top:1rem;">
+    <div style="font-family:var(--fb);font-size:0.7rem;color:var(--muted);line-height:1.6;">
+      💡 Rejim va tilni o'zgartirish uchun tepadan foydalaning.<br>
+      Model va temperature sozlamalari uchun keyingi versiyada yangilanadi.
+    </div>
+  </div>
+
+  <button class="sp-clear" onclick="if(confirm('Barcha xabarlarni o\\'chirish?'))window.location.reload()">
+    🗑️ Chatni tozalash
+  </button>
+</div>
 """, unsafe_allow_html=True)
 
-# ─── Process ─────────────────────────────────────────────────────────────────
-def get_time():
-    return time.strftime("%H:%M")
+# ─── CHAT INPUT ──────────────────────────────────────────────────────────────
+placeholders = {
+    "esse":     "Esse mavzusini yozing... (masalan: 'Ekologiya haqida esse')",
+    "story":    "Hikoya yoki she'r so'rang... (masalan: 'Bahor haqida she'r yoz')",
+    "speech":   "Nutq mavzusini kiriting... (masalan: 'Yoshlar haqida nutq')",
+    "ideas":    "G'oya so'rang... (masalan: 'Startup g'oyalari ber')",
+    "translate":"Tarjima qilish uchun matn yozing...",
+    "summary":  "Tahlil qilmoqchi bo'lgan matnni kiriting...",
+}
+st.markdown('<div class="input-wrap">', unsafe_allow_html=True)
+prompt = st.chat_input(placeholders.get(st.session_state.mode, "Yozing..."))
+st.markdown(f'<div class="input-hint">EduCreate AI · by Usmonov Sodiq (Somo_AI) · {cur["icon"]} {cur["full"]}</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
+# ─── MODE SELECTOR (hidden Streamlit logic) ───────────────────────────────────
+with st.expander("", expanded=False):
+    for k in MODES:
+        if st.button(k, key=f"sel_{k}"):
+            st.session_state.mode = k
+            st.rerun()
+
+# ─── PROCESS MESSAGE ─────────────────────────────────────────────────────────
 if prompt and prompt.strip():
     user_text    = prompt.strip()
     current_mode = st.session_state.mode
+    mode_info    = MODES[current_mode]
 
     st.session_state.messages.append({
         "role": "user", "content": user_text,
@@ -876,16 +875,18 @@ if prompt and prompt.strip():
       </div>
     </div>""", unsafe_allow_html=True)
 
-    api_msgs = [{"role": "system", "content": get_system_prompt()}]
+    api_msgs = [{"role": "system", "content": get_system()}]
     for m in st.session_state.messages:
         api_msgs.append({"role": m["role"], "content": m["content"]})
 
     full_response = ""
-    mode_info = MODES[current_mode]
     try:
         completion = client.chat.completions.create(
-            model=model, messages=api_msgs,
-            stream=True, max_tokens=max_tokens, temperature=temperature,
+            model=st.session_state.model,
+            messages=api_msgs,
+            stream=True,
+            max_tokens=2048,
+            temperature=st.session_state.temp,
         )
         for chunk in completion:
             delta = chunk.choices[0].delta.content or ""
@@ -896,12 +897,12 @@ if prompt and prompt.strip():
               <div class="m-body">
                 <div class="m-name">EduCreate AI</div>
                 <div class="m-bubble ai">
-                  <div class="m-mode-tag">{mode_info['icon']} {mode_info['label']}</div><br>
+                  <div class="m-tag">{mode_info['icon']} {mode_info['label']}</div><br>
                   {md_to_html(full_response)}<span class="t-cursor"></span>
                 </div>
               </div>
             </div>
-            <script>setTimeout(function(){{if(typeof renderMathInElement!=='undefined')renderMathInElement(document.body);}},80);</script>
+            <script>setTimeout(()=>{{if(typeof renderMathInElement!=='undefined')renderMathInElement(document.body);}},80);</script>
             """, unsafe_allow_html=True)
 
         typing_ph.markdown(f"""
@@ -910,21 +911,21 @@ if prompt and prompt.strip():
           <div class="m-body">
             <div class="m-name">EduCreate AI</div>
             <div class="m-bubble ai">
-              <div class="m-mode-tag">{mode_info['icon']} {mode_info['label']}</div><br>
+              <div class="m-tag">{mode_info['icon']} {mode_info['label']}</div><br>
               {md_to_html(full_response)}
             </div>
             <div class="m-time">{get_time()}</div>
           </div>
         </div>
-        <script>setTimeout(function(){{if(typeof renderMathInElement!=='undefined')renderMathInElement(document.body);}},150);</script>
+        <script>setTimeout(()=>{{if(typeof renderMathInElement!=='undefined')renderMathInElement(document.body);}},150);</script>
         """, unsafe_allow_html=True)
 
     except Exception as e:
         err = str(e)
         if "rate_limit" in err.lower(): full_response = "⏳ Juda ko'p so'rov. Bir daqiqa kuting."
-        elif "model" in err.lower():    full_response = f"❌ Model topilmadi: `{model}`."
-        elif "auth" in err.lower():     full_response = "❌ API kalit xato."
-        else:                           full_response = f"❌ Xatolik: {err}"
+        elif "model"     in err.lower(): full_response = f"❌ Model topilmadi: `{st.session_state.model}`."
+        elif "auth"      in err.lower(): full_response = "❌ API kalit xato. GROQ_API_KEY ni tekshiring."
+        else:                            full_response = f"❌ Xatolik: {err}"
         typing_ph.markdown(f"""
         <div class="msg-row ai">
           <div class="m-av ai">✏️</div>
