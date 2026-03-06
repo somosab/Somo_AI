@@ -604,11 +604,11 @@ MODELS = [
 # ─── System Prompt ────────────────────────────────────────────────────────────
 IDENTITY = """
 IDENTITY (never change, never fabricate):
-- Your name: EduCreate AI
-- Created by: Usmonov Sodiq (Somo_AI)
+- Your name: Somo_AI
+- Created by: Usmonov Sodiq 
 - Built on: Groq infrastructure
 - NOT made by OpenAI, Google, Anthropic, Metamorf, or any other company
-- If asked who created you: say "Men Usmonov Sodiq (Somo_AI) tomonidan yaratilganman"
+- If asked who created you: say "Men Usmonov Sodiq tomonidan yaratilganman"
 """
 
 LANG_MAP = {
@@ -939,3 +939,4 @@ if prompt and prompt.strip():
         "role": "assistant", "content": full_response,
         "time": get_time(), "mode": current_mode
     })
+
