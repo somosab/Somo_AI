@@ -1,5 +1,5 @@
 import streamlit as st
-from groq import Groq
+import google.generativeai as genai
 import time, re
 
 # ═══════════════════════════════════════════════════════════════
@@ -742,9 +742,10 @@ html, body {
 #  GROQ CLIENT
 # ═══════════════════════════════════════════════════════════════
 try:
-    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    client = genai.GenerativeModel("gemini-2.0-flash")
 except Exception:
-    st.error("❌ GROQ_API_KEY topilmadi. Streamlit Secrets ga qo'shing.")
+    st.error("❌ GEMINI_API_KEY topilmadi. Streamlit Secrets ga qo'shing.")
     st.stop()
 
 
@@ -758,7 +759,7 @@ if "active_mode"  not in st.session_state: st.session_state.active_mode  = "gene
 # ═══════════════════════════════════════════════════════════════
 #  CONSTANTS
 # ═══════════════════════════════════════════════════════════════
-MODEL = "llama-3.3-70b-versatile"
+MODEL = "gemini-2.0-flash"
 
 MODE_META = {
     "esse"      : {"icon":"✍️",  "label":"Esse"},
@@ -920,7 +921,7 @@ if active_mode != "general":
     </div>
     """
 
-st.markdown(f"""<div class="hdr"><div class="hdr-brand"><div class="hdr-logo">S</div><div><div class="hdr-title">Somo <em>AI</em></div><div class="hdr-author">by Usmonov Sodiq</div></div></div><div class="hdr-right">{mode_indicator_html}<div class="status-badge"><div class="status-dot"></div>Online</div><div class="model-badge">Llama 3.3 · 70B</div></div></div>""", unsafe_allow_html=True)
+st.markdown(f"""<div class="hdr"><div class="hdr-brand"><div class="hdr-logo">S</div><div><div class="hdr-title">Somo <em>AI</em></div><div class="hdr-author">by Usmonov Sodiq</div></div></div><div class="hdr-right">{mode_indicator_html}<div class="status-badge"><div class="status-dot"></div>Online</div><div class="model-badge">Gemini 2.0 Flash ✦</div></div></div>""", unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1093,19 +1094,30 @@ if prompt and prompt.strip():
             unsafe_allow_html=True
         )
 
-    # Stream from Groq
+    # Stream from Gemini
     full_response = ""
     try:
-        stream = client.chat.completions.create(
-            model       = MODEL,
-            messages    = api_msgs,
-            stream      = True,
-            max_tokens  = 2048,
-            temperature = 0.8,
+        # Build Gemini message history
+        system_txt = build_system_prompt(detected_mode)
+        gemini_history = []
+        for m in st.session_state.messages[:-1]:  # exclude last user msg
+            role = "user" if m["role"] == "user" else "model"
+            gemini_history.append({"role": role, "parts": [m["content"]]})
+
+        chat = client.start_chat(history=gemini_history)
+        full_user_msg = system_txt + "\n\n" + user_text
+
+        stream = chat.send_message(
+            full_user_msg,
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.9,
+                max_output_tokens=4096,
+            ),
+            stream=True,
         )
 
         for chunk in stream:
-            delta          = chunk.choices[0].delta.content or ""
+            delta          = chunk.text or ""
             full_response += delta
             render_bubble(full_response, cursor=True)
 
