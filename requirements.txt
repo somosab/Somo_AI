@@ -2,7 +2,7 @@ streamlit
 streamlit-cookies-manager
 groq
 cerebras-cloud-sdk
-google-generativeai
+google-generativeai>=0.8.0
 mistralai
 cohere
 openai
@@ -14,3 +14,4 @@ pypdf
 mammoth
 pandas
 requests
+
