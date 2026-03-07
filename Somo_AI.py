@@ -684,9 +684,11 @@ html, body {
   letter-spacing : .3px;
 }
 
-/* ─────────────────────────────────────────────
-   KaTeX
-───────────────────────────────────────────── */
+/* Hide Streamlit's built-in suggestion chips below input */
+[data-testid="stChatInputSuggestions"],
+[data-testid="stChatInputSuggestionsContainer"],
+[data-baseweb="tag"],
+.stChatInputSuggestions { display: none !important; }
 .katex         { font-size:1em !important; color:var(--text) !important; }
 .katex-display { overflow-x:auto; padding:.3rem 0; }
 
@@ -862,26 +864,7 @@ if active_mode != "general":
     </div>
     """
 
-st.markdown(f"""
-<div class="hdr">
-  <div class="hdr-brand">
-    <div class="hdr-logo">S</div>
-    <div>
-      <div class="hdr-title">Somo <em>AI</em></div>
-      <div class="hdr-author">by Usmonov Sodiq</div>
-    </div>
-  </div>
-
-  <div class="hdr-right">
-    {mode_indicator_html}
-    <div class="status-badge">
-      <div class="status-dot"></div>
-      Online
-    </div>
-    <div class="model-badge">Llama 3.3 · 70B</div>
-  </div>
-</div>
-""", unsafe_allow_html=True)
+st.markdown(f"""<div class="hdr"><div class="hdr-brand"><div class="hdr-logo">S</div><div><div class="hdr-title">Somo <em>AI</em></div><div class="hdr-author">by Usmonov Sodiq</div></div></div><div class="hdr-right">{mode_indicator_html}<div class="status-badge"><div class="status-dot"></div>Online</div><div class="model-badge">Llama 3.3 · 70B</div></div></div>""", unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════
