@@ -951,29 +951,17 @@ else:
 
         else:
             # Only show mode tag when it carries meaningful info
-            tag_html = ""
+            h_tag = ""
             if msg_mode != "general":
-                tag_html = f'<div class="mode-tag">{m_meta["icon"]} {m_meta["label"]}</div><br>'
-
-            st.markdown(f"""
-            <div class="msg-row ai">
-              <div class="av ai">S</div>
-              <div class="msg-body">
-                <div class="msg-name">Somo AI</div>
-                <div class="bubble ai">
-                  {tag_html}
-                  {md_to_html(content)}
-                </div>
-                <div class="msg-time">{ts}</div>
-              </div>
-            </div>
-            <script>
-              setTimeout(() => {{
-                if (typeof renderMathInElement !== 'undefined')
-                  renderMathInElement(document.body);
-              }}, 120);
-            </script>
-            """, unsafe_allow_html=True)
+                h_tag = '<div class="mode-tag">' + m_meta["icon"] + " " + m_meta["label"] + '</div><br>'
+            KJ = '<script>setTimeout(()=>{if(typeof renderMathInElement!=="undefined")renderMathInElement(document.body);},100);</script>'
+            st.markdown(
+                '<div class="msg-row ai"><div class="av ai">S</div><div class="msg-body">'
+                '<div class="msg-name">Somo AI</div><div class="bubble ai">'
+                + h_tag + md_to_html(content) +
+                '</div><div class="msg-time">' + ts + '</div></div></div>' + KJ,
+                unsafe_allow_html=True
+            )
 
 st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1010,28 +998,21 @@ if prompt and prompt.strip():
     })
 
     # Render user bubble
-    st.markdown(f"""
-    <div class="msg-row user">
-      <div class="av user">U</div>
-      <div class="msg-body">
-        <div class="msg-name">Siz</div>
-        <div class="bubble user">{user_text}</div>
-        <div class="msg-time">{now}</div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown(
+        '<div class="msg-row user"><div class="av user">U</div><div class="msg-body">'
+        '<div class="msg-name">Siz</div><div class="bubble user">' + user_text +
+        '</div><div class="msg-time">' + now + '</div></div></div>',
+        unsafe_allow_html=True
+    )
 
     # Typing placeholder
     ph = st.empty()
-    ph.markdown("""
-    <div class="msg-row ai">
-      <div class="av ai">S</div>
-      <div class="msg-body">
-        <div class="msg-name">Somo AI</div>
-        <div class="bubble ai"><span class="t-cur"></span></div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    ph.markdown(
+        '<div class="msg-row ai"><div class="av ai">S</div><div class="msg-body">'
+        '<div class="msg-name">Somo AI</div>'
+        '<div class="bubble ai"><span class="t-cur"></span></div></div></div>',
+        unsafe_allow_html=True
+    )
 
     # Build message list for API
     api_msgs = [{"role": "system", "content": build_system_prompt(detected_mode)}]
@@ -1041,7 +1022,20 @@ if prompt and prompt.strip():
     # Mode tag in response
     tag_html = ""
     if detected_mode != "general":
-        tag_html = f'<div class="mode-tag">{m_meta["icon"]} {m_meta["label"]}</div><br>'
+        tag_html = '<div class="mode-tag">' + m_meta["icon"] + " " + m_meta["label"] + '</div><br>'
+
+    KJ = '<script>setTimeout(()=>{if(typeof renderMathInElement!=="undefined")renderMathInElement(document.body);},100);</script>'
+
+    def render_bubble(text, cursor=False, ts=""):
+        cur = '<span class="t-cur"></span>' if cursor else ""
+        td  = '<div class="msg-time">' + ts + '</div>' if ts else ""
+        ph.markdown(
+            '<div class="msg-row ai"><div class="av ai">S</div><div class="msg-body">'
+            '<div class="msg-name">Somo AI</div><div class="bubble ai">'
+            + tag_html + md_to_html(text) + cur +
+            '</div>' + td + '</div></div>' + KJ,
+            unsafe_allow_html=True
+        )
 
     # Stream from Groq
     full_response = ""
@@ -1057,46 +1051,10 @@ if prompt and prompt.strip():
         for chunk in stream:
             delta          = chunk.choices[0].delta.content or ""
             full_response += delta
+            render_bubble(full_response, cursor=True)
 
-            ph.markdown(f"""
-            <div class="msg-row ai">
-              <div class="av ai">S</div>
-              <div class="msg-body">
-                <div class="msg-name">Somo AI</div>
-                <div class="bubble ai">
-                  {tag_html}
-                  {md_to_html(full_response)}<span class="t-cur"></span>
-                </div>
-              </div>
-            </div>
-            <script>
-              setTimeout(() => {{
-                if (typeof renderMathInElement !== 'undefined')
-                  renderMathInElement(document.body);
-              }}, 80);
-            </script>
-            """, unsafe_allow_html=True)
-
-        # Final — cursor removed, timestamp added
-        ph.markdown(f"""
-        <div class="msg-row ai">
-          <div class="av ai">S</div>
-          <div class="msg-body">
-            <div class="msg-name">Somo AI</div>
-            <div class="bubble ai">
-              {tag_html}
-              {md_to_html(full_response)}
-            </div>
-            <div class="msg-time">{get_time()}</div>
-          </div>
-        </div>
-        <script>
-          setTimeout(() => {{
-            if (typeof renderMathInElement !== 'undefined')
-              renderMathInElement(document.body);
-          }}, 160);
-        </script>
-        """, unsafe_allow_html=True)
+        # Final — no cursor, with timestamp
+        render_bubble(full_response, cursor=False, ts=get_time())
 
     except Exception as exc:
         err = str(exc)
