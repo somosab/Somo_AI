@@ -1071,11 +1071,6 @@ if prompt and prompt.strip():
         unsafe_allow_html=True
     )
 
-    # Build message list for API
-    api_msgs = [{"role": "system", "content": build_system_prompt(detected_mode)}]
-    for m in st.session_state.messages:
-        api_msgs.append({"role": m["role"], "content": m["content"]})
-
     # Mode tag in response
     tag_html = ""
     if detected_mode != "general":
@@ -1094,56 +1089,60 @@ if prompt and prompt.strip():
             unsafe_allow_html=True
         )
 
-    # Stream from Gemini
+    # Stream from Gemini 2.0 Flash
     full_response = ""
     try:
-        # Build Gemini message history
         system_txt = build_system_prompt(detected_mode)
+
+        # Build Gemini chat history (user/model pairs only — no system role)
         gemini_history = []
-        for m in st.session_state.messages[:-1]:  # exclude last user msg
-            role = "user" if m["role"] == "user" else "model"
-            gemini_history.append({"role": role, "parts": [m["content"]]})
+        for m in st.session_state.messages[:-1]:  # skip last (current) user msg
+            grole = "user" if m["role"] == "user" else "model"
+            gemini_history.append({"role": grole, "parts": [m["content"]]})
 
         chat = client.start_chat(history=gemini_history)
-        full_user_msg = system_txt + "\n\n" + user_text
 
-        stream = chat.send_message(
-            full_user_msg,
-            generation_config=genai.types.GenerationConfig(
-                temperature=0.9,
-                max_output_tokens=4096,
-            ),
+        # Prepend system instructions to first user turn
+        full_msg = system_txt + "\n\n---\n\n" + user_text
+
+        response = chat.send_message(
+            full_msg,
+            generation_config={
+                "temperature"     : 0.95,
+                "max_output_tokens": 4096,
+            },
             stream=True,
         )
 
-        for chunk in stream:
-            delta          = chunk.text or ""
+        for chunk in response:
+            delta = ""
+            try:
+                delta = chunk.text or ""
+            except Exception:
+                pass
             full_response += delta
-            render_bubble(full_response, cursor=True)
+            if full_response:
+                render_bubble(full_response, cursor=True)
 
-        # Final — no cursor, with timestamp
         render_bubble(full_response, cursor=False, ts=get_time())
 
     except Exception as exc:
         err = str(exc)
-        if "rate_limit" in err.lower():
-            full_response = "⏳ Juda ko'p so'rov. Bir daqiqa kuting."
-        elif "auth" in err.lower() or "api_key" in err.lower():
-            full_response = "❌ API kalit xato. GROQ_API_KEY ni tekshiring."
-        elif "model" in err.lower():
-            full_response = "❌ Model topilmadi."
+        if "429" in err or "quota" in err.lower() or "rate" in err.lower():
+            full_response = "⏳ So'rovlar limiti tugadi. Bir daqiqa kuting."
+        elif "401" in err or "invalid" in err.lower() or "api_key" in err.lower():
+            full_response = "❌ GEMINI_API_KEY xato. aistudio.google.com dan yangi kalit oling."
+        elif "400" in err:
+            full_response = "❌ So'rov xato formatlangan. Qayta urinib ko'ring."
         else:
-            full_response = f"❌ Xatolik: {err}"
+            full_response = "❌ Xatolik: " + err
 
-        ph.markdown(f"""
-        <div class="msg-row ai">
-          <div class="av ai">S</div>
-          <div class="msg-body">
-            <div class="msg-name">Somo AI</div>
-            <div class="bubble ai">{full_response}</div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+        ph.markdown(
+            '<div class="msg-row ai"><div class="av ai">S</div><div class="msg-body">'
+            '<div class="msg-name">Somo AI</div><div class="bubble ai">' +
+            full_response + '</div></div></div>',
+            unsafe_allow_html=True
+        )
 
     # Save assistant reply
     st.session_state.messages.append({
