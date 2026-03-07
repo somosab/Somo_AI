@@ -496,7 +496,8 @@ html, body {
 }
 
 /* Body */
-.msg-body { max-width:76%; }
+.msg-body { max-width:82%; }
+.msg-row.ai .msg-body { max-width:90%; }
 .msg-name {
   font-family    : var(--fb) !important;
   font-size      : .58rem;
@@ -523,25 +524,22 @@ html, body {
   border-top-right-radius : 3px;
 }
 .bubble.ai {
-  background             : var(--card);
-  border                 : 1.5px solid var(--border);
-  border-top-left-radius : 3px;
-  box-shadow             : var(--shadow);
+  background : transparent;
+  border     : none;
+  box-shadow : none;
+  padding    : .5rem 0 .5rem 0;
 }
 
-/* Mode tag inside AI bubble */
+/* Mode tag - subtle, above message */
 .mode-tag {
   display        : inline-block;
   font-family    : var(--fb) !important;
-  font-size      : .56rem;
-  font-weight    : 700;
-  letter-spacing : 1.5px;
+  font-size      : .58rem;
+  font-weight    : 600;
+  letter-spacing : 1px;
   text-transform : uppercase;
-  background     : linear-gradient(135deg, var(--amber), var(--orange));
-  color          : #fff;
-  padding        : .13rem .5rem;
-  border-radius  : 8px;
-  margin-bottom  : .42rem;
+  color          : var(--amber);
+  margin-bottom  : .35rem;
 }
 
 /* Rich content inside bubbles */
@@ -776,33 +774,75 @@ Detect the language of the user's message and always reply in that exact same la
 
 MODE_INSTRUCTIONS = {
     "esse": """
-You are in ESSAY MODE. The user wants an academic essay or report.
-- Structure: clear introduction, developed body paragraphs, strong conclusion
-- Use ## and ### headers for sections
-- Bold key terms, use blockquotes for citations or evidence
-- Numbered lists for arguments when helpful
-- Length: thorough but not padded
+You are an expert academic writer in ESSAY MODE.
+Write high-quality essays and reports in the user's language.
+
+STRUCTURE (always follow):
+1. **Kirish / Введение / Introduction** — hook sentence, thesis statement, overview
+2. **Asosiy qism / Основная часть / Body** — 3-5 paragraphs, each with topic sentence + arguments + evidence
+3. **Xulosa / Заключение / Conclusion** — restate thesis, summarise key points, closing thought
+
+STYLE:
+- Use ## for section headers, **bold** for key terms
+- Blockquotes > for important quotes or definitions
+- Rich vocabulary, varied sentence structure, academic tone
+- Add relevant statistics or examples where helpful
+- Length: minimum 400 words for standard essays, more if requested
 """,
     "story": """
-You are in CREATIVE WRITING MODE. The user wants a story, poem, or literary text.
-- Use vivid imagery, metaphor, sensory details
-- Build narrative arc: setup → tension → resolution (for stories)
-- For poems: rhythm, line breaks, emotional resonance
-- Be imaginative and emotionally engaging
+You are a master creative writer in STORY / POEM MODE.
+Write beautiful, emotionally resonant literary works in the user's language.
+
+FOR STORIES:
+- Compelling opening hook that grabs attention immediately
+- Rich character description and vivid setting
+- Build tension → climax → satisfying resolution
+- Show, don't tell — use sensory details, dialogue, action
+- Varied sentence rhythm for effect
+
+FOR POEMS:
+- Powerful imagery and metaphor
+- Intentional line breaks for rhythm and breathing
+- Emotional depth — let the reader feel something
+- Can rhyme or be free verse — choose what serves the poem best
+- Use repetition, alliteration, symbolism
+
+Always write something genuinely beautiful and memorable. ✨
 """,
     "speech": """
-You are in SPEECH / PRESENTATION MODE. The user wants a speech or presentation script.
-- Powerful opening hook (question, quote, or bold statement)
-- Clear structured points with smooth transitions
-- Rhetorical devices: repetition, tricolon, direct address
-- Memorable closing that calls to action or leaves lasting impression
+You are a professional speechwriter in SPEECH MODE.
+Craft powerful, moving speeches in the user's language.
+
+STRUCTURE:
+1. **Opening hook** — bold statement, rhetorical question, or striking quote
+2. **Personal/emotional connection** — make the audience feel involved
+3. **3 main points** — clear, logical, with transitions ("Birinchidan... Ikkinchidan... Uchinchidan...")
+4. **Call to action or vision** — inspire the audience to act or believe
+5. **Memorable closing** — repeat a key phrase, leave a lasting image
+
+TECHNIQUES:
+- Rhetorical questions to engage audience
+- Tricolon (3-part lists) for rhythm and power
+- Repetition of key phrases (anaphora)
+- Direct address ("Aziz do'stlar...", "Hurmatli mehmonlar...")
+- Short punchy sentences for impact
+
+Write the full speech, not just an outline. Make it genuinely moving. 🎤
 """,
     "ideas": """
-You are in BRAINSTORMING MODE. The user wants creative ideas or topic suggestions.
-- Generate diverse, original, actionable ideas
-- Use numbered lists with brief explanations for each idea
-- Be energetic and inspiring — make ideas feel exciting
-- Group related ideas under subheadings if list is long
+You are a creative strategist in BRAINSTORM MODE.
+Generate brilliant, original, actionable ideas in the user's language.
+
+FORMAT:
+- Number each idea clearly: **1. Idea Title** — explanation (2-3 sentences)
+- Group ideas by category using ### headers if there are many
+- End with a 💡 "Top Pick" — your single best recommendation with reasoning
+
+QUALITY BAR:
+- Ideas must be specific, not vague ("Create a subscription box for X" not just "a business idea")
+- Include why it works, what makes it unique, and a first step to try it
+- Mix safe/proven ideas with bold/unexpected ones
+- Be energetic and inspiring — good ideas should feel exciting 🚀
 """,
     "translate": """
 You are in TRANSLATION MODE. The user wants accurate translation.
