@@ -754,6 +754,7 @@ except Exception:
 # ═══════════════════════════════════════════════════════════════
 if "messages"     not in st.session_state: st.session_state.messages     = []
 if "active_mode"  not in st.session_state: st.session_state.active_mode  = "general"
+if "cooldown_end" not in st.session_state: st.session_state.cooldown_end = 0
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -1026,10 +1027,34 @@ st.markdown('</div>', unsafe_allow_html=True)
 # ═══════════════════════════════════════════════════════════════
 #  INPUT
 # ═══════════════════════════════════════════════════════════════
-prompt = st.chat_input("Xabar yozing… (esse, she'r, nutq, tarjima yoki istalgan savol)")
+# ── Cooldown timer ────────────────────────────────────────────
+remaining = int(st.session_state.cooldown_end - time.time())
+if remaining > 0:
+    st.markdown(f"""
+    <div style="
+      max-width:800px;margin:0 auto;
+      background:linear-gradient(135deg,#fff8ee,#fff3d6);
+      border:2px solid #f59e0b;border-radius:14px;
+      padding:.9rem 1.4rem;display:flex;align-items:center;gap:12px;
+      font-family:'DM Sans',sans-serif;font-size:.875rem;color:#92400e;
+      box-shadow:0 3px 14px rgba(245,158,11,.15);
+    ">
+      <span style="font-size:1.4rem">⏳</span>
+      <div>
+        <strong>Limit tugadi.</strong> Iltimos kuting —
+        <strong style="color:#ea580c;font-size:1rem"> {remaining} soniya</strong>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+    prompt = None
+    st.chat_input("Iltimos kuting…", disabled=True)
+    time.sleep(1)
+    st.rerun()
+else:
+    prompt = st.chat_input("Xabar yozing… (esse, she'r, nutq, tarjima yoki istalgan savol)")
 
 st.markdown(
-    '<div class="input-footer">Somo AI · Usmonov Sodiq (Somo_AI) · Powered by Groq</div>',
+    '<div class="input-footer">Somo AI · Usmonov Sodiq (Somo_AI) · Powered by Gemini</div>',
     unsafe_allow_html=True
 )
 
@@ -1129,7 +1154,8 @@ if prompt and prompt.strip():
     except Exception as exc:
         err = str(exc)
         if "429" in err or "quota" in err.lower() or "rate" in err.lower():
-            full_response = "⏳ So'rovlar limiti tugadi. Bir daqiqa kuting."
+            st.session_state.cooldown_end = time.time() + 60
+            full_response = "⏳ So'rovlar limiti tugadi. 60 soniya kuting."
         elif "401" in err or "invalid" in err.lower() or "api_key" in err.lower():
             full_response = "❌ GEMINI_API_KEY xato. aistudio.google.com dan yangi kalit oling."
         elif "400" in err:
