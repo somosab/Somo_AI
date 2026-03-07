@@ -1078,4 +1078,4 @@ if prompt and prompt.strip():
         "content" : full_response,
         "time"    : get_time(),
         "mode"    : active_mode,
-    })bbbbbb
+    })
