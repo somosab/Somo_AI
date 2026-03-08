@@ -662,14 +662,18 @@ st.set_page_config(
 # ═══════════════════════════════════════════════════════════════════
 #  CSS — PREMIUM DESIGN v4.0
 # ═══════════════════════════════════════════════════════════════════
-st.markdown("""
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
-  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
-<style>
+# inject fonts + katex links
+st.markdown(
+    '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">'
+    '<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">'
+    '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">'
+    '<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>'
+    '<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:String.fromCharCode(36,36),right:String.fromCharCode(36,36),display:true},{left:String.fromCharCode(36),right:String.fromCharCode(36),display:false}]});"></script>',
+    unsafe_allow_html=True
+)
+
+# inject CSS via st.markdown (split for reliability)
+_CSS = """
 
 /* ═══════════════════════════════════════════════════════════════
    DESIGN TOKENS
@@ -1488,8 +1492,9 @@ html, body {
   .somo-chips { gap: .35rem; }
 }
 
-</style>
-""", unsafe_allow_html=True)
+"""
+
+st.markdown(f"<style>{_CSS}</style>", unsafe_allow_html=True)
 
 
 # ═══════════════════════════════════════════════════════════════════
