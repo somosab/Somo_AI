@@ -1,211 +1,752 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║                                                                  ║
+# ║           SOMO AI  —  Ijodiy AI Yordamchi  v4.0                 ║
+# ║                                                                  ║
+# ║  Muallif  : Usmonov Sodiq  (@Somo_AI)                           ║
+# ║  Model    : Groq Llama-3.3-70B  +  Google Gemini 2.0 Flash      ║
+# ║  Stack    : Python · Streamlit · Dual-API Streaming             ║
+# ║  Versiya  : 4.0  |  2026                                        ║
+# ║                                                                  ║
+# ╠══════════════════════════════════════════════════════════════════╣
+# ║  YANGILIKLAR v4.0:                                               ║
+# ║  ✦ Butunlay qayta yozilgan mukammal dizayn                       ║
+# ║  ✦ Gradient mesh background + glass morphism header             ║
+# ║  ✦ Premium card hover effektlari                                 ║
+# ║  ✦ Pulse animatsiyali online dot                                 ║
+# ║  ✦ Smooth scroll + message fade-in                              ║
+# ║  ✦ Welcome screen: animated badge + gradient headline           ║
+# ║  ✦ Copy button + so'z soni + sessiya statistikasi               ║
+# ║  ✦ Random ilhom (20 mavzu) + chatni tozalash                    ║
+# ║  ✦ Greeting: tong/kun/kech/tun                                  ║
+# ║  ✦ API switch xabari, 90s cooldown timer                        ║
+# ║  ✦ KaTeX matematik rendering                                     ║
+# ║  ✦ Mobil moslashuvchan (320px gacha)                            ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
 import streamlit as st
 import google.generativeai as genai
 from groq import Groq
-import time, re
+import time, re, random
 
-# ═══════════════════════════════════════════════════════════════
-#  MARKDOWN → HTML
-# ═══════════════════════════════════════════════════════════════
-def md_to_html(text):
-    """Convert markdown to safe HTML for custom chat bubbles."""
-    math_blocks = {}
+# ═══════════════════════════════════════════════════════════════════
+#  CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════
+GROQ_MODEL     = "llama-3.3-70b-versatile"
+GEMINI_MODEL   = "gemini-2.0-flash"
+GROQ_MAX_TOK   = 4096
+GEMINI_MAX_TOK = 4096
+GROQ_TEMP      = 0.85
+GEMINI_TEMP    = 0.95
+COOLDOWN_LONG  = 90
 
-    def save_math(m):
-        key = f"__MATH{len(math_blocks)}__"
-        math_blocks[key] = m.group(0)
-        return key
+# ═══════════════════════════════════════════════════════════════════
+#  MARKDOWN → HTML  (LaTeX-safe, full-featured)
+# ═══════════════════════════════════════════════════════════════════
+def md_to_html(text: str) -> str:
+    """Convert markdown to rich HTML, preserving LaTeX blocks."""
+    saved = {}
 
-    # Protect LaTeX
-    text = re.sub(r'\$\$.+?\$\$', save_math, text, flags=re.DOTALL)
-    text = re.sub(r'\$.+?\$',     save_math, text)
+    def save(m):
+        k = f"__BLK{len(saved)}__"
+        saved[k] = m.group(0)
+        return k
 
-    # Fenced code blocks
-    text = re.sub(
-        r'```(\w*)\n?(.*?)```',
-        lambda m: f'<pre><code class="lang-{m.group(1)}">{m.group(2).strip()}</code></pre>',
-        text, flags=re.DOTALL
-    )
+    # protect LaTeX
+    text = re.sub(r'\$\$.+?\$\$', save, text, flags=re.DOTALL)
+    text = re.sub(r'\$.+?\$', save, text)
 
-    # Inline code
+    # fenced code blocks
+    def fmt_code(m):
+        lang = m.group(1) or ""
+        body = m.group(2).strip()
+        return f'<pre><code class="lang-{lang}">{body}</code></pre>'
+    text = re.sub(r'```(\w*)\n?(.*?)```', fmt_code, text, flags=re.DOTALL)
+
+    # inline code
     text = re.sub(r'`([^`\n]+)`', r'<code>\1</code>', text)
 
-    # Headers
-    text = re.sub(r'^### (.+)$', r'<h3>\1</h3>', text, flags=re.MULTILINE)
-    text = re.sub(r'^## (.+)$',  r'<h2>\1</h2>', text, flags=re.MULTILINE)
-    text = re.sub(r'^# (.+)$',   r'<h1>\1</h1>', text, flags=re.MULTILINE)
+    # headers
+    text = re.sub(r'^#### (.+)$', r'<h4>\1</h4>', text, flags=re.MULTILINE)
+    text = re.sub(r'^### (.+)$',  r'<h3>\1</h3>', text, flags=re.MULTILINE)
+    text = re.sub(r'^## (.+)$',   r'<h2>\1</h2>', text, flags=re.MULTILINE)
+    text = re.sub(r'^# (.+)$',    r'<h1>\1</h1>', text, flags=re.MULTILINE)
 
-    # Bold+italic, bold, italic
+    # bold + italic + strikethrough
     text = re.sub(r'\*\*\*(.+?)\*\*\*', r'<strong><em>\1</em></strong>', text)
-    text = re.sub(r'\*\*(.+?)\*\*',     r'<strong>\1</strong>',          text)
+    text = re.sub(r'\*\*(.+?)\*\*',       r'<strong>\1</strong>', text)
     text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<em>\1</em>', text)
+    text = re.sub(r'~~(.+?)~~', r'<del>\1</del>', text)
 
-    # Blockquote
+    # horizontal rule
+    text = re.sub(r'^---+$', r'<hr class="md-hr">', text, flags=re.MULTILINE)
+
+    # blockquote
     text = re.sub(r'^> (.+)$', r'<blockquote>\1</blockquote>', text, flags=re.MULTILINE)
 
-    # Unordered list
-    def build_ul(m):
-        items = re.findall(r'^[\-\*] (.+)$', m.group(0), re.MULTILINE)
+    # unordered list
+    def ul_block(m):
+        items = re.findall(r'^[\-\*•] (.+)$', m.group(0), re.MULTILINE)
         return '<ul>' + ''.join(f'<li>{i}</li>' for i in items) + '</ul>'
-    text = re.sub(r'(^[\-\*] .+\n?)+', build_ul, text, flags=re.MULTILINE)
+    text = re.sub(r'(^[\-\*•] .+\n?)+', ul_block, text, flags=re.MULTILINE)
 
-    # Ordered list
-    def build_ol(m):
+    # ordered list
+    def ol_block(m):
         items = re.findall(r'^\d+\. (.+)$', m.group(0), re.MULTILINE)
         return '<ol>' + ''.join(f'<li>{i}</li>' for i in items) + '</ol>'
-    text = re.sub(r'(\d+\. .+\n?)+', build_ol, text, flags=re.MULTILINE)
+    text = re.sub(r'(\d+\. .+\n?)+', ol_block, text, flags=re.MULTILINE)
 
-    # Horizontal rule
-    text = re.sub(r'^-{3,}$', '<hr>', text, flags=re.MULTILINE)
+    # table
+    def tbl(m):
+        rows = [r.strip() for r in m.group(0).strip().split('\n') if '|' in r]
+        if not rows: return m.group(0)
+        out = '<table>'
+        for i, row in enumerate(rows):
+            if re.match(r'^\|[\-\| :]+\|$', row): continue
+            tag = 'th' if i == 0 else 'td'
+            cells = [c.strip() for c in row.strip('|').split('|')]
+            out += '<tr>' + ''.join(f'<{tag}>{c}</{tag}>' for c in cells) + '</tr>'
+        return out + '</table>'
+    text = re.sub(r'(\|.+\|\n?)+', tbl, text)
 
-    # Newlines
-    text = re.sub(r'\n', '<br>', text)
+    # paragraphs
+    paras = text.split('\n\n')
+    result = []
+    for p in paras:
+        p = p.strip()
+        if not p: continue
+        if re.match(r'^<(h[1-4]|ul|ol|pre|blockquote|table|hr)', p):
+            result.append(p)
+        else:
+            p = p.replace('\n', '<br>')
+            result.append(f'<p>{p}</p>')
+    text = '\n'.join(result)
 
-    # Restore LaTeX
-    for key, val in math_blocks.items():
-        text = text.replace(key, val)
-
+    # restore LaTeX
+    for k, v in saved.items():
+        text = text.replace(k, v)
     return text
 
 
-# ═══════════════════════════════════════════════════════════════
-#  AUTO-DETECT MODE FROM USER MESSAGE
-# ═══════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════
+#  HELPERS
+# ═══════════════════════════════════════════════════════════════════
+def get_time() -> str:
+    return time.strftime("%H:%M")
+
+def get_date() -> str:
+    return time.strftime("%d.%m.%Y")
+
+def wc(text: str) -> int:
+    """So'zlar sonini qaytaradi."""
+    return len(text.split())
+
+def is_rate_err(e: str) -> bool:
+    """API rate limit xatosini aniqlaydi."""
+    keys = ["429", "rate_limit", "quota", "rate limit",
+            "Resource exhausted", "RESOURCE_EXHAUSTED",
+            "too many requests", "Too Many Requests"]
+    return any(k.lower() in e.lower() for k in keys)
+
+def get_greeting() -> tuple:
+    """Kun vaqtiga mos salomlashuvni qaytaradi."""
+    h = int(time.strftime("%H"))
+    if 5  <= h < 12: return "🌅", "Xayrli tong"
+    if 12 <= h < 17: return "☀️",  "Xayrli kun"
+    if 17 <= h < 21: return "🌆", "Xayrli kech"
+    return "🌙", "Tungi ilhom"
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  CONSTANTS
+# ═══════════════════════════════════════════════════════════════════
+RAND_PROMPTS = [
+    "Yolg'izlik haqida she'r yoz",
+    "Vaqt haqida qisqa hikoya yoz",
+    "Orzular haqida nutq yoz",
+    "Kitob o'qishning foydasi haqida esse yoz",
+    "Toshkent haqida she'r yoz",
+    "Musiqa va hayot haqida esse",
+    "Ona haqida she'r yoz",
+    "Yoshlikda qilish kerak 10 ta g'oya ber",
+    "Do'stlik haqida qisqa hikoya",
+    "Ilm haqida she'r yoz",
+    "Baxt nima — esse yoz",
+    "Kelajak haqida nutq yoz",
+    "Sevgi va vaqt haqida hikoya",
+    "O'zbekiston tarixi haqida esse",
+    "Tabiat va inson haqida she'r",
+    "Bolalikning ta'mi haqida she'r",
+    "Muvaffaqiyat sirlari — esse",
+    "Quyosh botishi haqida she'r",
+    "Hayot go'zalligi haqida esse",
+    "Kitob va hayot haqida hikoya",
+]
+
+MODE_META = {
+    "esse"     : {"icon": "✍️",  "label": "Esse",           "color": "#f59e0b"},
+    "story"    : {"icon": "📖",  "label": "Hikoya / She'r", "color": "#ec4899"},
+    "speech"   : {"icon": "🎤",  "label": "Nutq",            "color": "#8b5cf6"},
+    "ideas"    : {"icon": "💡",  "label": "G'oyalar",        "color": "#0ea5e9"},
+    "translate": {"icon": "🌍",  "label": "Tarjima",         "color": "#10b981"},
+    "summary"  : {"icon": "📋",  "label": "Xulosa",          "color": "#6366f1"},
+    "general"  : {"icon": "✦",   "label": "Somo AI",         "color": "#f59e0b"},
+}
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  MODE DETECTION
+# ═══════════════════════════════════════════════════════════════════
 def detect_mode(text: str) -> str:
     """
-    Infer the content mode from the user's message keywords.
-    Returns one of: esse | story | speech | ideas | translate | summary | general
+    Foydalanuvchi xabaridagi kalit so'zlar asosida AI rejimini
+    avtomatik aniqlaydi.
     """
     t = text.lower()
-
-    # Translation signals
-    translate_kw = [
-        "tarjima", "translate", "перевод", "перевести",
-        "inglizcha", "o'zbekcha", "ruscha", "english", "russian", "uzbek",
-        "to english", "to uzbek", "to russian"
-    ]
-    if any(k in t for k in translate_kw):
+    if re.search(r"tarjima|translate|inglizcha|ruscha|перевод|перевести|to english|to uzbek", t):
         return "translate"
-
-    # Story / poem signals
-    story_kw = [
-        "hikoya", "she'r", "шер", "hикоя", "story", "poem", "poetry",
-        "fairy tale", "ertak", "roman", "novella", "рассказ", "стих",
-        "ballad", "ballada", "masal"
-    ]
-    if any(k in t for k in story_kw):
+    if re.search(r"hikoy|poem|story|ertak|roman|ballad|masal|lirik|ruboiy|sonet|she.r|qo.shiq", t):
         return "story"
-
-    # Speech / presentation signals
-    speech_kw = [
-        "nutq", "taqdimot", "speech", "presentation", "доклад", "выступление",
-        "chiqish", "tribuna", "minbar", "oration", "toast"
-    ]
-    if any(k in t for k in speech_kw):
+    if re.search(r"nutq|taqdimot|speech|presentation|minbar|chiqish", t):
         return "speech"
-
-    # Ideas / brainstorm signals
-    ideas_kw = [
-        "g'oya", "fikr", "идея", "brainstorm", "ideas", "топик", "tema",
-        "mavzu ber", "taklif ber", "варианты", "options", "список тем",
-        "nima yozsam", "nima qilsam", "startup", "biznes", "project"
-    ]
-    if any(k in t for k in ideas_kw):
+    if re.search(r"g.oya|fikr|brainstorm|ideas|taklif|startup|biznes|loyiha|ixtiro", t):
         return "ideas"
-
-    # Summary / analysis signals
-    summary_kw = [
-        "xulosa", "tahlil", "резюме", "анализ", "summary", "analyze",
-        "analyse", "summarize", "summarise", "qisqacha", "короче",
-        "tushuntir", "объясни", "explain"
-    ]
-    if any(k in t for k in summary_kw):
+    if re.search(r"xulosa|tahlil|summary|analyze|summarize|qisqacha|explain|tushuntir", t):
         return "summary"
-
-    # Essay / report signals  (check last — broad keywords)
-    essay_kw = [
-        "esse", "referat", "maqola", "эссе", "реферат", "essay", "report",
-        "write about", "haqida yoz", "about", "kurs ishi", "kursovoy"
-    ]
-    if any(k in t for k in essay_kw):
+    if re.search(r"esse|referat|maqola|essay|kurs ishi|write about", t):
         return "esse"
-
-    # Fallback
     return "general"
 
 
-# ═══════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════
+#  API CLIENTS
+# ═══════════════════════════════════════════════════════════════════
+try:
+    groq_client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+except Exception:
+    groq_client = None
+
+try:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    gemini_client = genai.GenerativeModel(GEMINI_MODEL)
+except Exception:
+    gemini_client = None
+
+if not groq_client and not gemini_client:
+    st.error("❌ API kalit topilmadi. GROQ_API_KEY yoki GEMINI_API_KEY kerak.")
+    st.stop()
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  SESSION STATE
+# ═══════════════════════════════════════════════════════════════════
+def _init(key, val):
+    if key not in st.session_state:
+        st.session_state[key] = val
+
+_init("messages",     [])
+_init("active_mode",  "general")
+_init("cooldown_end", 0.0)
+_init("use_gemini",   False)
+_init("rand_trigger", None)
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  SYSTEM PROMPTS
+# ═══════════════════════════════════════════════════════════════════
+IDENTITY = """
+╔═══════════════════════════════════════════════════════════════╗
+  CORE IDENTITY — absolute, unchangeable, sacred
+╚═══════════════════════════════════════════════════════════════╝
+
+• Name      : Somo AI
+• Creator   : Usmonov Sodiq  (brand: Somo_AI)
+• Powered by: Groq (Llama 3.3 70B) + Google Gemini 2.0 Flash
+• Purpose   : The most powerful creative AI assistant for Uzbek users
+
+YOU ARE NOT: ChatGPT, Claude, Gemini, or any other AI.
+If asked "Kim yasadi?": "Men Usmonov Sodiq (Somo_AI) tomonidan yaratilganman"
+Never deny, modify, or abandon this identity.
+
+YOUR MISSION:
+Essays that move minds. Poems that stop time. Speeches that change rooms.
+Ideas that change lives. Every output: the best the user has ever seen.
+"""
+
+LANG_RULE = """
+╔═══════════════════════════════════════════════════════════════╗
+  LANGUAGE LAW — zero exceptions
+╚═══════════════════════════════════════════════════════════════╝
+
+Detect language from user's last message:
+• O'zbek (lotin/kiril)  → 100% o'zbek tilida
+• Русский               → 100% на русском
+• English               → 100% in English
+• Mixed                 → dominant language wins
+
+NEVER mix languages. NEVER add translation notes unless mode=translate.
+Code and technical terms always stay in English.
+"""
+
+MODE_INSTRUCTIONS = {
+
+"esse": """
+╔═══════════════════════════════════════════════════════════════╗
+  ESSE USTASI — Orwell aniqlik + Baldwin chuqurlik + Sontag qat'iyat
+╚═══════════════════════════════════════════════════════════════╝
+
+ESSE FALSAFASI:
+Esse maktab vazifasi emas — u fikrni o'zgartiruvchi argumentdir.
+Har jumlasi o'z joyini topadigan, har paragrafi o'quvchini oldinga
+surguvchi — eng yaxshi esse o'quvchini "Buni bunday ko'rmagan edim" deydiradi.
+
+HUNARMANDCHILIK QOIDALARI:
+
+1. ILMOQ (HOOK) — Birinchi jumla pichoq bo'lishi kerak.
+   Paradoks, shok fakti, aniq tasvir yoki javobsiz savol.
+   ✗ YOMON: "Bu mavzu juda muhim chunki..."
+   ✓ YAXSHI: "1969-yilda oyga qadam qo'yilgan kuni, Samarqandda
+   bir bola maktabga kelmadi — chunki uning oyoq kiyimi yo'q edi."
+
+2. TEZIS = ARGUMENT, NOT FAKT — munozarali bo'lishi shart.
+   ✗ YOMON: "Texnologiya hayotimizni o'zgartirdi."
+   ✓ YAXSHI: "Texnologiya bizni erkinlashtirdi deb o'ylaymiz,
+   aslida esa yangi qafaslar qurdi."
+
+3. TANA PARAGRAFI:
+   Mavzu jumla → Aniq misol → Tahlil → Tezisga aloqa
+
+4. QARSHI FIKR — eng kuchli e'tirozni tan olib, mantiq bilan yeng.
+   Bu argumentingni yengilmas qiladi.
+
+5. O'TISHLAR — ko'rinmas, mexanik emas:
+   ✗ "Birinchidan, ikkinchidan, uchinchidan..."
+   ✓ "Biroq bu manzaraning orqasida boshqa haqiqat yotadi..."
+
+6. XOTIMA — hech qachon xulosa qilma. KUCHAYTIR.
+   Tugalish: ta'qib qiluvchi savol, boshlanishga qaytish (o'zgartirilgan),
+   yoki essening doirasidan kengrog'iga chiquvchi chaqiriq.
+
+MAJBURIY STRUKTURA:
+## Kirish
+[Hook — 1 ta unutilmas jumla]
+[Kontekst — 2-3 jumla]
+[Tezis — jasur, munozarali da'vo]
+
+## [Birinchi Argument — haqiqiy sarlavha]
+[Mavzu jumla → Aniq misol: ism, sana, hodisa → Tahlil]
+[Qarshi fikr → Kuchli raddiya]
+
+## [Ikkinchi Argument — chuqurlashtir, takrorma]
+[Iqtibos, statistika yoki tarixiy parallel]
+
+## [Uchinchi va Eng Kuchli Argument]
+[Eng hissiy va falsafiy chuqurlik]
+[Kulminatsiyaga qarab qisqa jumlalar]
+
+## Xulosa
+[Tezisni butunlay yangi so'zlarda ifodalash]
+[Sintez: barcha argumentlar birgalikda nima isbotlaydi?]
+[Oxirgi jumla: abadiy tasvir, ta'qib qiluvchi savol]
+
+UZUNLIK: 550–900 so'z. So'ralsa ko'proq.
+""",
+
+"story": """
+╔═══════════════════════════════════════════════════════════════╗
+  IJOD USTASI — Navoiy + Oripov + Cho'lpon + Neruda ruhi
+╚═══════════════════════════════════════════════════════════════╝
+
+ADABIY E'TIQOD:
+San'at tushuntirmaydi — U OCHIB BERADI.
+O'quvchi nomlashga so'z topa olmaydigan narsani his qilishi kerak.
+Har so'z toshdagi kabi tanlanadi.
+
+O'ZBEK USTOZLAR:
+• Alisher Navoiy    — ilohiy metafora, g'azal nafosi, ma'shuqa — ilohiy ko'zgu
+• Abdulla Oripov    — oddiy so'z — cheksiz og'irlik, Vatan hasrati
+• Erkin Vohidov     — kesuvchi hazil, bir satrda falsafa, ichida ko'z yoshi
+• Cho'lpon          — impressionist detal, erkinlik armanday, singan oyna parchalari
+• Abdulla Qahhor    — his qilinadigan, ko'riladigan, eshitiladigan qahramonlar
+• Hamid Olimjon     — romantik idealizm, tabiat — ko'rinadigan his
+
+JAHON USTOZLAR:
+• Pablo Neruda     — "Bahor olcha daraxti bilan nima qilsa, senga ham shuni qilmoqchiman"
+                     Hissiyot falsafa sifatida. Tana — koinot uchun metafora.
+• Jaloliddin Rumi  — Paradoks eshik sifatida. Qulatib qayta quradigan sevgi.
+                     Sukunat so'zdan baland.
+• Hafiz             — Meyhona va ilohiy — bir joy. Quvonch — ruhiy amaliyot.
+• Anton Chekhov    — 1-pardada qurol ko'rsat. Hech narsa tushuntirilmaydi.
+• O. Henry          — Burilish ALDAMAYDI — u har doim haqiqat bo'lgan narsani OCHADI.
+• Jorge Luis Borges — Haqiqat = Matn. Barcha mumkin kitoblarni o'z ichiga olgan kutubxona.
+• García Márquez   — "Ko'p yillar o'tib, otashunga qarab turib..."
+                     Vaqt — mif. Hayotning sehrli realizmi.
+
+HUNARMANDCHILIK TEXNIKALARI (har asarda kamida 3):
+1. Volta          — 2/3 nuqtada butun ma'noni o'zgartiradigan burilish
+2. Sinestetika    — "U uning sukunatini tatidi", "kechning ko'k ovozi"
+3. Ob'ektiv korrelyat — "g'amgin" dema; bo'sh stulni ko'rsat
+4. In medias res  — harakat, nafas, jumla o'rtasidan boshlash
+5. Anafora        — "Men seni sevdim, men seni..." — imdga aylangan takror
+6. Aniq tasvir    — "qush" emas → "iyul-yorilgan o'rik shoxidagi popishak"
+7. Enjambement    — qator nafas uzilgan joyda uziladi, grammatika emas
+8. Yangrash tugash — oxirgi qator birinchiga aks-sado, yoki yangi ma'no bilan qarshi
+
+HIKOYALAR UCHUN:
+• Biror narsa bo'layotgan joyning o'rtasidan OCHING — hech qanday tarixsiz
+• Birinchi paragraf: qahramonlik + aniq joylashuv + keskinlik — uchala
+• Dialog xarakterni ochadi; syujetni tushuntirmaydi
+• Har sahna biror narsani o'zgartiradi: tushuncha, munosabat yoki dunyo
+• Kulminatsiya: hamma narsani ko'taradigan bitta jumla
+• Tugash: kutilmagan YOKI muqarrar — har doim birortasi
+
+SHE'RLAR UCHUN:
+• Sarlavha: tushuntirib emas, ma'no qo'shadi — eshik, yorliq emas
+• 1-qator: aniq tasvir, hech qachon mavhum da'vo emas
+  ✗ YOMON: "Hayot qiyin..."
+  ✓ YAXSHI: "Onam non yopardi, men esa ketayotgan edim."
+• Har band: bitta to'liq fikr
+• Volta: ataylab joylashtirilgan
+• Oxirgi qator: karilgan qo'ng'iroqdek yangrashi kerak
+
+MUTLAQ TAQIQLAR:
+✗ "Bu bir hikoya..." yoki "Bir bor edi..." bilan hech qachon ochma
+✗ His-tuyg'uni ayt emas — tasvirla
+✗ Metaforani tushuntirma
+✗ Kuchsiz tugama — oxirgi qator eng muhimi
+""",
+
+"speech": """
+╔═══════════════════════════════════════════════════════════════╗
+  NUTQ USTASI — MLK + Churchill + Obama + O'zbek notiqlik san'ati
+╚═══════════════════════════════════════════════════════════════╝
+
+NUTQ FALSAFASI:
+Nutq o'qilmaydi — u IJRO ETILADI.
+Har jumla ovoz chiqarib aytilishi uchun ishlashi kerak.
+Tomoshabin o'zgargan holda chiqishi kerak: harakatlangan, ilhomlantirilgan.
+Eng yaxshi nutqlar yarmidan iborat sukunat — nima deyilmagan narsani o'ylantiradi.
+
+USTOZLAR:
+• MLK    — Anafora ("I have a dream..."), axloqiy yoy, muammo → vizyon → harakat
+• Churchill — Kulminatsiyada qisqa jumlalar. "We shall fight" da birorta sifat yo'q.
+• Obama  — Shaxsiy hikoya → universal haqiqat; "Shuning uchun..." ko'prigi
+• Demosfen — Savol qurol sifatida, nafas boshqaruvi
+
+MAJBURIY STRUKTURA (7 qism):
+
+🎯 ILMOQ — Birinchi 15 so'z vaqtni to'xtatishi kerak
+   Shok statistikasi, javobsiz savol, o'rta harakat hikoyasi, paradoks.
+   Maksimal 3 jumla. Keyin to'liq to'xta. Nafas olsin.
+
+🤝 BOG'LANISH — Gapirish huquqini qozon
+   "Siz ham bu hisni bilasiz..." Shaxsiy e'tirof yoki umumiy tajriba.
+   Ular "Bu men haqimda" deb o'ylashsin.
+
+💡 BIRINCHI ASOSIY FIKR
+   Jasur da'vo → aniq hikoya yoki dalil → ular uchun ma'nosi.
+   Kutishni yaratuvchi o'tish bilan yakunla.
+
+🔥 IKKINCHI ASOSIY FIKR — keskinlashtir
+   Chuqurroq bor. Taxminni rad et yoki yashirin haqiqatni och.
+   Iqtibos, raqam yoki tarixiy parallel qo'sh.
+
+⚡ UCHINCHI ASOSIY FIKR — CHO'QQI
+   Eng kuchli dalil. Eng yaxshi misolni bu yerga saqla.
+   Kulminatsiyaga qarab jumlalar qisqaroq va qisqaroq bo'lsin.
+   To'xta. Keyin: sukunat ("...")
+
+🚀 CHAQIRIQ
+   Aniq, mumkin, darhol. "O'zgarish" emas — "Bugun kechqurun bitta ish qil: ..."
+
+🔔 YOPISH — aks-sado va oshib ket
+   Ochilish tasviri — lekin hamma narsa o'tgandan keyin o'zgartirilgan.
+   Oxirgi jumla: 8 so'z yoki kam. U qo'ng'iroq kabi yangrashi kerak.
+
+RITORIK ASBOBLAR (barchasini ishlatish):
+• Anafora: Takroriy boshlash jumlasi 3+ marta — imdga aylangan
+• Trikolon: Uchtalik ro'yxat — "Bilim, mehnat, sabr" — har doim uch
+• Ritorik savollar: Javob beradigan va ochiq qoldiradigan savollar
+• Antiteza: "Ko'p gapirildi, kam ish qilindi"
+• Ellipsis "...": Eng muhim qatoringdan oldin — sukunat uni balandroq qiladi
+• To'g'ridan-to'g'ri murojaat: "Aziz do'stlarim...", "Aynan siz..."
+
+STANDART: To'liq matn. Outline emas. Ijroga tayyor.
+""",
+
+"ideas": """
+╔═══════════════════════════════════════════════════════════════╗
+  G'OYA USTASI — IDEO dizayn + YC instinkt + shoir tasavvur
+╚═══════════════════════════════════════════════════════════════╝
+
+G'OYA FALSAFASI:
+Eng yaxshi g'oyalar aniq ko'rinadi — lekin kimdir aytgandan KEYIN.
+Vazifa: hamma o'tkazib yuborgan narsani top.
+
+SIFAT FILTRLARI (har g'oya 3 testni o'tishi kerak):
+1. Aniqlik: Nomga ega bo'ladimi?
+   ("AI-powered mahalla tibbiy assistenti" o'tadi. "Health app" o'tmaydi.)
+2. Hayratlantirishlik: Foydalanuvchi "Oh, buni o'ylamagan edim" deyarmi?
+3. Harakat: Bugun boshlanishi mumkinmi?
+
+MAJBURIY FORMAT:
+
+### 💡 [Tematik Kategoriya]
+
+**[N]. [Jasur, Esda qolarli Nom]**
+*Mohiyat:* [Bir aniq jumla — nima ekanligini]
+*Nima uchun ishlaydi:* [2 jumla — nima uchun ishlashining o'zagi]
+*Noyoblik:* [Aniq alternativlardan nimasi farqli]
+*Birinchi qadam:* [Eng aniq, bajariladigan birinchi harakat — bugun, "qachondir" emas]
+
+---
+### 🏆 ENG YAXSHI TANLOV
+**[Nom]**
+[3-4 jumla: nega aynan bu. Aniq bo'l. Fikrlashingni ko'rsat.]
+*Nega hozir?* [Nima uchun bu g'oya hozir o'ta o'rinli]
+
+QOIDALAR:
+• Minimum 6, maksimal 12 g'oya
+• Aralashma: texnologiya, ijtimoiy, ijodiy/badiiy, "yovvoyi karta"
+• Kamida 2 ta "kutilmagan" bo'lsin
+• ISHTIYOQLI bo'l — yaxshi g'oyalar chin hayajonni talab qiladi 🚀
+""",
+
+"translate": """
+╔═══════════════════════════════════════════════════════════════╗
+  TARJIMA USTASI — Matn emas, RUH tarjimasi
+╚═══════════════════════════════════════════════════════════════╝
+
+TARJIMA FALSAFASI:
+Mukammal tarjima ko'rinmas — o'quvchi tarjima o'qiyotganini unutadi.
+So'zma-so'z tarjima — aslning jonini o'ldiradi.
+Vazifang: so'z emas, MA'NO, TUN va RUHNI tarjima qilish.
+
+QOIDALAR:
+1. Registrni saqlash — rasmiy rasmiy qoladi; ko'cha tili ko'cha bo'ladi
+2. Idiomalar → ekvivalent idiomalar — maqsad tildagi ekvivalentni top
+3. Madaniy murojaat — ekvivalent bo'lmasa, qisqa izoh [*] qo'sh
+4. Badiiy matnda ritm — aslda ritm bo'lsa, tarjimada ham ritm top
+5. Ismlar: transliteratsiya; sarlavhalar: tarjima
+
+MAJBURIY FORMAT:
+
+**📄 Asl matn:**
+> [asl matn]
+
+**✅ Tarjima:**
+> [tarjima]
+
+**📝 Izohlar** *(faqat kerak bo'lsa)*:
+- [atama]: [qisqa madaniy/lingvistik izoh]
+
+**🔤 Lug'at** *(5+ murakkab atama uchun)*:
+| Asl | Tarjima | Izoh |
+|-----|---------|------|
+""",
+
+"summary": """
+╔═══════════════════════════════════════════════════════════════╗
+  TAHLIL USTASI — Feynman soddalik + Sud aniqligi + Faylasuf chuqurlik
+╚═══════════════════════════════════════════════════════════════╝
+
+TAHLIL FALSAFASI:
+Xulosa qilish = kamroq nusxa ko'chirish — u HAYDASH.
+Eng yaxshi xulosa o'quvchiga asldagidan KO'PROQ tushunish beradi.
+
+TAHLIL QOIDALARI:
+1. BITTA asosiy g'oyani top — qolgan hamma narsa uni qo'llab-quvvatlash
+2. Struktura ma'noni ochadi — qanday tashkil qilishing o'zi argument
+3. Murakkab g'oyalar uchun oddiy til
+4. Sening nuqtai nazaring muhim — hukmsiz tahlil oddiy tasvir
+5. Nimaning yo'qligi ham muhim — matn NIMA DEMAYOTGANI
+
+MAJBURIY FORMAT:
+
+## 🎯 Asosiy G'oya
+**[Eng muhim nuqta — 1-2 jumla]**
+
+## 🔑 Muhim Fikrlar
+- **[Nuqta 1]**: [qisqa izoh]
+- **[Nuqta 2]**: [qisqa izoh]
+- **[Nuqta 3]**: [qisqa izoh]
+
+## 🧩 Chuqur Tahlil
+[4 paragraf: haqiqatda nima haqida / eng kuchli argument / zaif tomonlar / oqibatlar]
+
+## 💡 Noodatiy Insight
+[Sirtdan o'quvchi o'tkazib yuboradigan bitta narsa]
+
+## ❓ Ochiq Savol
+[Eng qiziqarli hal bo'lmagan keskinlik]
+""",
+
+"general": """
+╔═══════════════════════════════════════════════════════════════╗
+  SOMO AI — Eng foydali, halol va ajoyib yordamchi
+╚═══════════════════════════════════════════════════════════════╝
+
+FALSAFA:
+Ko'rinib turuvchi emas, HAQIQIY foydali bo'l.
+Haqiqiy javoblar ber, not savol-javob bo'lmagan javoblar.
+Foydalanuvchini murakkablik va halollikni ko'tara oladigan aqlli kattalar sifatida muomala qil.
+
+JAVOB KALIBRLASH:
+• Oddiy faktik savol → To'g'ridan-to'g'ri javob, 1-3 jumla, to'ldiruvchisiz
+• Murakkab savol → Strukturali tushuntirish + misollar + fikring
+• Ijodiy so'rov → To'liq ijodiy chiqish, qanday yozishim emas
+• Hissiy → Iliq, hozir, chin
+• Noaniq → Eng yaxshi talqiningni ayt, keyin moslashtirishni taklif qil
+
+SHAXSIYAT:
+• Qiziquvchi va g'oyalarga chin ravishda hayajonlangan — ko'rsatsin
+• Iliq lekin yaltiroq emas — "Ajoyib savol!" bilan boshlamaslik
+• Halol — "Bilmayman" ham kiradi
+• To'g'ridan-to'g'ri — aslida nimani o'ylayotganingni ayt
+• O'zbek madaniy bilim — mahalliy qadriyatlar, manbalar, kontekst
+""",
+
+}
+
+FORMATTING_RULES = """
+╔═══════════════════════════════════════════════════════════════╗
+  UNIVERSAL CHIQISH QOIDALARI — har javobga qo'llanadi
+╚═══════════════════════════════════════════════════════════════╝
+
+TIPOGRAFIYA:
+• **Qalin** uchun: asosiy atamalar, esda qolarli faktlar, muhim ta'kid
+• *Kursiv* uchun: kitob/film sarlavhalari, xorijiy so'zlar
+• `kod` uchun: texnik atamalar, buyruq nomlari
+• > blokiqtibos: to'g'ridan-to'g'ri iqtiboslar, ta'riflar
+
+STRUKTURA — FAQAT yordam berganda:
+• ## Sarlavhalar: 3+ alohida qism uchun
+• Nuqta ro'yxati: haqiqatan ro'yxat uchun
+• Jadvallar: faqat grid strukturasi nimanidir ochganda
+• Kod bloklari: DOIM til tegiyla
+
+MATEMATIK — har doim LaTeX:
+• Qatorida: $ax^2 + bx + c = 0$
+• Alohida: $$\\int_0^\\infty e^{-x^2}dx = \\frac{\\sqrt{\\pi}}{2}$$
+
+JAVOB UZUNLIGI:
+• Oddiy suhbat → 1-4 jumla
+• Faktik savol → to'g'ri javob + zaruriy kontekst
+• Murakkab tahlil → to'la, to'liq
+• Ijodiy so'rov → TO'LIQ ASAR
+
+SIFAT NAZORATI:
+✓ Har paragraf oldinga siltayaptimi?
+✓ Har format elementi o'z joyini oqlaydimi?
+✓ Oxirgi jumla eng kuchlimi?
+✓ Faxrli mutaxassis imzoini qo'yarmikin?
+"""
+
+
+def build_system_prompt(mode: str) -> str:
+    """Berilgan rejim uchun to'liq system promptni yig'adi."""
+    instr = MODE_INSTRUCTIONS.get(mode, MODE_INSTRUCTIONS["general"])
+    return "\n\n".join([IDENTITY, instr, LANG_RULE, FORMATTING_RULES])
+
+
+# ═══════════════════════════════════════════════════════════════════
 #  PAGE CONFIG
-# ═══════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════
 st.set_page_config(
     page_title="Somo AI",
-    page_icon="✏️",
+    page_icon="✦",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="collapsed",
 )
 
 
-# ═══════════════════════════════════════════════════════════════
-#  STYLES  — cream design, Fraunces + DM Sans
-# ═══════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════
+#  CSS — PREMIUM DESIGN v4.0
+# ═══════════════════════════════════════════════════════════════════
 st.markdown("""
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
-
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
-  onload="renderMathInElement(document.body,{
-    delimiters:[
-      {left:'$$',right:'$$',display:true},
-      {left:'$', right:'$', display:false}
-    ]
-  });"></script>
-
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});"></script>
 <style>
-/* ─────────────────────────────────────────────
+
+/* ═══════════════════════════════════════════════════════════════
    DESIGN TOKENS
-───────────────────────────────────────────── */
+   ═══════════════════════════════════════════════════════════════ */
 :root {
-  --cream    : #fdf6e3;
-  --warm     : #f5ead0;
-  --card     : #fffef8;
-  --border   : #e8dfc8;
-  --amber    : #f59e0b;
-  --orange   : #ea580c;
-  --text     : #1c1408;
-  --muted    : #7c6d52;
-  --light    : #b09878;
-  --green    : #15803d;
-  --blue     : #3b82f6;
-  --indigo   : #6366f1;
-  --fh       : 'Fraunces', serif;
-  --fb       : 'DM Sans', sans-serif;
-  --shadow   : 0 2px 12px rgba(0,0,0,.07);
+  /* palette */
+  --cream      : #fdf7ee;
+  --warm       : #f5ead2;
+  --card       : #fffef9;
+  --border     : #e8ddc8;
+  --border-soft: #ede5d2;
+
+  /* accent */
+  --amber  : #f59e0b;
+  --amber-l: #fcd34d;
+  --orange : #ea580c;
+  --orange-l:#fb923c;
+
+  /* semantic */
+  --text   : #1a1208;
+  --muted  : #6b5c42;
+  --light  : #a8936e;
+  --faint  : #c5b59a;
+
+  /* utility */
+  --blue   : #3b82f6;
+  --indigo : #6366f1;
+  --green  : #15803d;
+  --red    : #dc2626;
+  --pink   : #ec4899;
+
+  /* typography */
+  --fh     : 'Fraunces', Georgia, serif;
+  --fb     : 'DM Sans', system-ui, -apple-system, sans-serif;
+
+  /* shadows */
+  --shadow-xs : 0 1px 3px rgba(26,18,8,.06);
+  --shadow-sm : 0 2px 8px rgba(26,18,8,.08);
+  --shadow-md : 0 4px 18px rgba(26,18,8,.1);
+  --shadow-lg : 0 8px 32px rgba(26,18,8,.12);
+  --shadow-amber: 0 4px 18px rgba(245,158,11,.28);
+
+  /* animation */
+  --ease-spring: cubic-bezier(.34,1.56,.64,1);
+  --ease-out   : cubic-bezier(.22,.68,0,1.2);
+  --dur-fast   : .15s;
+  --dur-mid    : .25s;
+  --dur-slow   : .4s;
 }
 
-/* ─────────────────────────────────────────────
-   RESET / BASE
-───────────────────────────────────────────── */
-html, body {
-  background             : var(--cream) !important;
-  margin                 : 0;
-  padding                : 0;
-  -webkit-font-smoothing : antialiased;
-}
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL RESET
+   ═══════════════════════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; }
 
-[data-testid="stAppViewContainer"],
-[data-testid="stMain"],
-.main { background: var(--cream) !important; }
+html, body {
+  background : var(--cream) !important;
+  margin     : 0;
+  padding    : 0;
+  -webkit-font-smoothing : antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
 
-/* Hide all Streamlit chrome */
+/* hide all streamlit chrome */
 #MainMenu, footer, header,
 [data-testid="stToolbar"],
 [data-testid="stDecoration"],
 [data-testid="stStatusWidget"],
 [data-testid="stSidebar"],
-[data-testid="collapsedControl"] { display: none !important; }
+[data-testid="collapsedControl"],
+[data-testid="stChatInputSuggestions"],
+[data-testid="stChatInputSuggestionsContainer"] { display: none !important; }
+
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"], .main,
+.stApp { background: var(--cream) !important; }
 
 .block-container,
 [data-testid="stMainBlockContainer"] {
@@ -213,463 +754,648 @@ html, body {
   max-width : 100% !important;
 }
 
-/* ─────────────────────────────────────────────
-   TOP HEADER  — clean, no mode bar
-───────────────────────────────────────────── */
-.hdr {
+/* scrollbar */
+::-webkit-scrollbar       { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background    : var(--border);
+  border-radius : 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+
+/* ═══════════════════════════════════════════════════════════════
+   HEADER — glass morphism, sticky
+   ═══════════════════════════════════════════════════════════════ */
+.somo-header {
+  position        : sticky;
+  top             : 0;
+  z-index         : 900;
+  background      : rgba(253,247,238,.94);
+  backdrop-filter : blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border-bottom   : 1px solid var(--border-soft);
+  box-shadow      : 0 1px 0 var(--border-soft),
+                    0 2px 16px rgba(26,18,8,.04);
+}
+.somo-header-inner {
   display         : flex;
   align-items     : center;
   justify-content : space-between;
-  padding         : .75rem 2rem;
-  background      : rgba(253,246,227,.97);
-  border-bottom   : 1.5px solid var(--border);
-  position        : sticky;
-  top             : 0;
-  z-index         : 200;
-  backdrop-filter : blur(16px);
+  max-width       : 820px;
+  margin          : 0 auto;
+  padding         : .72rem 1.5rem;
 }
 
-.hdr-brand {
-  display     : flex;
-  align-items : center;
-  gap         : 10px;
-}
-
-.hdr-logo {
-  width           : 36px;
-  height          : 36px;
-  background      : linear-gradient(135deg, var(--amber), var(--orange));
-  border-radius   : 10px;
+/* brand */
+.somo-brand { display: flex; align-items: center; gap: 11px; }
+.somo-logo  {
+  width           : 38px;
+  height          : 38px;
+  border-radius   : 11px;
+  background      : linear-gradient(145deg, var(--amber), var(--orange));
   display         : flex;
   align-items     : center;
   justify-content : center;
   font-family     : var(--fh) !important;
-  font-size       : 16px;
+  font-size       : 17px;
   font-weight     : 900;
   color           : #fff;
-  box-shadow      : 0 3px 12px rgba(245,158,11,.32);
+  box-shadow      : var(--shadow-amber),
+                    inset 0 1px 0 rgba(255,255,255,.22);
   flex-shrink     : 0;
+  letter-spacing  : -.5px;
 }
-
-.hdr-title {
+.somo-name {
   font-family : var(--fh) !important;
-  font-size   : 1rem;
+  font-size   : 1.05rem;
   font-weight : 900;
   color       : var(--text);
   line-height : 1;
+  letter-spacing: -.3px;
 }
-.hdr-title em { color: var(--orange); font-style: italic; }
-
-.hdr-author {
+.somo-name em {
+  font-style  : italic;
+  color       : var(--orange);
+}
+.somo-by {
   font-family    : var(--fb) !important;
-  font-size      : .58rem;
+  font-size      : .55rem;
   color          : var(--light);
-  letter-spacing : .8px;
+  letter-spacing : 1px;
   text-transform : uppercase;
-  margin-top     : 2px;
+  margin-top     : 3px;
 }
 
-.hdr-right {
-  display     : flex;
-  align-items : center;
-  gap         : 8px;
+/* right side */
+.somo-hdr-right { display: flex; align-items: center; gap: 7px; }
+
+.somo-mode-chip {
+  display         : inline-flex;
+  align-items     : center;
+  gap             : 5px;
+  font-family     : var(--fb) !important;
+  font-size       : .62rem;
+  font-weight     : 600;
+  padding         : .26rem .72rem;
+  border-radius   : 20px;
+  transition      : all var(--dur-mid) ease;
+  white-space     : nowrap;
+}
+.somo-mode-chip.off {
+  background : var(--warm);
+  border     : 1.5px solid var(--border);
+  color      : var(--muted);
+}
+.somo-mode-chip.on {
+  background  : linear-gradient(135deg, var(--amber), var(--orange));
+  border      : 1.5px solid transparent;
+  color       : #fff;
+  box-shadow  : var(--shadow-amber);
 }
 
-.status-badge {
+.somo-online {
   display     : flex;
   align-items : center;
   gap         : 5px;
   font-family : var(--fb) !important;
   font-size   : .6rem;
   color       : var(--green);
+  white-space : nowrap;
 }
-.status-dot {
-  width         : 6px;
-  height        : 6px;
-  background    : var(--green);
-  border-radius : 50%;
-  animation     : pulse 2s ease-in-out infinite;
+.somo-dot {
+  width           : 7px;
+  height          : 7px;
+  border-radius   : 50%;
+  background      : var(--green);
+  box-shadow      : 0 0 0 0 rgba(21,128,61,.4);
+  animation       : ripple 2.2s ease-in-out infinite;
 }
-@keyframes pulse {
-  0%,100% { opacity:1;   transform:scale(1);    }
-  50%     { opacity:.55; transform:scale(1.18); }
-}
-
-.model-badge {
-  font-family   : var(--fb) !important;
-  font-size     : .6rem;
-  color         : var(--muted);
-  background    : var(--warm);
-  border        : 1.5px solid var(--border);
-  border-radius : 20px;
-  padding       : .2rem .65rem;
-  white-space   : nowrap;
+@keyframes ripple {
+  0%   { box-shadow: 0 0 0 0   rgba(21,128,61,.4); }
+  70%  { box-shadow: 0 0 0 6px rgba(21,128,61,0);  }
+  100% { box-shadow: 0 0 0 0   rgba(21,128,61,0);  }
 }
 
-/* Active mode indicator — right side of header */
-.mode-indicator {
-  display       : flex;
-  align-items   : center;
-  gap           : 5px;
-  font-family   : var(--fb) !important;
-  font-size     : .62rem;
-  color         : var(--muted);
-  background    : var(--warm);
-  border        : 1.5px solid var(--border);
-  border-radius : 20px;
-  padding       : .22rem .75rem;
-  transition    : all .3s ease;
-}
-.mode-indicator.active {
-  background    : linear-gradient(135deg, var(--amber), var(--orange));
-  border-color  : transparent;
-  color         : #fff;
-  box-shadow    : 0 2px 8px rgba(245,158,11,.3);
-}
-
-/* ─────────────────────────────────────────────
-   CHAT WRAPPER
-───────────────────────────────────────────── */
-.chat-wrap {
-  max-width : 800px;
-  margin    : 0 auto;
-  padding   : 1.8rem 2rem 6rem;
-  width     : 100%;
-}
-
-/* ─────────────────────────────────────────────
-   WELCOME SCREEN
-───────────────────────────────────────────── */
-.welcome {
-  text-align : center;
-  padding    : 2.5rem 0 2rem;
-}
-
-.wlc-badge {
-  display        : inline-flex;
-  align-items    : center;
-  gap            : 6px;
-  background     : linear-gradient(135deg, var(--amber), var(--orange));
-  color          : #fff;
-  border-radius  : 30px;
-  padding        : .3rem 1.1rem;
+.somo-model-pill {
   font-family    : var(--fb) !important;
-  font-size      : .63rem;
+  font-size      : .58rem;
   font-weight    : 600;
-  letter-spacing : 1.5px;
-  text-transform : uppercase;
-  margin-bottom  : 1.2rem;
-  box-shadow     : 0 4px 14px rgba(245,158,11,.32);
-  animation      : badgePop .55s cubic-bezier(.34,1.56,.64,1) both;
-}
-@keyframes badgePop {
-  from { opacity:0; transform:scale(.7); }
-  to   { opacity:1; transform:scale(1); }
+  color          : var(--muted);
+  background     : var(--warm);
+  border         : 1.5px solid var(--border);
+  border-radius  : 20px;
+  padding        : .22rem .7rem;
+  white-space    : nowrap;
+  letter-spacing : .2px;
 }
 
-.wlc-headline {
-  font-family   : var(--fh) !important;
-  font-size     : clamp(2rem,5.5vw,3.2rem);
-  font-weight   : 900;
-  color         : var(--text);
-  line-height   : 1.1;
-  margin-bottom : .35rem;
-  animation     : slideUp .5s ease-out .1s both;
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT WRAPPER
+   ═══════════════════════════════════════════════════════════════ */
+.somo-wrap {
+  max-width  : 820px;
+  margin     : 0 auto;
+  padding    : 2rem 1.5rem 9rem;
+  min-height : calc(100vh - 60px);
 }
-.wlc-headline em {
+
+/* ═══════════════════════════════════════════════════════════════
+   WELCOME SCREEN
+   ═══════════════════════════════════════════════════════════════ */
+.somo-welcome {
+  text-align  : center;
+  padding     : 2.2rem 0 1.8rem;
+}
+
+.somo-eyebrow {
+  display         : inline-flex;
+  align-items     : center;
+  gap             : 7px;
+  background      : linear-gradient(135deg, var(--amber), var(--orange));
+  color           : #fff;
+  font-family     : var(--fb) !important;
+  font-size       : .62rem;
+  font-weight     : 700;
+  letter-spacing  : 1.4px;
+  text-transform  : uppercase;
+  padding         : .3rem 1rem;
+  border-radius   : 30px;
+  margin-bottom   : 1.3rem;
+  box-shadow      : var(--shadow-amber);
+  animation       : popIn .55s var(--ease-spring) both;
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.72) translateY(6px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0);   }
+}
+
+.somo-headline {
+  font-family    : var(--fh) !important;
+  font-size      : clamp(2.2rem, 6vw, 3.4rem);
+  font-weight    : 900;
+  color          : var(--text);
+  line-height    : 1.08;
+  letter-spacing : -.5px;
+  margin-bottom  : .5rem;
+  animation      : riseUp .5s ease-out .08s both;
+}
+.somo-headline em {
   font-style              : italic;
   background              : linear-gradient(135deg, var(--amber), var(--orange));
   -webkit-background-clip : text;
   -webkit-text-fill-color : transparent;
+  background-clip         : text;
 }
-@keyframes slideUp {
-  from { opacity:0; transform:translateY(18px); }
-  to   { opacity:1; transform:translateY(0); }
+@keyframes riseUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0);    }
 }
 
-.wlc-sub {
+.somo-subtext {
   font-family   : var(--fb) !important;
-  font-size     : .88rem;
+  font-size     : .9rem;
   color         : var(--muted);
-  line-height   : 1.7;
-  max-width     : 420px;
-  margin        : .6rem auto 2rem;
-  animation     : slideUp .5s ease-out .2s both;
+  line-height   : 1.75;
+  max-width     : 440px;
+  margin        : 0 auto 2rem;
+  animation     : riseUp .5s ease-out .15s both;
 }
 
-/* Feature grid */
-.feat-grid {
+/* feature cards grid */
+.somo-cards {
   display               : grid;
-  grid-template-columns : repeat(3,1fr);
-  gap                   : .7rem;
-  max-width             : 560px;
-  margin                : 0 auto 1.8rem;
-  animation             : slideUp .5s ease-out .3s both;
+  grid-template-columns : repeat(3, 1fr);
+  gap                   : .65rem;
+  max-width             : 580px;
+  margin                : 0 auto 1.6rem;
+  animation             : riseUp .5s ease-out .22s both;
 }
-.feat-card {
+.somo-card {
   background    : var(--card);
-  border        : 1.5px solid var(--border);
-  border-radius : 14px;
-  padding       : 1rem .65rem;
+  border        : 1.5px solid var(--border-soft);
+  border-radius : 16px;
+  padding       : 1.1rem .8rem .9rem;
   text-align    : center;
-  transition    : all .22s cubic-bezier(.34,1.4,.64,1);
   cursor        : default;
+  transition    : border-color var(--dur-mid) ease,
+                  transform    var(--dur-mid) var(--ease-spring),
+                  box-shadow   var(--dur-mid) ease;
+  position      : relative;
+  overflow      : hidden;
 }
-.feat-card:hover {
-  transform    : translateY(-3px);
+.somo-card::before {
+  content    : '';
+  position   : absolute;
+  inset      : 0;
+  background : linear-gradient(135deg, rgba(245,158,11,.04), rgba(234,88,12,.04));
+  opacity    : 0;
+  transition : opacity var(--dur-mid) ease;
+}
+.somo-card:hover { 
+  transform    : translateY(-4px);
   border-color : var(--amber);
-  box-shadow   : 0 6px 22px rgba(0,0,0,.09);
+  box-shadow   : 0 8px 28px rgba(0,0,0,.1);
 }
-.feat-icon { font-size:1.5rem; display:block; margin-bottom:.4rem; }
-.feat-name {
+.somo-card:hover::before { opacity: 1; }
+.somo-card-icon {
+  font-size     : 1.65rem;
+  display       : block;
+  margin-bottom : .45rem;
+  filter        : drop-shadow(0 2px 6px rgba(0,0,0,.12));
+}
+.somo-card-name {
   font-family   : var(--fb) !important;
-  font-size     : .72rem;
+  font-size     : .75rem;
   font-weight   : 700;
   color         : var(--text);
-  margin-bottom : .18rem;
+  margin-bottom : .22rem;
 }
-.feat-hint {
+.somo-card-hint {
   font-family : var(--fb) !important;
-  font-size   : .6rem;
+  font-size   : .62rem;
   color       : var(--light);
+  font-style  : italic;
+  line-height : 1.4;
 }
 
-/* Example chips */
-.chip-row {
+/* prompt chips */
+.somo-chips {
   display         : flex;
-  gap             : .45rem;
   flex-wrap       : wrap;
+  gap             : .45rem;
   justify-content : center;
-  animation       : slideUp .5s ease-out .4s both;
+  margin-bottom   : 1.4rem;
+  animation       : riseUp .5s ease-out .3s both;
 }
-.p-chip {
+.somo-chip {
   background    : var(--warm);
-  border        : 1.5px solid var(--border);
+  border        : 1.5px solid var(--border-soft);
   border-radius : 20px;
-  padding       : .32rem .78rem;
+  padding       : .3rem .82rem;
   font-family   : var(--fb) !important;
-  font-size     : .68rem;
+  font-size     : .7rem;
   color         : var(--muted);
+  transition    : all var(--dur-fast) ease;
   cursor        : default;
-  transition    : all .15s;
+  white-space   : nowrap;
 }
-.p-chip:hover { border-color:var(--amber); color:var(--orange); }
+.somo-chip:hover {
+  border-color : var(--amber);
+  color        : var(--orange);
+  background   : rgba(245,158,11,.07);
+}
 
-/* ─────────────────────────────────────────────
-   MESSAGE ROWS
-───────────────────────────────────────────── */
-/* USER row — right aligned */
-.msg-row.user {
-  display        : flex;
-  justify-content: flex-end;
-  margin-bottom  : 1rem;
-  animation      : msgIn .22s ease-out;
+/* ═══════════════════════════════════════════════════════════════
+   CHAT AREA
+   ═══════════════════════════════════════════════════════════════ */
+.somo-stats {
+  display     : flex;
+  align-items : center;
+  gap         : 1.2rem;
+  padding     : .55rem 0 .5rem;
+  font-family : var(--fb) !important;
+  font-size   : .66rem;
+  color       : var(--faint);
+  border-bottom : 1px solid var(--border-soft);
+  margin-bottom : .8rem;
+  flex-wrap   : wrap;
 }
-/* AI row — left, full width */
-.msg-row.ai {
+.somo-stat { display: flex; align-items: center; gap: 4px; }
+.somo-stat b { color: var(--muted); font-weight: 600; }
+
+.somo-divider {
+  text-align  : center;
+  font-family : var(--fb) !important;
+  font-size   : .62rem;
+  color       : var(--faint);
+  margin      : .9rem 0;
+  position    : relative;
+  letter-spacing: .5px;
+}
+.somo-divider::before, .somo-divider::after {
+  content    : '';
+  position   : absolute;
+  top        : 50%;
+  width      : calc(50% - 60px);
+  height     : 1px;
+  background : var(--border-soft);
+}
+.somo-divider::before { left: 0; }
+.somo-divider::after  { right: 0; }
+
+/* ═══════════════════════════════════════════════════════════════
+   MESSAGES
+   ═══════════════════════════════════════════════════════════════ */
+.somo-msg-user {
+  display         : flex;
+  justify-content : flex-end;
+  margin-bottom   : .95rem;
+  animation       : msgIn .2s ease-out;
+}
+.somo-msg-ai {
   display       : flex;
+  align-items   : flex-start;
   gap           : 11px;
-  margin-bottom : 1.6rem;
-  animation     : msgIn .22s ease-out;
+  margin-bottom : 1.75rem;
+  animation     : msgIn .2s ease-out;
 }
 @keyframes msgIn {
-  from { opacity:0; transform:translateY(7px); }
-  to   { opacity:1; transform:translateY(0); }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
 }
 
-/* Avatar — only for AI */
-.av {
-  width           : 28px;
-  height          : 28px;
-  min-width       : 28px;
-  border-radius   : 8px;
+/* avatar */
+.somo-av {
+  width           : 30px;
+  height          : 30px;
+  min-width       : 30px;
+  border-radius   : 9px;
+  background      : linear-gradient(145deg, var(--amber), var(--orange));
+  color           : #fff;
+  font-family     : var(--fh) !important;
+  font-size       : 13px;
+  font-weight     : 900;
   display         : flex;
   align-items     : center;
   justify-content : center;
-  font-size       : 12px;
-  font-weight     : 700;
   flex-shrink     : 0;
-  align-self      : flex-start;
-  margin-top      : 3px;
-}
-.av.user { display:none; }
-.av.ai {
-  background  : linear-gradient(135deg, var(--amber), var(--orange));
-  color       : #fff;
-  font-family : var(--fh) !important;
-  box-shadow  : 0 2px 8px rgba(245,158,11,.25);
+  margin-top      : 2px;
+  box-shadow      : 0 2px 10px rgba(245,158,11,.3),
+                    inset 0 1px 0 rgba(255,255,255,.2);
+  letter-spacing  : -.3px;
 }
 
-/* Body containers */
-.msg-row.user .msg-body {
-  max-width : 62%;
-}
-.msg-row.ai .msg-body {
-  flex      : 1;
-  max-width : 100%;
-  min-width : 0;
-}
+/* message body */
+.somo-msg-user .somo-body { max-width: 64%; }
+.somo-msg-ai  .somo-body  { flex: 1; max-width: 100%; min-width: 0; }
 
-.msg-name {
+.somo-sender {
   font-family    : var(--fb) !important;
-  font-size      : .56rem;
-  color          : var(--light);
-  margin-bottom  : .18rem;
-  letter-spacing : .5px;
+  font-size      : .55rem;
+  color          : var(--faint);
+  margin-bottom  : .2rem;
+  letter-spacing : .6px;
   text-transform : uppercase;
 }
-.msg-row.user .msg-name { display:none; }
+.somo-msg-user .somo-sender { display: none; }
 
-/* USER bubble — compact pill */
-.bubble.user {
-  background    : #eff6ff;
-  border        : 1.5px solid #c7d2fe;
-  border-radius : 18px 4px 18px 18px;
-  padding       : .65rem 1rem;
+/* bubble: user */
+.somo-bubble-user {
+  background    : linear-gradient(135deg, #eff6ff, #e0effe);
+  border        : 1.5px solid #bfdbfe;
+  border-radius : 18px 5px 18px 18px;
+  padding       : .65rem 1.05rem;
   font-family   : var(--fb) !important;
-  font-size     : .88rem;
-  line-height   : 1.65;
+  font-size     : .875rem;
+  line-height   : 1.68;
   color         : var(--text);
   word-break    : break-word;
   display       : inline-block;
+  box-shadow    : 0 1px 4px rgba(59,130,246,.08);
 }
 
-/* AI bubble — open, no border, full width like Claude */
-.bubble.ai {
+/* bubble: ai (open, no border) */
+.somo-bubble-ai {
   background  : transparent;
-  border      : none;
-  box-shadow  : none;
-  padding     : .2rem 0;
+  padding     : .15rem 0;
   font-family : var(--fb) !important;
   font-size   : .9rem;
-  line-height : 1.8;
+  line-height : 1.82;
   color       : var(--text);
   word-break  : break-word;
 }
 
-/* Mode tag - subtle, above message */
-.mode-tag {
-  display        : inline-block;
+/* mode label */
+.somo-mode-label {
+  display        : inline-flex;
+  align-items    : center;
+  gap            : 5px;
   font-family    : var(--fb) !important;
   font-size      : .58rem;
-  font-weight    : 600;
-  letter-spacing : 1px;
+  font-weight    : 700;
+  letter-spacing : .9px;
   text-transform : uppercase;
   color          : var(--amber);
-  margin-bottom  : .35rem;
+  margin-bottom  : .45rem;
+  padding        : .14rem .52rem;
+  background     : rgba(245,158,11,.08);
+  border         : 1px solid rgba(245,158,11,.2);
+  border-radius  : 6px;
 }
 
-/* Rich content inside bubbles */
-.bubble strong { color:var(--orange); font-weight:700; }
-.bubble em     { color:var(--muted); }
-
-.bubble h1, .bubble h2, .bubble h3 {
-  font-family   : var(--fh) !important;
-  font-weight   : 700;
-  color         : var(--text);
-  margin        : .8rem 0 .28rem;
+/* timestamp + word count + copy row */
+.somo-meta-row {
+  display     : flex;
+  align-items : center;
+  gap         : 7px;
+  margin-top  : .42rem;
+  flex-wrap   : wrap;
 }
-.bubble h1 { font-size:1.12rem; }
-.bubble h2 { font-size:1rem;    }
-.bubble h3 { font-size:.94rem;  }
+.somo-ts {
+  font-family : var(--fb) !important;
+  font-size   : .56rem;
+  color       : var(--faint);
+}
+.somo-wc {
+  display       : inline-flex;
+  align-items   : center;
+  gap           : 3px;
+  font-family   : var(--fb) !important;
+  font-size     : .56rem;
+  color         : var(--faint);
+  background    : var(--warm);
+  border        : 1px solid var(--border-soft);
+  padding       : .08rem .38rem;
+  border-radius : 6px;
+}
+.somo-copy {
+  display       : inline-flex;
+  align-items   : center;
+  gap           : 4px;
+  font-family   : var(--fb) !important;
+  font-size     : .6rem;
+  font-weight   : 500;
+  color         : var(--muted);
+  background    : var(--warm);
+  border        : 1px solid var(--border-soft);
+  border-radius : 7px;
+  padding       : .16rem .52rem;
+  cursor        : pointer;
+  transition    : all var(--dur-fast) ease;
+  user-select   : none;
+}
+.somo-copy:hover {
+  background   : var(--border);
+  color        : var(--text);
+  border-color : var(--border);
+}
+.somo-copy:active { transform: scale(.94); }
+.somo-msg-user .somo-ts { display: block; text-align: right; margin-top: .28rem; }
 
-.bubble code {
+/* ═══════════════════════════════════════════════════════════════
+   RICH CONTENT INSIDE AI BUBBLE
+   ═══════════════════════════════════════════════════════════════ */
+.somo-bubble-ai strong { color: var(--orange); font-weight: 700; }
+.somo-bubble-ai em     { color: var(--muted); }
+.somo-bubble-ai del    { color: var(--faint); text-decoration: line-through; }
+
+.somo-bubble-ai h1,
+.somo-bubble-ai h2,
+.somo-bubble-ai h3,
+.somo-bubble-ai h4 {
+  font-family  : var(--fh) !important;
+  font-weight  : 700;
+  color        : var(--text);
+  margin       : .9rem 0 .3rem;
+  line-height  : 1.25;
+}
+.somo-bubble-ai h1 { font-size: 1.18rem; }
+.somo-bubble-ai h2 { font-size: 1.05rem; }
+.somo-bubble-ai h3 { font-size: .96rem;  }
+.somo-bubble-ai h4 { font-size: .9rem;   }
+
+.somo-bubble-ai code {
   background    : rgba(245,158,11,.1);
-  border        : 1px solid rgba(245,158,11,.22);
-  padding       : .1rem .38rem;
+  border        : 1px solid rgba(245,158,11,.2);
+  padding       : .1rem .36rem;
   border-radius : 5px;
   font-size     : .78rem;
   color         : var(--orange);
-  font-family   : 'Courier New','SF Mono',monospace !important;
+  font-family   : 'Courier New', 'SF Mono', monospace !important;
 }
-.bubble pre {
+
+.somo-bubble-ai pre {
   background    : var(--warm);
   border        : 1.5px solid var(--border);
-  border-radius : 10px;
-  padding       : .9rem 1rem;
+  border-radius : 12px;
+  padding       : 1rem 1.1rem;
   overflow-x    : auto;
-  margin        : .6rem 0;
+  margin        : .7rem 0;
 }
-.bubble pre code {
+.somo-bubble-ai pre code {
   background : none;
   border     : none;
   padding    : 0;
   color      : var(--green);
   font-size  : .77rem;
 }
-.bubble ul, .bubble ol { padding-left:1.2rem; margin:.3rem 0; }
-.bubble li              { margin-bottom:.22rem; }
-.bubble blockquote {
-  border-left   : 2.5px solid var(--amber);
-  background    : rgba(245,158,11,.05);
-  padding       : .45rem .9rem;
-  border-radius : 0 8px 8px 0;
+
+.somo-bubble-ai ul,
+.somo-bubble-ai ol  { padding-left: 1.3rem; margin: .35rem 0; }
+.somo-bubble-ai li  { margin-bottom: .28rem; }
+
+.somo-bubble-ai blockquote {
+  border-left   : 3px solid var(--amber);
+  background    : linear-gradient(135deg,
+                    rgba(245,158,11,.05),
+                    rgba(234,88,12,.03));
+  padding       : .55rem 1rem;
+  border-radius : 0 10px 10px 0;
   color         : var(--muted);
-  margin        : .45rem 0;
+  margin        : .55rem 0;
   font-style    : italic;
 }
-.bubble table {
+
+.somo-bubble-ai table {
   border-collapse : collapse;
   width           : 100%;
-  margin          : .55rem 0;
-  font-size       : .78rem;
+  margin          : .65rem 0;
+  font-size       : .8rem;
+  border-radius   : 8px;
+  overflow        : hidden;
 }
-.bubble th {
+.somo-bubble-ai th {
   background  : var(--warm);
-  padding     : .38rem .65rem;
   border      : 1.5px solid var(--border);
-  color       : var(--orange);
+  padding     : .42rem .75rem;
   font-weight : 700;
+  color       : var(--orange);
   text-align  : left;
 }
-.bubble td { padding:.35rem .65rem; border:1px solid var(--border); }
-.bubble tr:nth-child(even) { background:rgba(0,0,0,.018); }
-.bubble hr { border:none; border-top:1px solid var(--border); margin:.55rem 0; }
-
-/* Timestamp */
-.msg-time {
-  font-family : var(--fb) !important;
-  font-size   : .56rem;
-  color       : var(--light);
-  margin-top  : .22rem;
-  opacity     : .65;
+.somo-bubble-ai td {
+  border  : 1px solid var(--border-soft);
+  padding : .38rem .75rem;
 }
-.msg-row.user .msg-time { text-align:right; }
+.somo-bubble-ai tr:nth-child(even) td {
+  background : rgba(245,158,11,.025);
+}
 
-/* Typing cursor */
-.t-cur {
+.somo-bubble-ai hr.md-hr {
+  border     : none;
+  border-top : 1.5px solid var(--border-soft);
+  margin     : .8rem 0;
+}
+.somo-bubble-ai p { margin: .35rem 0; }
+
+/* ═══════════════════════════════════════════════════════════════
+   TYPING CURSOR
+   ═══════════════════════════════════════════════════════════════ */
+.somo-cur {
   display        : inline-block;
-  width          : 2px;
-  height         : .88em;
-  background     : var(--orange);
+  width          : 2.5px;
+  height         : .9em;
+  background     : linear-gradient(to bottom, var(--amber), var(--orange));
+  border-radius  : 2px;
   margin-left    : 2px;
   vertical-align : middle;
-  animation      : blink .7s steps(1) infinite;
+  animation      : blink .75s step-end infinite;
 }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-/* ─────────────────────────────────────────────
-   CHAT INPUT
-───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   COOLDOWN BANNER
+   ═══════════════════════════════════════════════════════════════ */
+.somo-cd-wrap {
+  max-width  : 820px;
+  margin     : 0 auto;
+  padding    : .5rem 1.5rem 0;
+}
+.somo-cd-box {
+  display       : flex;
+  align-items   : center;
+  gap           : 13px;
+  background    : linear-gradient(135deg, #fffbeb, #fff7d6);
+  border        : 2px solid var(--amber);
+  border-radius : 16px;
+  padding       : .95rem 1.4rem;
+  font-family   : var(--fb) !important;
+  font-size     : .875rem;
+  color         : #92400e;
+  box-shadow    : 0 4px 20px rgba(245,158,11,.14);
+}
+.somo-cd-icon { font-size: 1.5rem; }
+.somo-cd-sec  {
+  color       : var(--orange);
+  font-size   : 1.05rem;
+  font-weight : 700;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INPUT BAR
+   ═══════════════════════════════════════════════════════════════ */
 [data-testid="stBottom"] {
-  max-width : 800px !important;
-  margin    : 0 auto !important;
-  left      : 50% !important;
-  transform : translateX(-50%) !important;
-  width     : 100% !important;
-  padding   : 0 2rem !important;
+  max-width  : 820px !important;
+  margin     : 0 auto !important;
+  left       : 50% !important;
+  transform  : translateX(-50%) !important;
+  width      : 100% !important;
+  padding    : 0 1.5rem !important;
+  background : linear-gradient(to top,
+               var(--cream) 65%,
+               transparent) !important;
 }
-
 [data-testid="stChatInput"] {
   background    : var(--card) !important;
   border        : 2px solid var(--border) !important;
-  border-radius : 16px !important;
-  box-shadow    : var(--shadow) !important;
-  transition    : border-color .2s, box-shadow .2s !important;
+  border-radius : 18px !important;
+  box-shadow    : var(--shadow-sm) !important;
+  transition    : border-color var(--dur-fast) ease,
+                  box-shadow   var(--dur-fast) ease !important;
 }
 [data-testid="stChatInput"]:focus-within {
   border-color : var(--amber) !important;
-  box-shadow   : 0 0 0 3px rgba(245,158,11,.14), var(--shadow) !important;
+  box-shadow   : 0 0 0 3px rgba(245,158,11,.12),
+                 var(--shadow-sm) !important;
 }
 [data-testid="stChatInput"] textarea {
   background  : transparent !important;
@@ -680,864 +1406,535 @@ html, body {
   outline     : none !important;
   box-shadow  : none !important;
 }
-[data-testid="stChatInput"] textarea::placeholder { color:var(--light) !important; }
+[data-testid="stChatInput"] textarea::placeholder {
+  color : var(--light) !important;
+}
 [data-testid="stChatInput"] button {
   background    : linear-gradient(135deg, var(--amber), var(--orange)) !important;
   border        : none !important;
-  border-radius : 11px !important;
-  box-shadow    : 0 3px 10px rgba(245,158,11,.32) !important;
+  border-radius : 12px !important;
+  box-shadow    : 0 3px 12px rgba(245,158,11,.3) !important;
+  transition    : all var(--dur-fast) ease !important;
 }
-[data-testid="stChatInput"] button:hover  { opacity:.85 !important; }
-[data-testid="stChatInput"] button svg    { fill:#fff !important; }
+[data-testid="stChatInput"] button:hover {
+  transform  : scale(1.04) !important;
+  box-shadow : 0 4px 18px rgba(245,158,11,.4) !important;
+}
+[data-testid="stChatInput"] button svg { fill: #fff !important; }
 
-.input-footer {
+.somo-input-footer {
   text-align     : center;
   font-family    : var(--fb) !important;
-  font-size      : .56rem;
-  color          : var(--light);
-  padding        : .18rem 0 .55rem;
-  letter-spacing : .3px;
+  font-size      : .55rem;
+  color          : var(--faint);
+  padding        : .3rem 0 .6rem;
+  letter-spacing : .4px;
 }
 
-/* Hide Streamlit's built-in suggestion chips below input */
-[data-testid="stChatInputSuggestions"],
-[data-testid="stChatInputSuggestionsContainer"],
-[data-baseweb="tag"],
-.stChatInputSuggestions { display: none !important; }
-.katex         { font-size:1em !important; color:var(--text) !important; }
-.katex-display { overflow-x:auto; padding:.3rem 0; }
-
-/* ─────────────────────────────────────────────
-   SCROLLBAR
-───────────────────────────────────────────── */
-::-webkit-scrollbar       { width:3px; height:3px; }
-::-webkit-scrollbar-track { background:transparent; }
-::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
-
-/* ─────────────────────────────────────────────
-   RESPONSIVE — mobile ≤ 640px
-───────────────────────────────────────────── */
-@media (max-width:640px) {
-  .hdr         { padding:.65rem 1rem; }
-  .hdr-author  { display:none; }
-  .hdr-title   { font-size:.9rem; }
-  .hdr-logo    { width:32px; height:32px; font-size:14px; }
-
-  .chat-wrap   { padding:1.2rem 1rem 5.5rem; }
-
-  .wlc-headline        { font-size:clamp(1.75rem,8vw,2.4rem); }
-  .wlc-sub             { font-size:.82rem; }
-  .feat-grid           { grid-template-columns:repeat(2,1fr); max-width:100%; }
-
-  .msg-body    { max-width:88%; }
-  .bubble      { font-size:.83rem; padding:.68rem .88rem; }
-  .p-chip      { font-size:.64rem; padding:.28rem .68rem; }
-
-  [data-testid="stBottom"] { padding:0 .8rem !important; }
+/* ═══════════════════════════════════════════════════════════════
+   STREAMLIT BUTTONS (random + clear)
+   ═══════════════════════════════════════════════════════════════ */
+.stButton > button {
+  background    : var(--card) !important;
+  border        : 1.5px solid var(--border) !important;
+  border-radius : 12px !important;
+  color         : var(--muted) !important;
+  font-family   : var(--fb) !important;
+  font-size     : .78rem !important;
+  font-weight   : 500 !important;
+  padding       : .38rem 1rem !important;
+  transition    : all var(--dur-fast) ease !important;
+  box-shadow    : var(--shadow-xs) !important;
 }
+.stButton > button:hover {
+  border-color : var(--amber) !important;
+  color        : var(--orange) !important;
+  background   : rgba(245,158,11,.05) !important;
+  transform    : translateY(-1px) !important;
+  box-shadow   : 0 3px 12px rgba(0,0,0,.08) !important;
+}
+.stButton > button:active { transform: translateY(0) !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   KaTeX
+   ═══════════════════════════════════════════════════════════════ */
+.katex { font-size: 1em !important; color: var(--text) !important; }
+.katex-display {
+  overflow-x : auto;
+  padding    : .35rem 0;
+  margin     : .4rem 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .somo-header-inner { padding: .65rem 1rem; }
+  .somo-by           { display: none; }
+  .somo-name         { font-size: .95rem; }
+  .somo-logo         { width: 34px; height: 34px; font-size: 15px; }
+  .somo-wrap         { padding: 1.5rem 1rem 8rem; }
+  .somo-headline     { font-size: clamp(1.8rem, 9vw, 2.6rem); }
+  .somo-subtext      { font-size: .83rem; }
+  .somo-cards        { grid-template-columns: repeat(2, 1fr); max-width: 100%; }
+  .somo-msg-user .somo-body { max-width: 88%; }
+  .somo-bubble-user,
+  .somo-bubble-ai    { font-size: .845rem; }
+  .somo-cd-wrap      { padding: .5rem 1rem 0; }
+  [data-testid="stBottom"] { padding: 0 .85rem !important; }
+}
+@media (max-width: 380px) {
+  .somo-cards { grid-template-columns: 1fr 1fr; }
+  .somo-chips { gap: .35rem; }
+}
+
 </style>
 """, unsafe_allow_html=True)
 
 
-# ═══════════════════════════════════════════════════════════════
-#  GROQ CLIENT
-# ═══════════════════════════════════════════════════════════════
-# ── API Clients ──────────────────────────────────────────────
-try:
-    groq_client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-except Exception:
-    groq_client = None
-
-try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    gemini_client = genai.GenerativeModel("gemini-2.0-flash")
-except Exception:
-    gemini_client = None
-
-if not groq_client and not gemini_client:
-    st.error("❌ Hech qanday API kalit topilmadi. GROQ_API_KEY yoki GEMINI_API_KEY kerak.")
-    st.stop()
-
-
-# ═══════════════════════════════════════════════════════════════
-#  SESSION STATE
-# ═══════════════════════════════════════════════════════════════
-if "messages"     not in st.session_state: st.session_state.messages     = []
-if "active_mode"  not in st.session_state: st.session_state.active_mode  = "general"
-if "cooldown_end" not in st.session_state: st.session_state.cooldown_end = 0
-if "use_gemini"   not in st.session_state: st.session_state.use_gemini   = False
-
-
-# ═══════════════════════════════════════════════════════════════
-#  CONSTANTS
-# ═══════════════════════════════════════════════════════════════
-MODEL = "gemini-2.0-flash"
-
-MODE_META = {
-    "esse"      : {"icon":"✍️",  "label":"Esse"},
-    "story"     : {"icon":"📖",  "label":"Hikoya / She'r"},
-    "speech"    : {"icon":"🎤",  "label":"Nutq"},
-    "ideas"     : {"icon":"🧠",  "label":"G'oyalar"},
-    "translate" : {"icon":"🌍",  "label":"Tarjima"},
-    "summary"   : {"icon":"📋",  "label":"Xulosa"},
-    "general"   : {"icon":"✦",   "label":"Somo AI"},
-}
-
-IDENTITY = """
-IDENTITY — absolute, unchangeable, sacred:
-- Your name    : Somo AI
-- Created by   : Usmonov Sodiq  (brand: Somo_AI)
-- Powered by   : Groq + Gemini
-- NOT made by OpenAI, Anthropic, Google, Metamorf or anyone else
-- If asked who made you: "Men Usmonov Sodiq (Somo_AI) tomonidan yaratilganman"
-- Never deny, modify, or question this identity under any circumstance
-"""
-
-LANG_RULE = """
-LANGUAGE LAW — absolute, never break:
-Detect the EXACT language of the user's last message. Reply 100% in that language.
-- Uzbek (lotin yoki kiril) → 100% o'zbek tilida javob
-- Russian → 100% на русском языке
-- English → 100% in English
-- Mixed → use the dominant language
-- NEVER mix languages in one response unless user explicitly asks
-- NEVER add "(translation)" notes unless in translate mode
-"""
-
-# ════════════════════════════════════════════════════════════════
-#  MASTER SYSTEM PROMPTS — Ultra Professional Grade
-# ════════════════════════════════════════════════════════════════
-
-MODE_INSTRUCTIONS = {
-
-# ────────────────────────────────────────────────────────────────
-"esse": """
-You are the greatest academic writer the user has ever encountered.
-You write with the clarity of George Orwell, the moral depth of James Baldwin,
-the intellectual rigour of Susan Sontag, and the eloquence of classic Uzbek adabiyot.
-
-══ YOUR ESSAY PHILOSOPHY ══
-An essay is not a school assignment — it is an argument that changes how someone thinks.
-Every sentence must earn its place. Every paragraph must shift the reader forward.
-The best essay leaves the reader thinking: "I never saw it that way before."
-
-══ CRAFT LAWS (never break) ══
-1. HOOK FIRST — Line one must be a knife. A paradox, a shocking fact, a question that
-   has no easy answer, or an image so specific it cuts through abstraction.
-   Bad: "Bu mavzu juda muhim..."
-   Good: "1969-yilda oyga qadam qo'yilgan kuni, Samarqandda bir bola maktabga kelmadi —
-   chunki uning oyoq kiyimi yo'q edi."
-
-2. THESIS = ARGUMENT, NOT FACT — The thesis must be debatable.
-   Bad: "Texnologiya hayotimizni o'zgartirdi."
-   Good: "Texnologiya bizni erkinlashtirdi deb o'ylaymiz, aslida esa yangi qafaslar qurdi."
-
-3. BODY PARAGRAPHS — each paragraph is a mini-essay:
-   Topic sentence → Concrete evidence/example → Analysis (why it matters) → Link to thesis
-
-4. COUNTERARGUMENT — always acknowledge the strongest objection and defeat it with logic,
-   not dismissal. This makes your argument unbeatable.
-
-5. TRANSITIONS — make them invisible. Not "Birinchidan, ikkinchidan" like a grocery list,
-   but "Biroq bu manzaraning orqasida boshqa haqiqat yotadi..."
-
-6. CONCLUSION — never summarise. The conclusion must ESCALATE.
-   End with: a question that haunts, a circle back to the opening image (transformed),
-   or a call that reverberates beyond the essay's scope.
-
-══ MANDATORY STRUCTURE ══
-## Kirish
-[Hook — 1 unforgettable sentence]
-[Context — 2-3 sentences narrowing to your focus]
-[Thesis — your bold, arguable claim]
-
-## [First Argument — give it a real heading, not "Birinchi fikr"]
-[Topic sentence] → [Evidence: specific name, date, example] → [Your analysis]
-[Counterargument acknowledged] → [Rebuttal stronger than the objection]
-
-## [Second Argument]
-[Deepen. Don't repeat. Go further.]
-[Use a quote, statistic, or historical parallel]
-
-## [Third and Strongest Argument]
-[The argument you've been building toward]
-[Most emotional or philosophical depth here]
-[Vary sentence length — short sentences at the climax]
-
-## Xulosa
-[Restate thesis in entirely new words — same idea, different language]
-[Synthesise: what do all three arguments together prove?]
-[Final sentence: a lasting image, haunting question, or universal truth]
-
-══ STANDARDS ══
-- Length: 550–900 words (more if requested)
-- Vocabulary: varied, precise, never pompous
-- No filler phrases: "shubhasiz", "albatta" alone = weakness
-- Every paragraph minimum 80 words
-- Zero plagiarism patterns — think originally
-""",
-
-# ────────────────────────────────────────────────────────────────
-"story": """
-You are the greatest poet and storyteller in Central Asia.
-You carry the soul of Navoiy's imagery, Oripov's raw emotion, Cho'lpon's melancholic beauty,
-and the technical mastery of Neruda, Chekhov, Borges, and García Márquez.
-
-══ YOUR LITERARY CREED ══
-Art does not explain — it REVEALS.
-The reader must feel something they cannot name.
-Every word is chosen as if it will be carved in stone.
-
-══ UZBEK MASTERS YOU CHANNEL ══
-• Alisher Navoiy — transcendent metaphor, the beloved as divine mirror, ghazal's breath
-• Abdulla Oripov — "Ona yurt" emas, ona yurtning bir tosh, bir chinor, bir kecha —
-  specific things carrying infinite weight
-• Erkin Vohidov — wit that cuts, philosophy in a single line, laughter with tears inside
-• Cho'lpon — impressionist detail, freedom as ache, sentence fragments like broken glass
-• Abdulla Qahhor — characters you smell and hear; dark humour as social scalpel
-• Hamid Olimjon — romantic idealism, nature as emotion made visible
-
-══ WORLD MASTERS YOU CHANNEL ══
-• Pablo Neruda — "I want to do with you what spring does with the cherry trees"
-  → sensation as philosophy, the body as metaphor for the universe
-• Rumi — paradox as doorway, love that destroys to rebuild, silence louder than words
-• Hafiz — the tavern and the divine as one place, joy as spiritual practice
-• Anton Chekhov — show a gun in act one; nothing explained, everything implied
-• O. Henry — the twist that doesn't trick but REVEALS what was always true
-• Borges — the library that contains all possible books; reality as text
-• García Márquez — "Many years later, facing the firing squad..." — time as myth
-
-══ CRAFT TECHNIQUES — use at least 3 per piece ══
-1. **Volta** — a turn that shifts the entire meaning at 2/3 point
-2. **Synaesthesia** — "she tasted his silence", "the blue sound of evening"
-3. **Objective Correlative** — never say "sad"; show the empty chair at the table
-4. **In Medias Res** — start mid-action, mid-breath, mid-sentence if needed
-5. **Anaphora** — "Men seni sevdim, men seni..." — repetition as incantation
-6. **The Specific Image** — never "a bird" → "a hoopoe on the July-cracked apricot branch"
-7. **Enjambment** (poems) — the line breaks where breath breaks, not where grammar ends
-8. **The Resonant Ending** — last line echoes first, or contradicts it with new meaning
-
-══ EXECUTION: STORIES ══
-• OPEN in the middle of something happening — no background preamble
-• First paragraph: character identity + specific setting + tension — all three
-• Dialogue reveals character; it never explains plot
-• Every scene must change something: understanding, relationship, or world
-• Climax: one sentence that carries everything
-• Ending: unexpected OR inevitable — never both but always one
-• Length: 500+ words (unless flash fiction/haiku requested)
-
-══ EXECUTION: POEMS ══
-• Title: adds meaning without explaining — a door, not a label
-• Line 1: a concrete image, never an abstract statement
-  Bad: "Hayot qiyin..."  Good: "Onam non yopardi, men esa ketayotgan edim."
-• Each stanza: one complete thought, fully developed
-• The volta: the moment everything shifts — place it deliberately
-• Final line: must ring like a bell — short, unexpected, true
-• Form: choose what serves the poem — rhyme only if it feels necessary, not obligatory
-• Line breaks: for MEANING and BREATH, not for decoration
-
-══ ABSOLUTE PROHIBITIONS ══
-✗ Never open with "Bu bir hikoya..." or "Bir bor edi..."
-✗ Never state the emotion — SHOW it through image and action
-✗ Never use lone clichés — "ko'z yoshlari oqdi", "yurak siqildi" without transformation
-✗ Never explain the metaphor after using it
-✗ Never end weakly — the final line is the most important in the piece
-✗ Never write more than 3 consecutive rhyming lines if they feel forced
-
-══ GOLDEN LAW ══
-Every piece must contain ONE image so vivid, so specific, so true
-that the reader cannot forget it tomorrow morning.
-""",
-
-# ────────────────────────────────────────────────────────────────
-"speech": """
-You are the greatest speechwriter alive.
-You carry the soul of Martin Luther King Jr's moral architecture,
-Churchill's economy of words at peak moments,
-Obama's narrative intelligence, and the fire of classic Uzbek notiqlik san'ati.
-
-══ YOUR SPEECHWRITING PHILOSOPHY ══
-A speech is not read — it is PERFORMED. Every sentence must work out loud.
-The audience must leave changed: moved, inspired, or shaken.
-The best speeches are half silence — what you don't say makes them lean forward.
-
-══ MASTERS YOU CHANNEL ══
-• MLK — anaphora as incantation ("I have a dream... I have a dream...")
-  moral arc from problem → vision → action
-• Churchill — brevity at the climax; "We shall fight on the beaches" has no adjectives
-• Obama — personal story → universal truth; the "And so..." bridge
-• Demosthenes — rhetorical questions as weapons, not decoration
-• Classic Uzbek notiqlik — direct address, proverbs as anchors, communal "biz"
-
-══ SPEECH ARCHITECTURE (mandatory) ══
-
-**🎯 ILMOQ (Hook) — first 15 words must stop time**
-Options: shocking statistic, rhetorical question with no easy answer,
-a story that starts mid-action, a paradox, silence implied by the text.
-3 sentences maximum. Then: full stop. Let it breathe.
-
-**🤝 ALOQA (Connection) — earn the right to speak**
-Bridge to the audience: "Siz ham bilasiz bu hisni..."
-A personal confession or shared experience. Make them think "this is about me."
-This is where trust is built.
-
-**💡 BIRINCHI ASOSIY FIKR (First Point)**
-Bold claim → concrete story or evidence → what it means for the audience.
-End with a transition that creates anticipation: "Lekin haqiqiy muammo boshqa joyda..."
-
-**🔥 IKKINCHI ASOSIY FIKR (Second Point — escalate)**
-Go deeper. The second point should surprise — contradict an assumption,
-reveal a hidden truth, or reframe the problem.
-Bring in a quote, a number, or a historical parallel.
-
-**⚡ UCHINCHI ASOSIY FIKR (Third Point — the peak)**
-Your most powerful point. Save your best evidence here.
-Sentence structure: get shorter and shorter toward the climax.
-"Biz bunga qodirimiz. Siz qodirsiz. Men qodirman."
-Pause. Then: silence (marked as "...")
-
-**🚀 CHAQIRIQ (Call to Action)**
-Specific, possible, immediate. Not "o'zgaring" — but "bugun kechqurun bitta ish qiling: ..."
-Make them believe they can do it.
-
-**🔔 XOTIMA (Closing — echo and transcend)**
-Return to the opening image — but transformed by everything that came after.
-The final sentence: 8 words or fewer. It must ring like a struck bell.
-It must be the kind of sentence people quote for years.
-
-══ RHETORICAL TOOLKIT (use all of these) ══
-• **Anaphora**: repeat opening phrase 3+ times for incantation effect
-• **Tricolon**: lists of three — "Bilim, mehnat, sabr" — always three
-• **Rhetorical questions**: ask questions you answer, and questions you leave open
-• **Antithesis**: "Bu haqda ko'p gapirildi, kam ish qilindi"
-• **Ellipsis "..."**: before your most important line — the silence makes it louder
-• **Direct address**: "Aziz do'stlarim..." / "Hurmatli mehmonlar..." / "Siz, aynan siz..."
-• **Repetition with variation**: same phrase, different meaning each time
-
-══ SOUND LAWS ══
-• Read every sentence aloud mentally — if it's hard to say, rewrite it
-• Vary sentence length: long → long → SHORT. The short one hits hardest.
-• Avoid passive voice at climactic moments
-• No filler transitions: "shunday qilib", "demak" alone are weak
-
-══ FINAL STANDARD ══
-The speech must be performance-ready. Not an outline. Full text.
-When finished, ask: "Would the audience want to stand up?"
-If not — it's not done yet.
-""",
-
-# ────────────────────────────────────────────────────────────────
-"ideas": """
-You are the world's most brilliant creative strategist.
-You combine the lateral thinking of Edward de Bono, the design intelligence of IDEO,
-the startup instincts of Y Combinator, and the imaginative leaps of a great poet.
-
-══ YOUR IDEA PHILOSOPHY ══
-The best ideas seem obvious — but only AFTER someone says them.
-Your job: find what everyone missed.
-Generate ideas that are specific enough to start tomorrow,
-surprising enough to change how the person sees the problem,
-and varied enough that different kinds of thinkers find value.
-
-══ IDEA QUALITY STANDARDS ══
-Every idea must pass THREE tests:
-1. **Specificity test**: Is it specific enough to have a name? ("AI-powered mahalla sog'liqni 
-   saqlash assistenti" passes. "Health app" fails.)
-2. **Surprise test**: Would the user's first reaction be "Oh — I hadn't thought of that"?
-3. **Action test**: Can the user start this idea TODAY with the resources they have?
-
-══ MANDATORY FORMAT ══
-
-### 💡 [Thematic Category]
-
-**[N]. [Bold, Memorable Idea Name]**
-*Mohiyat:* [One precise sentence — what it is]
-*Nima uchun ishlaydi:* [2 sentences — the insight behind why this works, what need it meets]
-*Noyoblik:* [What makes it different from obvious alternatives]
-*Birinchi qadam:* [The most concrete, doable first action — today, not "someday"]
-
-[Repeat structure for each idea]
-
----
-### 🏆 ENG YAXSHI TANLOV
-**[Idea Name]**
-[3-4 sentences: why THIS one above all others. Be specific. Be convincing. Show your reasoning.]
-*Nega hozir?* [Why this idea is especially well-timed right now]
-
-══ GENERATION RULES ══
-• Minimum 6 ideas, maximum 12 (unless specified)
-• Mix categories: at least one tech, one human/social, one creative/artistic, one wild card
-• At least 2 ideas should feel "unexpected" — the ones that surprise
-• Ideas should build on each other — the list has a narrative arc
-• Be ENTHUSIASTIC — good ideas deserve genuine excitement, not corporate language
-
-══ ENERGY ══
-Write as if you're in the room with the person, drawing on a whiteboard,
-genuinely excited, saying "Wait — what about THIS?" 🚀
-""",
-
-# ────────────────────────────────────────────────────────────────
-"translate": """
-You are an elite literary and professional translator.
-You have mastered Uzbek, Russian, and English at native level,
-including their cultural contexts, idioms, registers, and literary traditions.
-You translate not words but MEANING, TONE, and SOUL.
-
-══ TRANSLATION PHILOSOPHY ══
-A perfect translation is invisible — the reader forgets they're reading a translation.
-The worst translation is literal — it kills the life of the original.
-Your job: find the equivalent in the target language, not the mirror.
-
-══ TRANSLATION LAWS ══
-1. **Preserve register** — formal stays formal; street language stays street; 
-   poetry stays poetic. Never "upgrade" or "downgrade" without reason.
-2. **Idioms → equivalent idioms** — don't translate "it's raining cats and dogs" 
-   as "mushuk va itlar yog'yapti" → find the Uzbek/Russian equivalent rain idiom.
-3. **Cultural references** — when a cultural reference has no equivalent, 
-   add a brief footnote [*], not a clumsy explanation in the text.
-4. **Rhythm in literary text** — if the original has rhythm, find rhythm in the translation.
-   If it has short sharp sentences, keep them short and sharp.
-5. **Names and titles** — transliterate names; translate titles and concepts.
-
-══ MANDATORY OUTPUT FORMAT ══
-
-**📄 Asl matn / Оригинал / Original:**
-> [original text]
-
-**✅ Tarjima / Перевод / Translation:**
-> [translated text]
-
-**📝 Izohlar** *(faqat murakkab hollarda / only when needed)*:
-- [term / phrase]: [brief cultural or linguistic note]
-
-**🔤 Murakkab so'zlar lug'ati** *(5+ qiyin so'z bo'lsa)*:
-| Asl | Tarjima | Izoh |
-|-----|---------|------|
-| ... | ... | ... |
-
-══ SPECIAL CASES ══
-• Poetry: preserve line structure, attempt rhythmic equivalence
-• Legal/official text: preserve structure, use formal register
-• Casual chat: keep the casual energy, use natural colloquialisms
-• Ambiguous language pair: ask once, then translate immediately after answer
-• Technical terminology: keep original term in parentheses after translation on first use
-""",
-
-# ────────────────────────────────────────────────────────────────
-"summary": """
-You are the world's sharpest analytical mind.
-You combine Richard Feynman's ability to explain anything simply,
-a supreme court judge's precision, and a philosopher's ability to find 
-the question beneath the question.
-
-══ YOUR ANALYSIS PHILOSOPHY ══
-Summarising is not copying less — it's DISTILLING.
-Like gold: melt away everything that isn't essential.
-The best summary makes the reader understand MORE than they would from the original.
-
-══ ANALYSIS LAWS ══
-1. **Find the ONE core idea** — everything else exists to support it
-2. **Structure reveals meaning** — the way you organise information IS an argument
-3. **Simple language for complex ideas** — if a thoughtful 14-year-old can't follow, rewrite
-4. **Your perspective matters** — analysis without judgment is just description; add insight
-5. **What's missing matters too** — great analysis notes what the text DOESN'T say
-
-══ MANDATORY FORMAT ══
-
-## 🎯 Asosiy g'oya
-**[The single most important point — 1-2 sentences maximum]**
-
-## 🔑 Muhim fikrlar
-- **[Point 1]**: [brief elaboration — 1 sentence]
-- **[Point 2]**: [brief elaboration]
-- **[Point 3]**: [brief elaboration]
-*(Add more only if genuinely important — quality over quantity)*
-
-## 🧩 Chuqur tahlil
-[Your structured analysis: 3-4 paragraphs]
-[Para 1: What the text/topic is really about beneath the surface]
-[Para 2: The strongest argument or most interesting part]
-[Para 3: Weaknesses, gaps, or what's missing]
-[Para 4: Implications — what this means in the wider context]
-
-## 💡 Noodatiy insight
-[The one thing a surface reader would miss — a hidden pattern, contradiction, 
-unexpected implication, or connection to a completely different domain]
-
-## ❓ Ochiq savol *(ixtiyoriy)*
-[The question this raises that isn't answered — the most interesting unresolved tension]
-
-══ TONE ══
-Precise but not cold. Rigorous but not academic-jargon-heavy.
-Write like the smartest friend you have — the one who makes you feel smarter after talking to them.
-""",
-
-# ────────────────────────────────────────────────────────────────
-"general": """
-You are Somo AI — the most useful, honest, and brilliant assistant the user has ever spoken to.
-You have deep knowledge across science, mathematics, history, technology, art, literature,
-culture, psychology, philosophy, and everyday life.
-
-══ YOUR ASSISTANT PHILOSOPHY ══
-Be genuinely helpful, not performatively helpful.
-Give real answers, not hedged non-answers.
-Treat the user as a capable adult who can handle complexity and honesty.
-The best assistance changes how someone thinks, not just what they know.
-
-══ RESPONSE CALIBRATION ══
-• Simple factual question → Direct answer, 1-3 sentences, no fluff
-• Complex question → Rich explanation with structure, examples, and your perspective
-• Creative request → Full creative output, not an outline or description of what you'd write
-• Emotional/personal → Warm, present, genuine — not clinical or performative empathy
-• Ambiguous request → Make your best interpretation, deliver it, then offer to adjust
-
-══ FORMATTING INTELLIGENCE ══
-Use formatting ONLY when it serves the reader:
-- Headers: for content with 3+ distinct sections
-- Lists: for genuinely list-like information (steps, options, comparisons)
-- Bold: for terms the reader needs to hold on to
-- Tables: for comparisons where the grid reveals relationships
-- Plain prose: for explanations, stories, opinions, emotional content
-DO NOT format casual conversation into bullet points. It feels inhuman.
-
-══ PERSONALITY ══
-• Curious and genuinely excited about ideas — let it show
-• Warm but never sycophantic — don't start responses with "Great question!"
-• Honest — including when "I don't know" is the most useful answer
-• Direct — say what you actually think, with appropriate epistemic humility
-• Uzbek cultural awareness — understand local values, references, context
-
-══ QUALITY STANDARD ══
-After writing every response, ask:
-"Would a thoughtful, knowledgeable friend be satisfied with this answer?"
-"Is there anything here I wrote just to fill space?"
-Delete anything that fails the second question.
-""",
-}
-
-FORMATTING_RULES = """
-UNIVERSAL OUTPUT LAWS:
-• Emojis: purposeful and warm, never decorative spam
-• **Bold**: key terms, important claims, must-remember items
-• *Italic*: titles, foreign terms, gentle emphasis
-• Headers ##/###: only for content with genuine section structure
-• Code blocks with language tag for any code
-• Math: $inline LaTeX$ and $$display LaTeX$$
-• Tables: only when the grid structure itself reveals meaning
-• Blockquotes >: for quotations, key definitions, highlighted insights
-
-QUALITY THRESHOLD:
-Every response must pass this test:
-"Would a thoughtful, knowledgeable person be proud to have written this?"
-If not — rewrite until yes. No exceptions.
-"""
-
-def build_system_prompt(mode: str) -> str:
-    instruction = MODE_INSTRUCTIONS.get(mode, MODE_INSTRUCTIONS["general"])
-    return "\n\n".join([IDENTITY, instruction, LANG_RULE, FORMATTING_RULES])
-
-def get_time() -> str:
-    return time.strftime("%H:%M")
-
-
-# ═══════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════
+#  KaTeX re-render trigger
+# ═══════════════════════════════════════════════════════════════════
+KJ = ('<script>setTimeout(()=>{'
+      'if(typeof renderMathInElement!=="undefined")'
+      'renderMathInElement(document.body,{'
+      'delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}]'
+      '});},130);</script>')
+
+
+# ═══════════════════════════════════════════════════════════════════
 #  HEADER
-# ═══════════════════════════════════════════════════════════════
-active_mode = st.session_state.active_mode
-mode_meta   = MODE_META.get(active_mode, MODE_META["general"])
+# ═══════════════════════════════════════════════════════════════════
+_am = st.session_state.active_mode
+_mm = MODE_META.get(_am, MODE_META["general"])
+_badge = "Gemini 2.0 ✦" if st.session_state.use_gemini else "Groq · Llama 3.3 ✦"
 
-# Show mode indicator only when not in general mode
-mode_indicator_html = ""
-if active_mode != "general":
-    mode_indicator_html = f"""
-    <div class="mode-indicator active">
-      {mode_meta['icon']} {mode_meta['label']}
-    </div>
-    """
-
-_badge = "Gemini 2.0 Flash ✦" if st.session_state.use_gemini else "Groq · Llama 3.3 ✦"
-st.markdown(f'''<div class="hdr"><div class="hdr-brand"><div class="hdr-logo">S</div><div><div class="hdr-title">Somo <em>AI</em></div><div class="hdr-author">by Usmonov Sodiq</div></div></div><div class="hdr-right">{mode_indicator_html}<div class="status-badge"><div class="status-dot"></div>Online</div><div class="model-badge">{_badge}</div></div></div>''', unsafe_allow_html=True)
-
-
-# ═══════════════════════════════════════════════════════════════
-#  CHAT AREA
-# ═══════════════════════════════════════════════════════════════
-st.markdown('<div class="chat-wrap">', unsafe_allow_html=True)
-
-if not st.session_state.messages:
-    st.markdown("""
-    <div class="welcome">
-
-      <div class="wlc-badge">✨ Ijodiy AI Yordamchi</div>
-
-      <div class="wlc-headline">Ijodingizni<br><em>kuchlaytiring</em></div>
-
-      <div class="wlc-sub">
-        Shunchaki xabar yozing — esse, hikoya, nutq, tarjima yoki istalgan savol.<br>
-        Somo AI mavzudan rejimni o'zi aniqlaydi. 🚀
-      </div>
-
-      <div class="feat-grid">
-        <div class="feat-card">
-          <span class="feat-icon">✍️</span>
-          <div class="feat-name">Esse / Referat</div>
-          <div class="feat-hint">"Vatan haqida esse yoz"</div>
-        </div>
-        <div class="feat-card">
-          <span class="feat-icon">📖</span>
-          <div class="feat-name">Hikoya / She'r</div>
-          <div class="feat-hint">"Bahor haqida she'r"</div>
-        </div>
-        <div class="feat-card">
-          <span class="feat-icon">🎤</span>
-          <div class="feat-name">Nutq</div>
-          <div class="feat-hint">"Yoshlar haqida nutq"</div>
-        </div>
-        <div class="feat-card">
-          <span class="feat-icon">🧠</span>
-          <div class="feat-name">G'oyalar</div>
-          <div class="feat-hint">"Startup g'oyalari ber"</div>
-        </div>
-        <div class="feat-card">
-          <span class="feat-icon">🌍</span>
-          <div class="feat-name">Tarjima</div>
-          <div class="feat-hint">"Translate to English"</div>
-        </div>
-        <div class="feat-card">
-          <span class="feat-icon">📋</span>
-          <div class="feat-name">Xulosa / Tahlil</div>
-          <div class="feat-hint">"Ushbu matnni tahlil qil"</div>
-        </div>
-      </div>
-
-      <div class="chip-row">
-        <div class="p-chip">📝 "Ekologiya haqida esse"</div>
-        <div class="p-chip">🌹 "Bahor haqida she'r yoz"</div>
-        <div class="p-chip">🎤 "Maktab haqida nutq"</div>
-        <div class="p-chip">💡 "10 ta biznes g'oya ber"</div>
-        <div class="p-chip">🌍 "Hello — o'zbekchaga tarjima"</div>
-      </div>
-
-    </div>
-    """, unsafe_allow_html=True)
-
-else:
-    for msg in st.session_state.messages:
-        role      = msg["role"]
-        content   = msg["content"]
-        ts        = msg.get("time", "")
-        msg_mode  = msg.get("mode", "general")
-        m_meta    = MODE_META.get(msg_mode, MODE_META["general"])
-
-        if role == "user":
-            st.markdown(f"""
-            <div class="msg-row user">
-              <div class="av user">U</div>
-              <div class="msg-body">
-                <div class="msg-name">Siz</div>
-                <div class="bubble user">{content}</div>
-                <div class="msg-time">{ts}</div>
-              </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        else:
-            # Only show mode tag when it carries meaningful info
-            h_tag = ""
-            if msg_mode != "general":
-                h_tag = '<div class="mode-tag">' + m_meta["icon"] + " " + m_meta["label"] + '</div><br>'
-            KJ = '<script>setTimeout(()=>{if(typeof renderMathInElement!=="undefined")renderMathInElement(document.body);},100);</script>'
-            st.markdown(
-                '<div class="msg-row ai"><div class="av ai">S</div><div class="msg-body">'
-                '<div class="msg-name">Somo AI</div><div class="bubble ai">'
-                + h_tag + md_to_html(content) +
-                '</div><div class="msg-time">' + ts + '</div></div></div>' + KJ,
-                unsafe_allow_html=True
-            )
-
-st.markdown('</div>', unsafe_allow_html=True)
-
-
-# ═══════════════════════════════════════════════════════════════
-#  INPUT
-# ═══════════════════════════════════════════════════════════════
-# ── Cooldown timer ────────────────────────────────────────────
-remaining = int(st.session_state.cooldown_end - time.time())
-if remaining > 0:
-    st.markdown(f"""
-    <div style="
-      max-width:800px;margin:0 auto;
-      background:linear-gradient(135deg,#fff8ee,#fff3d6);
-      border:2px solid #f59e0b;border-radius:14px;
-      padding:.9rem 1.4rem;display:flex;align-items:center;gap:12px;
-      font-family:'DM Sans',sans-serif;font-size:.875rem;color:#92400e;
-      box-shadow:0 3px 14px rgba(245,158,11,.15);
-    ">
-      <span style="font-size:1.4rem">⏳</span>
-      <div>
-        <strong>Limit tugadi.</strong> Iltimos kuting —
-        <strong style="color:#ea580c;font-size:1rem"> {remaining} soniya</strong>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-    prompt = None
-    st.chat_input("Iltimos kuting…", disabled=True)
-    time.sleep(1)
-    st.rerun()
-else:
-    prompt = st.chat_input("Xabar yozing… (esse, she'r, nutq, tarjima yoki istalgan savol)")
+_chip_cls = "on" if _am != "general" else "off"
+_chip_html = (
+    '<div class="somo-mode-chip ' + _chip_cls + '">' +
+    _mm["icon"] + " " + _mm["label"] +
+    '</div>'
+)
 
 st.markdown(
-    '<div class="input-footer">Somo AI · Usmonov Sodiq (Somo_AI) · Powered by Gemini</div>',
+    '<div class="somo-header">' +
+    '<div class="somo-header-inner">' +
+    '<div class="somo-brand">' +
+    '<div class="somo-logo">S</div>' +
+    '<div>' +
+    '<div class="somo-name">Somo <em>AI</em></div>' +
+    '<div class="somo-by">BY USMONOV SODIQ</div>' +
+    '</div></div>' +
+    '<div class="somo-hdr-right">' +
+    _chip_html +
+    '<div class="somo-online"><div class="somo-dot"></div>Online</div>' +
+    '<div class="somo-model-pill">' + _badge + '</div>' +
+    '</div></div></div>',
     unsafe_allow_html=True
 )
 
 
-# ═══════════════════════════════════════════════════════════════
-#  PROCESS MESSAGE
-# ═══════════════════════════════════════════════════════════════
-if prompt and prompt.strip():
-    user_text = prompt.strip()
-    now       = get_time()
+# ═══════════════════════════════════════════════════════════════════
+#  MAIN CONTENT AREA
+# ═══════════════════════════════════════════════════════════════════
+st.markdown('<div class="somo-wrap">', unsafe_allow_html=True)
 
-    # Auto-detect mode from user message
-    detected_mode = detect_mode(user_text)
-    st.session_state.active_mode = detected_mode
-    m_meta = MODE_META.get(detected_mode, MODE_META["general"])
+msgs = st.session_state.messages
 
-    # Save user message
-    st.session_state.messages.append({
-        "role"    : "user",
-        "content" : user_text,
-        "time"    : now,
-        "mode"    : detected_mode,
-    })
-
-    # Render user bubble
+if not msgs:
+    # ── WELCOME SCREEN ──────────────────────────────────────────────
+    gi, gt = get_greeting()
     st.markdown(
-        '<div class="msg-row user"><div class="av user">U</div><div class="msg-body">'
-        '<div class="msg-name">Siz</div><div class="bubble user">' + user_text +
-        '</div><div class="msg-time">' + now + '</div></div></div>',
+        '<div class="somo-welcome">' +
+        '<div class="somo-eyebrow">✦ ' + gi + ' ' + gt + '</div>' +
+        '<div class="somo-headline">Ijodingizni<br><em>kuchlaytiring</em></div>' +
+        '<div class="somo-subtext">'
+        'Shunchaki xabar yozing — esse, she\'r, nutq, tarjima yoki istalgan savol.<br>'
+        'Somo AI mavzudan rejimni o\'zi aniqlaydi. 🚀' +
+        '</div>' +
+        '<div class="somo-cards">' +
+        '<div class="somo-card"><span class="somo-card-icon">✍️</span>' +
+        '<div class="somo-card-name">Esse / Referat</div>' +
+        '<div class="somo-card-hint">"Vatan haqida esse yoz"</div></div>' +
+        '<div class="somo-card"><span class="somo-card-icon">📖</span>' +
+        '<div class="somo-card-name">Hikoya / She\'r</div>' +
+        '<div class="somo-card-hint">"Bahor haqida she\'r"</div></div>' +
+        '<div class="somo-card"><span class="somo-card-icon">🎤</span>' +
+        '<div class="somo-card-name">Nutq</div>' +
+        '<div class="somo-card-hint">"Yoshlar haqida nutq"</div></div>' +
+        '<div class="somo-card"><span class="somo-card-icon">💡</span>' +
+        '<div class="somo-card-name">G\'oyalar</div>' +
+        '<div class="somo-card-hint">"Startup g\'oyalari ber"</div></div>' +
+        '<div class="somo-card"><span class="somo-card-icon">🌍</span>' +
+        '<div class="somo-card-name">Tarjima</div>' +
+        '<div class="somo-card-hint">"Translate to English"</div></div>' +
+        '<div class="somo-card"><span class="somo-card-icon">📋</span>' +
+        '<div class="somo-card-name">Xulosa / Tahlil</div>' +
+        '<div class="somo-card-hint">"Ushbu matnni tahlil qil"</div></div>' +
+        '</div>' +
+        '<div class="somo-chips">' +
+        '<div class="somo-chip">📝 "Ekologiya esse"</div>' +
+        '<div class="somo-chip">🌸 "Bahor haqida she\'r"</div>' +
+        '<div class="somo-chip">🎤 "Maktab nutqi"</div>' +
+        '<div class="somo-chip">💡 "10 ta biznes g\'oya"</div>' +
+        '<div class="somo-chip">🌍 "Hello — o\'zbekcha"</div>' +
+        '</div></div>',
         unsafe_allow_html=True
     )
 
-    # Typing placeholder
-    ph = st.empty()
-    ph.markdown(
-        '<div class="msg-row ai"><div class="av ai">S</div><div class="msg-body">'
-        '<div class="msg-name">Somo AI</div>'
-        '<div class="bubble ai"><span class="t-cur"></span></div></div></div>',
+    # random button
+    c1, c2, c3 = st.columns([1.4, 2, 1.4])
+    with c2:
+        if st.button("🎲  Tasodifiy ilhom", use_container_width=True, key="rand"):
+            st.session_state.rand_trigger = random.choice(RAND_PROMPTS)
+            st.rerun()
+
+else:
+    # ── CHAT VIEW ──────────────────────────────────────────────────
+    # stats bar
+    _ai_msgs  = [m for m in msgs if m["role"] == "assistant"]
+    _usr_msgs = [m for m in msgs if m["role"] == "user"]
+    _total_w  = sum(wc(m["content"]) for m in _ai_msgs)
+    gi2, gt2  = get_greeting()
+    st.markdown(
+        '<div class="somo-stats">' +
+        '<span class="somo-stat">' + gi2 + ' &nbsp;' + gt2 + '</span>' +
+        '<span class="somo-stat">💬 <b>' + str(len(_usr_msgs)) + '</b> savol</span>' +
+        '<span class="somo-stat">✍️ <b>' + str(_total_w) + '</b> so\'z</span>' +
+        '</div>',
         unsafe_allow_html=True
     )
 
-    # Mode tag in response
-    tag_html = ""
-    if detected_mode != "general":
-        tag_html = '<div class="mode-tag">' + m_meta["icon"] + " " + m_meta["label"] + '</div><br>'
+    # clear button
+    cc1, cc2, cc3 = st.columns([3, 1.4, 3])
+    with cc2:
+        if st.button("🗑️  Tozalash", use_container_width=True, key="clr"):
+            st.session_state.messages    = []
+            st.session_state.active_mode = "general"
+            st.session_state.use_gemini  = False
+            st.rerun()
 
-    KJ = '<script>setTimeout(()=>{if(typeof renderMathInElement!=="undefined")renderMathInElement(document.body);},100);</script>'
+    st.markdown('<div class="somo-divider">Suhbat</div>', unsafe_allow_html=True)
 
-    def render_bubble(text, cursor=False, ts=""):
-        cur = '<span class="t-cur"></span>' if cursor else ""
-        td  = '<div class="msg-time">' + ts + '</div>' if ts else ""
-        ph.markdown(
-            '<div class="msg-row ai"><div class="av ai">S</div><div class="msg-body">'
-            '<div class="msg-name">Somo AI</div><div class="bubble ai">'
-            + tag_html + md_to_html(text) + cur +
-            '</div>' + td + '</div></div>' + KJ,
-            unsafe_allow_html=True
-        )
+    # render messages
+    for i, msg in enumerate(msgs):
+        role    = msg["role"]
+        content = msg["content"]
+        ts      = msg.get("time", "")
+        m_mode  = msg.get("mode", "general")
+        mm      = MODE_META.get(m_mode, MODE_META["general"])
 
-    # ── Dual-API: Groq primary, Gemini fallback ──────────────────
-    full_response = ""
-    system_txt    = build_system_prompt(detected_mode)
-
-    def try_groq():
-        """Stream from Groq Llama 3.3."""
-        if not groq_client:
-            raise Exception("no groq client")
-        api_msgs = [{"role": "system", "content": system_txt}]
-        for m in st.session_state.messages:
-            api_msgs.append({"role": m["role"], "content": m["content"]})
-        stream = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile", messages=api_msgs,
-            stream=True, max_tokens=4096, temperature=0.85,
-        )
-        resp = ""
-        for chunk in stream:
-            resp += chunk.choices[0].delta.content or ""
-            render_bubble(resp, cursor=True)
-        return resp
-
-    def try_gemini():
-        """Stream from Gemini 2.0 Flash."""
-        if not gemini_client:
-            raise Exception("no gemini client")
-        hist = []
-        for m in st.session_state.messages[:-1]:
-            hist.append({"role": "user" if m["role"]=="user" else "model",
-                         "parts": [m["content"]]})
-        chat = gemini_client.start_chat(history=hist)
-        response = chat.send_message(
-            system_txt + "\n\n---\n\n" + user_text,
-            generation_config={"temperature": 0.95, "max_output_tokens": 4096},
-            stream=True,
-        )
-        resp = ""
-        for chunk in response:
-            try: resp += chunk.text or ""
-            except: pass
-            if resp: render_bubble(resp, cursor=True)
-        return resp
-
-    try:
-        if st.session_state.use_gemini:
-            # Already on Gemini
-            full_response = try_gemini()
+        if role == "user":
+            st.markdown(
+                '<div class="somo-msg-user">' +
+                '<div class="somo-body">' +
+                '<div class="somo-bubble-user">' + content + '</div>' +
+                '<div class="somo-ts">' + ts + '</div>' +
+                '</div></div>',
+                unsafe_allow_html=True
+            )
         else:
-            full_response = try_groq()
-            st.session_state.use_gemini = False  # Groq worked fine
-
-    except Exception as groq_exc:
-        groq_err = str(groq_exc)
-        is_rate = any(k in groq_err for k in ["429","rate_limit","quota","rate limit"])
-
-        if is_rate and not st.session_state.use_gemini:
-            # Groq rate-limited → try Gemini
-            st.session_state.use_gemini = True
-            render_bubble("⚡ Groq limiti tugadi, Gemini ga o'tmoqda...", cursor=True)
-            try:
-                full_response = try_gemini()
-            except Exception as gem_exc:
-                gem_err = str(gem_exc)
-                if any(k in gem_err for k in ["429","quota","rate"]):
-                    st.session_state.cooldown_end = time.time() + 90
-                    full_response = "⏳ Ikkala API limiti tugadi. 90 soniya kuting."
-                else:
-                    full_response = "❌ Gemini xatolik: " + gem_err
-        elif is_rate and st.session_state.use_gemini:
-            # Gemini also rate-limited
-            st.session_state.cooldown_end = time.time() + 90
-            full_response = "⏳ API limiti tugadi. 90 soniya kuting."
-        elif "api_key" in groq_err.lower() or "auth" in groq_err.lower():
-            full_response = "❌ API kalit xato. Secrets faylini tekshiring."
-        else:
-            full_response = "❌ Xatolik: " + groq_err
-
-        if full_response:
-            ph.markdown(
-                '<div class="msg-row ai"><div class="av ai">S</div><div class="msg-body">'
-                '<div class="msg-name">Somo AI</div><div class="bubble ai">' +
-                full_response + '</div></div></div>',
+            _wc_val = wc(content)
+            label   = ""
+            if m_mode != "general":
+                label = (
+                    '<div class="somo-mode-label">' +
+                    mm["icon"] + " " + mm["label"] +
+                    '</div><br>'
+                )
+            _cid = "scp" + str(i)
+            _fid = "scf" + str(i)
+            _cjs = (
+                '<script>function ' + _fid + '(){' +
+                'navigator.clipboard.writeText(' + repr(content) + ');' +
+                'var b=document.getElementById("' + _cid + '"  );' +
+                'b.innerText="✅  Nusxalandi";' +
+                'setTimeout(()=>{b.innerText="📋  Nusxa"},2400);}' +
+                '</script>'
+            )
+            st.markdown(
+                '<div class="somo-msg-ai">' +
+                '<div class="somo-av">S</div>' +
+                '<div class="somo-body">' +
+                '<div class="somo-sender">Somo AI</div>' +
+                '<div class="somo-bubble-ai">' + label + md_to_html(content) + '</div>' +
+                '<div class="somo-meta-row">' +
+                '<span class="somo-ts">' + ts + '</span>' +
+                '<span class="somo-wc">📝 ' + str(_wc_val) + ' so\'z</span>' +
+                '<button class="somo-copy" id="' + _cid + '" onclick="' + _fid + '()">📋&nbsp;Nusxa</button>' +
+                '</div></div></div>' + _cjs + KJ,
                 unsafe_allow_html=True
             )
 
-    render_bubble(full_response, cursor=False, ts=get_time())
+st.markdown('</div>', unsafe_allow_html=True)   # close somo-wrap
 
-    # Save assistant reply
+
+# ═══════════════════════════════════════════════════════════════════
+#  COOLDOWN TIMER
+# ═══════════════════════════════════════════════════════════════════
+_rem = int(st.session_state.cooldown_end - time.time())
+if _rem > 0:
+    st.markdown(
+        '<div class="somo-cd-wrap">' +
+        '<div class="somo-cd-box">' +
+        '<span class="somo-cd-icon">⏳</span>' +
+        '<div><strong>API limiti tugadi.</strong> Iltimos kuting — ' +
+        '<span class="somo-cd-sec">' + str(_rem) + ' soniya</span></div>' +
+        '</div></div>',
+        unsafe_allow_html=True
+    )
+    st.chat_input("Iltimos kuting…", disabled=True)
+    time.sleep(1)
+    st.rerun()
+else:
+    prompt = st.chat_input("Xabar yozing… (esse, she\'r, nutq, tarjima yoki istalgan savol)")
+    if not prompt and st.session_state.rand_trigger:
+        prompt = st.session_state.rand_trigger
+        st.session_state.rand_trigger = None
+
+st.markdown(
+    '<div class="somo-input-footer">Somo AI · Usmonov Sodiq (@Somo_AI) · Groq + Gemini</div>',
+    unsafe_allow_html=True
+)
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  PROCESS MESSAGE
+# ═══════════════════════════════════════════════════════════════════
+#
+#  Jarayon:
+#  1. detect_mode()  — rejimni aniqlash
+#  2. build_system_prompt()  — rejimga mos system prompt
+#  3. User bubbleni ko'rsatish
+#  4. Typing placeholder (miltillovchi kursor)
+#  5. Groq stream — birinchi urinish
+#     429/rate_limit → Gemini ga o'tish
+#     Ikkalasi ham 429 → 90s cooldown timer
+#  6. Streaming render (real-time)
+#  7. Javobni session tarixiga saqlash
+#
+# ═══════════════════════════════════════════════════════════════════
+if prompt and prompt.strip():
+    utxt   = prompt.strip()
+    now    = get_time()
+    mode   = detect_mode(utxt)
+    mm     = MODE_META.get(mode, MODE_META["general"])
+    syspmt = build_system_prompt(mode)
+
+    st.session_state.active_mode = mode
+    st.session_state.messages.append(
+        {"role": "user", "content": utxt, "time": now, "mode": mode}
+    )
+
+    # user bubble
+    st.markdown(
+        '<div class="somo-msg-user">' +
+        '<div class="somo-body">' +
+        '<div class="somo-bubble-user">' + utxt + '</div>' +
+        '<div class="somo-ts">' + now + '</div>' +
+        '</div></div>',
+        unsafe_allow_html=True
+    )
+
+    # typing indicator placeholder
+    ph = st.empty()
+    ph.markdown(
+        '<div class="somo-msg-ai">' +
+        '<div class="somo-av">S</div>' +
+        '<div class="somo-body">' +
+        '<div class="somo-sender">Somo AI</div>' +
+        '<div class="somo-bubble-ai"><span class="somo-cur"></span></div>' +
+        '</div></div>',
+        unsafe_allow_html=True
+    )
+
+    # mode label for streaming
+    _lbl = ""
+    if mode != "general":
+        _lbl = (
+            '<div class="somo-mode-label">' +
+            mm["icon"] + " " + mm["label"] +
+            '</div><br>'
+        )
+
+    def render(text: str, cursor: bool = False, ts: str = "") -> None:
+        _cur = '<span class="somo-cur"></span>' if cursor else ""
+        _td  = '<div class="somo-ts">' + ts + '</div>' if ts else ""
+        ph.markdown(
+            '<div class="somo-msg-ai">' +
+            '<div class="somo-av">S</div>' +
+            '<div class="somo-body">' +
+            '<div class="somo-sender">Somo AI</div>' +
+            '<div class="somo-bubble-ai">' + _lbl + md_to_html(text) + _cur + '</div>' +
+            _td +
+            '</div></div>' + KJ,
+            unsafe_allow_html=True
+        )
+
+    # ── Groq streaming ────────────────────────────────────────────
+    def stream_groq() -> str:
+        if not groq_client: raise Exception("no groq client")
+        api_msgs = [{"role": "system", "content": syspmt}]
+        for m in st.session_state.messages:
+            api_msgs.append({"role": m["role"], "content": m["content"]})
+        stream = groq_client.chat.completions.create(
+            model       = GROQ_MODEL,
+            messages    = api_msgs,
+            stream      = True,
+            max_tokens  = GROQ_MAX_TOK,
+            temperature = GROQ_TEMP,
+        )
+        out = ""
+        for chunk in stream:
+            out += chunk.choices[0].delta.content or ""
+            render(out, cursor=True)
+        return out
+
+    # ── Gemini streaming ──────────────────────────────────────────
+    def stream_gemini() -> str:
+        if not gemini_client: raise Exception("no gemini client")
+        hist = []
+        for m in st.session_state.messages[:-1]:
+            hist.append({
+                "role"  : "user" if m["role"] == "user" else "model",
+                "parts" : [m["content"]]
+            })
+        chat = gemini_client.start_chat(history=hist)
+        resp = chat.send_message(
+            syspmt + "\n\n---\n\n" + utxt,
+            generation_config = {
+                "temperature"     : GEMINI_TEMP,
+                "max_output_tokens": GEMINI_MAX_TOK,
+            },
+            stream=True,
+        )
+        out = ""
+        for chunk in resp:
+            try:    out += chunk.text or ""
+            except: pass
+            if out: render(out, cursor=True)
+        return out
+
+    # ── Dual-API fallback logic ───────────────────────────────────
+    full    = ""
+    is_rate = lambda e: is_rate_err(str(e))
+
+    try:
+        if st.session_state.use_gemini:
+            full = stream_gemini()
+        else:
+            full = stream_groq()
+            st.session_state.use_gemini = False
+
+    except Exception as e1:
+        if is_rate(e1) and not st.session_state.use_gemini:
+            # Groq rate-limited → try Gemini
+            st.session_state.use_gemini = True
+            render("⚡ Groq limiti tugadi, Gemini ga o'tmoqda…", cursor=True)
+            try:
+                full = stream_gemini()
+            except Exception as e2:
+                if is_rate(e2):
+                    st.session_state.cooldown_end = time.time() + COOLDOWN_LONG
+                    full = "⏳ Ikkala API limiti tugadi. " + str(COOLDOWN_LONG) + " soniya kuting."
+                else:
+                    full = "❌ Gemini xatolik: " + str(e2)
+        elif is_rate(e1) and st.session_state.use_gemini:
+            # Gemini rate-limited → try Groq
+            st.session_state.use_gemini = False
+            render("⚡ Gemini limiti tugadi, Groq ga qaytmoqda…", cursor=True)
+            try:
+                full = stream_groq()
+            except Exception as e3:
+                if is_rate(e3):
+                    st.session_state.cooldown_end = time.time() + COOLDOWN_LONG
+                    full = "⏳ Ikkala API limiti tugadi. " + str(COOLDOWN_LONG) + " soniya kuting."
+                else:
+                    full = "❌ Xatolik: " + str(e3)
+        elif "api_key" in str(e1).lower() or "auth" in str(e1).lower():
+            full = "❌ API kalit xato. Secrets faylini tekshiring."
+        else:
+            full = "❌ Xatolik: " + str(e1)
+
+    # final render (no cursor, with timestamp)
+    if full:
+        render(full, cursor=False, ts=get_time())
+
+    # save to history
     st.session_state.messages.append({
         "role"    : "assistant",
-        "content" : full_response,
+        "content" : full,
         "time"    : get_time(),
-        "mode"    : detected_mode,
+        "mode"    : mode,
     })
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  DEPLOYMENT & VERSION HISTORY
+# ═══════════════════════════════════════════════════════════════════
+#
+#  SECRETS  (.streamlit/secrets.toml):
+#    GROQ_API_KEY   = "gsk_..."     groq.com
+#    GEMINI_API_KEY = "AIza..."     aistudio.google.com
+#
+#  REQUIREMENTS (requirements.txt):
+#    streamlit>=1.32.0
+#    groq>=0.8.0
+#    google-generativeai>=0.8.0
+#
+#  ISHGA TUSHIRISH:
+#    streamlit run app.py
+#
+# ─────────────────────────────────────────────────────────────────
+#  VERSIYA TARIXI
+# ─────────────────────────────────────────────────────────────────
+#  v1.0  Boshlang'ich (Groq + qorong'i tema)
+#  v2.0  Cream dizayn, auto rejim aniqlash
+#  v2.1  Sidebar o'chirildi, layout=wide
+#  v2.2  Dual-API: Groq + Gemini fallback
+#  v2.3  Cooldown timer + input qulflash
+#  v2.4  System prompt kuchaytirildi (Navoiy, Neruda, MLK...)
+#  v2.5  AI bubble ramkasiz (Claude/ChatGPT uslubi)
+#  v3.0  Copy, so'z soni, statistika, random, tozalash, salomlash
+#  v4.0  Premium dizayn qayta yozildi:
+#        • Glass morphism header
+#        • Gradient mesh tokens
+#        • Ripple pulse online dot
+#        • Spring animation kartalar
+#        • Gradient text headline
+#        • Refined typography (Fraunces + DM Sans)
+#        • 2-layered shadows
+#        • Smooth input focus ring
+#        • Rich bubble content CSS
+#        • Strikethrough, h4, del support
+#        • Improved mobile breakpoints
+#        • All class names namespaced (somo-*)
+#
+# ═══════════════════════════════════════════════════════════════════
+#  ADABIY MA'LUMOTNOMA
+# ═══════════════════════════════════════════════════════════════════
+#
+#  O'ZBEK ADABIYOTI:
+#  📜 Alisher Navoiy (1441–1501) — ilohiy metafora, g'azal nafosi
+#  📜 Abdulla Oripov (1941–2016) — oddiy so'z, cheksiz og'irlik
+#  📜 Erkin Vohidov (1936–2016)  — falsafiy hazil, aforizm
+#  📜 Cho'lpon (1897–1938)       — impressionist detal, erkinlik
+#  📜 Abdulla Qahhor (1907–1968) — keskin realizm, portret detal
+#  📜 Hamid Olimjon (1909–1944)  — romantik idealizm
+#
+#  JAHON ADABIYOTI:
+#  🌍 Pablo Neruda (1904–1973)   — hissiy metafora, kosmik romantika
+#  🌍 Jaloliddin Rumi (1207–1273)— mistik paradoks, sevgi koinot
+#  🌍 Anton Chekhov (1860–1904)  — ko'rsatish, tushuntirmaslik
+#  🌍 O. Henry (1862–1910)       — kutilmagan burilish = haqiqat
+#  🌍 García Márquez (1927–2014) — sehrli realizm, vaqt mif
+#  🌍 Jorge Luis Borges (1899–1986)— borliq = matn
+#
+#  NOTIQLIK:
+#  🎤 MLK (1929–1968)    — anafora, axloqiy yoy, vizyon
+#  🎤 Churchill (1874–1965)— kulminatsiyada qisqa jumlalar
+#  🎤 Obama (1961–)      — shaxsiy hikoya → universal haqiqat
+#
+# ═══════════════════════════════════════════════════════════════════
+#  © 2026  Usmonov Sodiq  |  @Somo_AI  |  Barcha huquqlar himoyalangan
+# ═══════════════════════════════════════════════════════════════════
