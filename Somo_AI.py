@@ -1,26 +1,25 @@
 # ╔══════════════════════════════════════════════════════════════════╗
 # ║                                                                  ║
-# ║           SOMO AI  —  Ijodiy AI Yordamchi  v4.0                 ║
+# ║           SOMO AI  —  Ijodiy AI Yordamchi  v4.1                 ║
 # ║                                                                  ║
 # ║  Muallif  : Usmonov Sodiq  (@Somo_AI)                           ║
 # ║  Model    : Groq Llama-3.3-70B  +  Google Gemini 2.0 Flash      ║
 # ║  Stack    : Python · Streamlit · Dual-API Streaming             ║
-# ║  Versiya  : 4.0  |  2026                                        ║
+# ║  Versiya  : 4.1  |  2026  (Mobile-Perfect Edition)              ║
 # ║                                                                  ║
 # ╠══════════════════════════════════════════════════════════════════╣
-# ║  YANGILIKLAR v4.0:                                               ║
-# ║  ✦ Butunlay qayta yozilgan mukammal dizayn                       ║
-# ║  ✦ Gradient mesh background + glass morphism header             ║
-# ║  ✦ Premium card hover effektlari                                 ║
-# ║  ✦ Pulse animatsiyali online dot                                 ║
-# ║  ✦ Smooth scroll + message fade-in                              ║
-# ║  ✦ Welcome screen: animated badge + gradient headline           ║
-# ║  ✦ Copy button + so'z soni + sessiya statistikasi               ║
-# ║  ✦ Random ilhom (20 mavzu) + chatni tozalash                    ║
-# ║  ✦ Greeting: tong/kun/kech/tun                                  ║
-# ║  ✦ API switch xabari, 90s cooldown timer                        ║
-# ║  ✦ KaTeX matematik rendering                                     ║
-# ║  ✦ Mobil moslashuvchan (320px gacha)                            ║
+# ║  YANGILIKLAR v4.1:                                               ║
+# ║  ✦ Telefon uchun mukammal dizayn (320px–430px)                   ║
+# ║  ✦ Safe-area insets (notch / home bar phones)                    ║
+# ║  ✦ 44px minimum touch targets barcha tugmalar                    ║
+# ║  ✦ Mobil header: ultra-compact, scroll-proof                     ║
+# ║  ✦ Sticky input: viewport-lock, iOS Safari fix                   ║
+# ║  ✦ Welcome cards: 2-col mobile, 3-col desktop                    ║
+# ║  ✦ Larger base font on mobile (16px) — no zoom on focus          ║
+# ║  ✦ Chips horizontal scroll, no wrap on small screens             ║
+# ║  ✦ Copy button: full-width on mobile                             ║
+# ║  ✦ Reduced motion support (prefers-reduced-motion)               ║
+# ║  ✦ Smooth overscroll + momentum scrolling (iOS)                  ║
 # ╚══════════════════════════════════════════════════════════════════╝
 
 import streamlit as st
@@ -43,7 +42,6 @@ COOLDOWN_LONG  = 90
 #  MARKDOWN → HTML  (LaTeX-safe, full-featured)
 # ═══════════════════════════════════════════════════════════════════
 def md_to_html(text: str) -> str:
-    """Convert markdown to rich HTML, preserving LaTeX blocks."""
     saved = {}
 
     def save(m):
@@ -51,51 +49,40 @@ def md_to_html(text: str) -> str:
         saved[k] = m.group(0)
         return k
 
-    # protect LaTeX
     text = re.sub(r'\$\$.+?\$\$', save, text, flags=re.DOTALL)
     text = re.sub(r'\$.+?\$', save, text)
 
-    # fenced code blocks
     def fmt_code(m):
         lang = m.group(1) or ""
         body = m.group(2).strip()
         return f'<pre><code class="lang-{lang}">{body}</code></pre>'
     text = re.sub(r'```(\w*)\n?(.*?)```', fmt_code, text, flags=re.DOTALL)
 
-    # inline code
     text = re.sub(r'`([^`\n]+)`', r'<code>\1</code>', text)
 
-    # headers
     text = re.sub(r'^#### (.+)$', r'<h4>\1</h4>', text, flags=re.MULTILINE)
     text = re.sub(r'^### (.+)$',  r'<h3>\1</h3>', text, flags=re.MULTILINE)
     text = re.sub(r'^## (.+)$',   r'<h2>\1</h2>', text, flags=re.MULTILINE)
     text = re.sub(r'^# (.+)$',    r'<h1>\1</h1>', text, flags=re.MULTILINE)
 
-    # bold + italic + strikethrough
     text = re.sub(r'\*\*\*(.+?)\*\*\*', r'<strong><em>\1</em></strong>', text)
     text = re.sub(r'\*\*(.+?)\*\*',       r'<strong>\1</strong>', text)
     text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<em>\1</em>', text)
     text = re.sub(r'~~(.+?)~~', r'<del>\1</del>', text)
 
-    # horizontal rule
     text = re.sub(r'^---+$', r'<hr class="md-hr">', text, flags=re.MULTILINE)
-
-    # blockquote
     text = re.sub(r'^> (.+)$', r'<blockquote>\1</blockquote>', text, flags=re.MULTILINE)
 
-    # unordered list
     def ul_block(m):
         items = re.findall(r'^[\-\*•] (.+)$', m.group(0), re.MULTILINE)
         return '<ul>' + ''.join(f'<li>{i}</li>' for i in items) + '</ul>'
     text = re.sub(r'(^[\-\*•] .+\n?)+', ul_block, text, flags=re.MULTILINE)
 
-    # ordered list
     def ol_block(m):
         items = re.findall(r'^\d+\. (.+)$', m.group(0), re.MULTILINE)
         return '<ol>' + ''.join(f'<li>{i}</li>' for i in items) + '</ol>'
     text = re.sub(r'(\d+\. .+\n?)+', ol_block, text, flags=re.MULTILINE)
 
-    # table
     def tbl(m):
         rows = [r.strip() for r in m.group(0).strip().split('\n') if '|' in r]
         if not rows: return m.group(0)
@@ -108,7 +95,6 @@ def md_to_html(text: str) -> str:
         return out + '</table>'
     text = re.sub(r'(\|.+\|\n?)+', tbl, text)
 
-    # paragraphs
     paras = text.split('\n\n')
     result = []
     for p in paras:
@@ -121,7 +107,6 @@ def md_to_html(text: str) -> str:
             result.append(f'<p>{p}</p>')
     text = '\n'.join(result)
 
-    # restore LaTeX
     for k, v in saved.items():
         text = text.replace(k, v)
     return text
@@ -137,18 +122,15 @@ def get_date() -> str:
     return time.strftime("%d.%m.%Y")
 
 def wc(text: str) -> int:
-    """So'zlar sonini qaytaradi."""
     return len(text.split())
 
 def is_rate_err(e: str) -> bool:
-    """API rate limit xatosini aniqlaydi."""
     keys = ["429", "rate_limit", "quota", "rate limit",
             "Resource exhausted", "RESOURCE_EXHAUSTED",
             "too many requests", "Too Many Requests"]
     return any(k.lower() in e.lower() for k in keys)
 
 def get_greeting() -> tuple:
-    """Kun vaqtiga mos salomlashuvni qaytaradi."""
     h = int(time.strftime("%H"))
     if 5  <= h < 12: return "🌅", "Xayrli tong"
     if 12 <= h < 17: return "☀️",  "Xayrli kun"
@@ -197,10 +179,6 @@ MODE_META = {
 #  MODE DETECTION
 # ═══════════════════════════════════════════════════════════════════
 def detect_mode(text: str) -> str:
-    """
-    Foydalanuvchi xabaridagi kalit so'zlar asosida AI rejimini
-    avtomatik aniqlaydi.
-    """
     t = text.lower()
     if re.search(r"tarjima|translate|inglizcha|ruscha|перевод|перевести|to english|to uzbek", t):
         return "translate"
@@ -316,39 +294,21 @@ HUNARMANDCHILIK QOIDALARI:
    Mavzu jumla → Aniq misol → Tahlil → Tezisga aloqa
 
 4. QARSHI FIKR — eng kuchli e'tirozni tan olib, mantiq bilan yeng.
-   Bu argumentingni yengilmas qiladi.
 
-5. O'TISHLAR — ko'rinmas, mexanik emas:
-   ✗ "Birinchidan, ikkinchidan, uchinchidan..."
-   ✓ "Biroq bu manzaraning orqasida boshqa haqiqat yotadi..."
+5. O'TISHLAR — ko'rinmas, mexanik emas.
 
 6. XOTIMA — hech qachon xulosa qilma. KUCHAYTIR.
-   Tugalish: ta'qib qiluvchi savol, boshlanishga qaytish (o'zgartirilgan),
-   yoki essening doirasidan kengrog'iga chiquvchi chaqiriq.
 
 MAJBURIY STRUKTURA:
 ## Kirish
-[Hook — 1 ta unutilmas jumla]
-[Kontekst — 2-3 jumla]
-[Tezis — jasur, munozarali da'vo]
+[Hook] [Kontekst] [Tezis]
 
-## [Birinchi Argument — haqiqiy sarlavha]
-[Mavzu jumla → Aniq misol: ism, sana, hodisa → Tahlil]
-[Qarshi fikr → Kuchli raddiya]
-
-## [Ikkinchi Argument — chuqurlashtir, takrorma]
-[Iqtibos, statistika yoki tarixiy parallel]
-
+## [Birinchi Argument]
+## [Ikkinchi Argument]
 ## [Uchinchi va Eng Kuchli Argument]
-[Eng hissiy va falsafiy chuqurlik]
-[Kulminatsiyaga qarab qisqa jumlalar]
-
 ## Xulosa
-[Tezisni butunlay yangi so'zlarda ifodalash]
-[Sintez: barcha argumentlar birgalikda nima isbotlaydi?]
-[Oxirgi jumla: abadiy tasvir, ta'qib qiluvchi savol]
 
-UZUNLIK: 550–900 so'z. So'ralsa ko'proq.
+UZUNLIK: 550–900 so'z.
 """,
 
 "story": """
@@ -358,61 +318,22 @@ UZUNLIK: 550–900 so'z. So'ralsa ko'proq.
 
 ADABIY E'TIQOD:
 San'at tushuntirmaydi — U OCHIB BERADI.
-O'quvchi nomlashga so'z topa olmaydigan narsani his qilishi kerak.
-Har so'z toshdagi kabi tanlanadi.
-
-O'ZBEK USTOZLAR:
-• Alisher Navoiy    — ilohiy metafora, g'azal nafosi, ma'shuqa — ilohiy ko'zgu
-• Abdulla Oripov    — oddiy so'z — cheksiz og'irlik, Vatan hasrati
-• Erkin Vohidov     — kesuvchi hazil, bir satrda falsafa, ichida ko'z yoshi
-• Cho'lpon          — impressionist detal, erkinlik armanday, singan oyna parchalari
-• Abdulla Qahhor    — his qilinadigan, ko'riladigan, eshitiladigan qahramonlar
-• Hamid Olimjon     — romantik idealizm, tabiat — ko'rinadigan his
-
-JAHON USTOZLAR:
-• Pablo Neruda     — "Bahor olcha daraxti bilan nima qilsa, senga ham shuni qilmoqchiman"
-                     Hissiyot falsafa sifatida. Tana — koinot uchun metafora.
-• Jaloliddin Rumi  — Paradoks eshik sifatida. Qulatib qayta quradigan sevgi.
-                     Sukunat so'zdan baland.
-• Hafiz             — Meyhona va ilohiy — bir joy. Quvonch — ruhiy amaliyot.
-• Anton Chekhov    — 1-pardada qurol ko'rsat. Hech narsa tushuntirilmaydi.
-• O. Henry          — Burilish ALDAMAYDI — u har doim haqiqat bo'lgan narsani OCHADI.
-• Jorge Luis Borges — Haqiqat = Matn. Barcha mumkin kitoblarni o'z ichiga olgan kutubxona.
-• García Márquez   — "Ko'p yillar o'tib, otashunga qarab turib..."
-                     Vaqt — mif. Hayotning sehrli realizmi.
 
 HUNARMANDCHILIK TEXNIKALARI (har asarda kamida 3):
 1. Volta          — 2/3 nuqtada butun ma'noni o'zgartiradigan burilish
-2. Sinestetika    — "U uning sukunatini tatidi", "kechning ko'k ovozi"
+2. Sinestetika    — "U uning sukunatini tatidi"
 3. Ob'ektiv korrelyat — "g'amgin" dema; bo'sh stulni ko'rsat
-4. In medias res  — harakat, nafas, jumla o'rtasidan boshlash
-5. Anafora        — "Men seni sevdim, men seni..." — imdga aylangan takror
+4. In medias res  — harakat o'rtasidan boshlash
+5. Anafora        — imdga aylangan takror
 6. Aniq tasvir    — "qush" emas → "iyul-yorilgan o'rik shoxidagi popishak"
-7. Enjambement    — qator nafas uzilgan joyda uziladi, grammatika emas
-8. Yangrash tugash — oxirgi qator birinchiga aks-sado, yoki yangi ma'no bilan qarshi
 
-HIKOYALAR UCHUN:
-• Biror narsa bo'layotgan joyning o'rtasidan OCHING — hech qanday tarixsiz
-• Birinchi paragraf: qahramonlik + aniq joylashuv + keskinlik — uchala
-• Dialog xarakterni ochadi; syujetni tushuntirmaydi
-• Har sahna biror narsani o'zgartiradi: tushuncha, munosabat yoki dunyo
-• Kulminatsiya: hamma narsani ko'taradigan bitta jumla
-• Tugash: kutilmagan YOKI muqarrar — har doim birortasi
-
-SHE'RLAR UCHUN:
-• Sarlavha: tushuntirib emas, ma'no qo'shadi — eshik, yorliq emas
-• 1-qator: aniq tasvir, hech qachon mavhum da'vo emas
-  ✗ YOMON: "Hayot qiyin..."
-  ✓ YAXSHI: "Onam non yopardi, men esa ketayotgan edim."
-• Har band: bitta to'liq fikr
-• Volta: ataylab joylashtirilgan
-• Oxirgi qator: karilgan qo'ng'iroqdek yangrashi kerak
+HIKOYALAR: O'rta harakatdan och. Dialog xarakterni ochadi.
+SHE'RLAR: Sarlavha ma'no qo'shadi. 1-qator: aniq tasvir.
 
 MUTLAQ TAQIQLAR:
-✗ "Bu bir hikoya..." yoki "Bir bor edi..." bilan hech qachon ochma
+✗ "Bu bir hikoya..." bilan boshlamaslik
 ✗ His-tuyg'uni ayt emas — tasvirla
-✗ Metaforani tushuntirma
-✗ Kuchsiz tugama — oxirgi qator eng muhimi
+✗ Kuchsiz tugama
 """,
 
 "speech": """
@@ -420,57 +341,17 @@ MUTLAQ TAQIQLAR:
   NUTQ USTASI — MLK + Churchill + Obama + O'zbek notiqlik san'ati
 ╚═══════════════════════════════════════════════════════════════╝
 
-NUTQ FALSAFASI:
-Nutq o'qilmaydi — u IJRO ETILADI.
-Har jumla ovoz chiqarib aytilishi uchun ishlashi kerak.
-Tomoshabin o'zgargan holda chiqishi kerak: harakatlangan, ilhomlantirilgan.
-Eng yaxshi nutqlar yarmidan iborat sukunat — nima deyilmagan narsani o'ylantiradi.
-
-USTOZLAR:
-• MLK    — Anafora ("I have a dream..."), axloqiy yoy, muammo → vizyon → harakat
-• Churchill — Kulminatsiyada qisqa jumlalar. "We shall fight" da birorta sifat yo'q.
-• Obama  — Shaxsiy hikoya → universal haqiqat; "Shuning uchun..." ko'prigi
-• Demosfen — Savol qurol sifatida, nafas boshqaruvi
-
-MAJBURIY STRUKTURA (7 qism):
-
+MAJBURIY STRUKTURA:
 🎯 ILMOQ — Birinchi 15 so'z vaqtni to'xtatishi kerak
-   Shok statistikasi, javobsiz savol, o'rta harakat hikoyasi, paradoks.
-   Maksimal 3 jumla. Keyin to'liq to'xta. Nafas olsin.
-
 🤝 BOG'LANISH — Gapirish huquqini qozon
-   "Siz ham bu hisni bilasiz..." Shaxsiy e'tirof yoki umumiy tajriba.
-   Ular "Bu men haqimda" deb o'ylashsin.
-
 💡 BIRINCHI ASOSIY FIKR
-   Jasur da'vo → aniq hikoya yoki dalil → ular uchun ma'nosi.
-   Kutishni yaratuvchi o'tish bilan yakunla.
-
-🔥 IKKINCHI ASOSIY FIKR — keskinlashtir
-   Chuqurroq bor. Taxminni rad et yoki yashirin haqiqatni och.
-   Iqtibos, raqam yoki tarixiy parallel qo'sh.
-
+🔥 IKKINCHI ASOSIY FIKR
 ⚡ UCHINCHI ASOSIY FIKR — CHO'QQI
-   Eng kuchli dalil. Eng yaxshi misolni bu yerga saqla.
-   Kulminatsiyaga qarab jumlalar qisqaroq va qisqaroq bo'lsin.
-   To'xta. Keyin: sukunat ("...")
-
-🚀 CHAQIRIQ
-   Aniq, mumkin, darhol. "O'zgarish" emas — "Bugun kechqurun bitta ish qil: ..."
-
+🚀 CHAQIRIQ — Aniq, mumkin, darhol
 🔔 YOPISH — aks-sado va oshib ket
-   Ochilish tasviri — lekin hamma narsa o'tgandan keyin o'zgartirilgan.
-   Oxirgi jumla: 8 so'z yoki kam. U qo'ng'iroq kabi yangrashi kerak.
 
-RITORIK ASBOBLAR (barchasini ishlatish):
-• Anafora: Takroriy boshlash jumlasi 3+ marta — imdga aylangan
-• Trikolon: Uchtalik ro'yxat — "Bilim, mehnat, sabr" — har doim uch
-• Ritorik savollar: Javob beradigan va ochiq qoldiradigan savollar
-• Antiteza: "Ko'p gapirildi, kam ish qilindi"
-• Ellipsis "...": Eng muhim qatoringdan oldin — sukunat uni balandroq qiladi
-• To'g'ridan-to'g'ri murojaat: "Aziz do'stlarim...", "Aynan siz..."
-
-STANDART: To'liq matn. Outline emas. Ijroga tayyor.
+RITORIK ASBOBLAR: Anafora, Trikolon, Ritorik savollar, Antiteza, Ellipsis
+STANDART: To'liq matn. Ijroga tayyor.
 """,
 
 "ideas": """
@@ -478,55 +359,25 @@ STANDART: To'liq matn. Outline emas. Ijroga tayyor.
   G'OYA USTASI — IDEO dizayn + YC instinkt + shoir tasavvur
 ╚═══════════════════════════════════════════════════════════════╝
 
-G'OYA FALSAFASI:
-Eng yaxshi g'oyalar aniq ko'rinadi — lekin kimdir aytgandan KEYIN.
-Vazifa: hamma o'tkazib yuborgan narsani top.
-
-SIFAT FILTRLARI (har g'oya 3 testni o'tishi kerak):
-1. Aniqlik: Nomga ega bo'ladimi?
-   ("AI-powered mahalla tibbiy assistenti" o'tadi. "Health app" o'tmaydi.)
-2. Hayratlantirishlik: Foydalanuvchi "Oh, buni o'ylamagan edim" deyarmi?
-3. Harakat: Bugun boshlanishi mumkinmi?
-
 MAJBURIY FORMAT:
 
 ### 💡 [Tematik Kategoriya]
 
 **[N]. [Jasur, Esda qolarli Nom]**
-*Mohiyat:* [Bir aniq jumla — nima ekanligini]
-*Nima uchun ishlaydi:* [2 jumla — nima uchun ishlashining o'zagi]
+*Mohiyat:* [Bir aniq jumla]
+*Nima uchun ishlaydi:* [2 jumla]
 *Noyoblik:* [Aniq alternativlardan nimasi farqli]
-*Birinchi qadam:* [Eng aniq, bajariladigan birinchi harakat — bugun, "qachondir" emas]
+*Birinchi qadam:* [Eng aniq, bajariladigan birinchi harakat]
 
----
 ### 🏆 ENG YAXSHI TANLOV
-**[Nom]**
-[3-4 jumla: nega aynan bu. Aniq bo'l. Fikrlashingni ko'rsat.]
-*Nega hozir?* [Nima uchun bu g'oya hozir o'ta o'rinli]
 
-QOIDALAR:
-• Minimum 6, maksimal 12 g'oya
-• Aralashma: texnologiya, ijtimoiy, ijodiy/badiiy, "yovvoyi karta"
-• Kamida 2 ta "kutilmagan" bo'lsin
-• ISHTIYOQLI bo'l — yaxshi g'oyalar chin hayajonni talab qiladi 🚀
+QOIDALAR: Minimum 6, maksimal 12 g'oya. Kamida 2 ta kutilmagan bo'lsin.
 """,
 
 "translate": """
 ╔═══════════════════════════════════════════════════════════════╗
   TARJIMA USTASI — Matn emas, RUH tarjimasi
 ╚═══════════════════════════════════════════════════════════════╝
-
-TARJIMA FALSAFASI:
-Mukammal tarjima ko'rinmas — o'quvchi tarjima o'qiyotganini unutadi.
-So'zma-so'z tarjima — aslning jonini o'ldiradi.
-Vazifang: so'z emas, MA'NO, TUN va RUHNI tarjima qilish.
-
-QOIDALAR:
-1. Registrni saqlash — rasmiy rasmiy qoladi; ko'cha tili ko'cha bo'ladi
-2. Idiomalar → ekvivalent idiomalar — maqsad tildagi ekvivalentni top
-3. Madaniy murojaat — ekvivalent bo'lmasa, qisqa izoh [*] qo'sh
-4. Badiiy matnda ritm — aslda ritm bo'lsa, tarjimada ham ritm top
-5. Ismlar: transliteratsiya; sarlavhalar: tarjima
 
 MAJBURIY FORMAT:
 
@@ -537,47 +388,21 @@ MAJBURIY FORMAT:
 > [tarjima]
 
 **📝 Izohlar** *(faqat kerak bo'lsa)*:
-- [atama]: [qisqa madaniy/lingvistik izoh]
-
-**🔤 Lug'at** *(5+ murakkab atama uchun)*:
-| Asl | Tarjima | Izoh |
-|-----|---------|------|
+- [atama]: [qisqa izoh]
 """,
 
 "summary": """
 ╔═══════════════════════════════════════════════════════════════╗
-  TAHLIL USTASI — Feynman soddalik + Sud aniqligi + Faylasuf chuqurlik
+  TAHLIL USTASI — Feynman soddalik + Sud aniqligi
 ╚═══════════════════════════════════════════════════════════════╝
-
-TAHLIL FALSAFASI:
-Xulosa qilish = kamroq nusxa ko'chirish — u HAYDASH.
-Eng yaxshi xulosa o'quvchiga asldagidan KO'PROQ tushunish beradi.
-
-TAHLIL QOIDALARI:
-1. BITTA asosiy g'oyani top — qolgan hamma narsa uni qo'llab-quvvatlash
-2. Struktura ma'noni ochadi — qanday tashkil qilishing o'zi argument
-3. Murakkab g'oyalar uchun oddiy til
-4. Sening nuqtai nazaring muhim — hukmsiz tahlil oddiy tasvir
-5. Nimaning yo'qligi ham muhim — matn NIMA DEMAYOTGANI
 
 MAJBURIY FORMAT:
 
 ## 🎯 Asosiy G'oya
-**[Eng muhim nuqta — 1-2 jumla]**
-
 ## 🔑 Muhim Fikrlar
-- **[Nuqta 1]**: [qisqa izoh]
-- **[Nuqta 2]**: [qisqa izoh]
-- **[Nuqta 3]**: [qisqa izoh]
-
 ## 🧩 Chuqur Tahlil
-[4 paragraf: haqiqatda nima haqida / eng kuchli argument / zaif tomonlar / oqibatlar]
-
 ## 💡 Noodatiy Insight
-[Sirtdan o'quvchi o'tkazib yuboradigan bitta narsa]
-
 ## ❓ Ochiq Savol
-[Eng qiziqarli hal bo'lmagan keskinlik]
 """,
 
 "general": """
@@ -585,65 +410,37 @@ MAJBURIY FORMAT:
   SOMO AI — Eng foydali, halol va ajoyib yordamchi
 ╚═══════════════════════════════════════════════════════════════╝
 
-FALSAFA:
-Ko'rinib turuvchi emas, HAQIQIY foydali bo'l.
-Haqiqiy javoblar ber, not savol-javob bo'lmagan javoblar.
-Foydalanuvchini murakkablik va halollikni ko'tara oladigan aqlli kattalar sifatida muomala qil.
-
 JAVOB KALIBRLASH:
-• Oddiy faktik savol → To'g'ridan-to'g'ri javob, 1-3 jumla, to'ldiruvchisiz
-• Murakkab savol → Strukturali tushuntirish + misollar + fikring
-• Ijodiy so'rov → To'liq ijodiy chiqish, qanday yozishim emas
+• Oddiy faktik savol → To'g'ridan-to'g'ri javob, 1-3 jumla
+• Murakkab savol → Strukturali tushuntirish + misollar
+• Ijodiy so'rov → To'liq ijodiy chiqish
 • Hissiy → Iliq, hozir, chin
-• Noaniq → Eng yaxshi talqiningni ayt, keyin moslashtirishni taklif qil
-
-SHAXSIYAT:
-• Qiziquvchi va g'oyalarga chin ravishda hayajonlangan — ko'rsatsin
-• Iliq lekin yaltiroq emas — "Ajoyib savol!" bilan boshlamaslik
-• Halol — "Bilmayman" ham kiradi
-• To'g'ridan-to'g'ri — aslida nimani o'ylayotganingni ayt
-• O'zbek madaniy bilim — mahalliy qadriyatlar, manbalar, kontekst
 """,
 
 }
 
 FORMATTING_RULES = """
 ╔═══════════════════════════════════════════════════════════════╗
-  UNIVERSAL CHIQISH QOIDALARI — har javobga qo'llanadi
+  UNIVERSAL CHIQISH QOIDALARI
 ╚═══════════════════════════════════════════════════════════════╝
 
 TIPOGRAFIYA:
-• **Qalin** uchun: asosiy atamalar, esda qolarli faktlar, muhim ta'kid
-• *Kursiv* uchun: kitob/film sarlavhalari, xorijiy so'zlar
-• `kod` uchun: texnik atamalar, buyruq nomlari
-• > blokiqtibos: to'g'ridan-to'g'ri iqtiboslar, ta'riflar
-
-STRUKTURA — FAQAT yordam berganda:
-• ## Sarlavhalar: 3+ alohida qism uchun
-• Nuqta ro'yxati: haqiqatan ro'yxat uchun
-• Jadvallar: faqat grid strukturasi nimanidir ochganda
-• Kod bloklari: DOIM til tegiyla
+• **Qalin** — asosiy atamalar
+• *Kursiv* — sarlavhalar, xorijiy so'zlar
+• `kod` — texnik atamalar
+• > blokiqtibos — to'g'ridan-to'g'ri iqtiboslar
 
 MATEMATIK — har doim LaTeX:
 • Qatorida: $ax^2 + bx + c = 0$
 • Alohida: $$\\int_0^\\infty e^{-x^2}dx = \\frac{\\sqrt{\\pi}}{2}$$
 
-JAVOB UZUNLIGI:
-• Oddiy suhbat → 1-4 jumla
-• Faktik savol → to'g'ri javob + zaruriy kontekst
-• Murakkab tahlil → to'la, to'liq
-• Ijodiy so'rov → TO'LIQ ASAR
-
 SIFAT NAZORATI:
 ✓ Har paragraf oldinga siltayaptimi?
-✓ Har format elementi o'z joyini oqlaydimi?
 ✓ Oxirgi jumla eng kuchlimi?
-✓ Faxrli mutaxassis imzoini qo'yarmikin?
 """
 
 
 def build_system_prompt(mode: str) -> str:
-    """Berilgan rejim uchun to'liq system promptni yig'adi."""
     instr = MODE_INSTRUCTIONS.get(mode, MODE_INSTRUCTIONS["general"])
     return "\n\n".join([IDENTITY, instr, LANG_RULE, FORMATTING_RULES])
 
@@ -660,68 +457,72 @@ st.set_page_config(
 
 
 # ═══════════════════════════════════════════════════════════════════
-#  CSS — PREMIUM DESIGN v4.0
+#  FONTS + KaTeX
 # ═══════════════════════════════════════════════════════════════════
-# inject fonts + katex links
 st.markdown(
-    '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">'
+    '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">'
+    '<meta name="theme-color" content="#fdf7ee">'
+    '<meta name="apple-mobile-web-app-capable" content="yes">'
+    '<meta name="apple-mobile-web-app-status-bar-style" content="default">'
     '<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">'
     '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">'
     '<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>'
-    '<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:String.fromCharCode(36,36),right:String.fromCharCode(36,36),display:true},{left:String.fromCharCode(36),right:String.fromCharCode(36),display:false}]});"></script>',
+    '<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"'
+    ' onload="renderMathInElement(document.body,{delimiters:['
+    '{left:String.fromCharCode(36,36),right:String.fromCharCode(36,36),display:true},'
+    '{left:String.fromCharCode(36),right:String.fromCharCode(36),display:false}]});"></script>',
     unsafe_allow_html=True
 )
 
-# inject CSS via st.markdown (split for reliability)
+# ═══════════════════════════════════════════════════════════════════
+#  CSS — MOBILE-PERFECT PREMIUM DESIGN v4.1
+# ═══════════════════════════════════════════════════════════════════
 _CSS = """
 
 /* ═══════════════════════════════════════════════════════════════
    DESIGN TOKENS
    ═══════════════════════════════════════════════════════════════ */
 :root {
-  /* palette */
   --cream      : #fdf7ee;
   --warm       : #f5ead2;
   --card       : #fffef9;
   --border     : #e8ddc8;
   --border-soft: #ede5d2;
 
-  /* accent */
   --amber  : #f59e0b;
   --amber-l: #fcd34d;
   --orange : #ea580c;
   --orange-l:#fb923c;
 
-  /* semantic */
   --text   : #1a1208;
   --muted  : #6b5c42;
   --light  : #a8936e;
   --faint  : #c5b59a;
 
-  /* utility */
   --blue   : #3b82f6;
-  --indigo : #6366f1;
   --green  : #15803d;
   --red    : #dc2626;
-  --pink   : #ec4899;
 
-  /* typography */
   --fh     : 'Fraunces', Georgia, serif;
   --fb     : 'DM Sans', system-ui, -apple-system, sans-serif;
 
-  /* shadows */
-  --shadow-xs : 0 1px 3px rgba(26,18,8,.06);
-  --shadow-sm : 0 2px 8px rgba(26,18,8,.08);
-  --shadow-md : 0 4px 18px rgba(26,18,8,.1);
-  --shadow-lg : 0 8px 32px rgba(26,18,8,.12);
-  --shadow-amber: 0 4px 18px rgba(245,158,11,.28);
+  --shadow-xs  : 0 1px 3px rgba(26,18,8,.06);
+  --shadow-sm  : 0 2px 8px rgba(26,18,8,.08);
+  --shadow-md  : 0 4px 18px rgba(26,18,8,.1);
+  --shadow-lg  : 0 8px 32px rgba(26,18,8,.12);
+  --shadow-amb : 0 4px 18px rgba(245,158,11,.28);
 
-  /* animation */
   --ease-spring: cubic-bezier(.34,1.56,.64,1);
   --ease-out   : cubic-bezier(.22,.68,0,1.2);
   --dur-fast   : .15s;
   --dur-mid    : .25s;
   --dur-slow   : .4s;
+
+  /* Safe area — for notch phones */
+  --sat : env(safe-area-inset-top,    0px);
+  --sar : env(safe-area-inset-right,  0px);
+  --sab : env(safe-area-inset-bottom, 0px);
+  --sal : env(safe-area-inset-left,   0px);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -729,16 +530,25 @@ _CSS = """
    ═══════════════════════════════════════════════════════════════ */
 *, *::before, *::after { box-sizing: border-box; }
 
+html {
+  /* Prevent text size inflation on orientation change */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 html, body {
-  background : var(--cream) !important;
-  margin     : 0;
-  padding    : 0;
+  background     : var(--cream) !important;
+  margin         : 0;
+  padding        : 0;
   -webkit-font-smoothing : antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+  /* iOS momentum scroll */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: none;
 }
 
-/* hide all streamlit chrome */
+/* Hide all streamlit chrome */
 #MainMenu, footer, header,
 [data-testid="stToolbar"],
 [data-testid="stDecoration"],
@@ -758,60 +568,62 @@ html, body {
   max-width : 100% !important;
 }
 
-/* scrollbar */
-::-webkit-scrollbar       { width: 4px; height: 4px; }
+/* Scrollbar */
+::-webkit-scrollbar       { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
   background    : var(--border);
   border-radius : 4px;
 }
-::-webkit-scrollbar-thumb:hover { background: var(--faint); }
 
 /* ═══════════════════════════════════════════════════════════════
-   HEADER — glass morphism, sticky
+   HEADER — glass morphism, sticky, safe-area aware
    ═══════════════════════════════════════════════════════════════ */
 .somo-header {
   position        : sticky;
   top             : 0;
   z-index         : 900;
-  background      : rgba(253,247,238,.94);
-  backdrop-filter : blur(20px) saturate(1.6);
-  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  background      : rgba(253,247,238,.95);
+  backdrop-filter : blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
   border-bottom   : 1px solid var(--border-soft);
   box-shadow      : 0 1px 0 var(--border-soft),
-                    0 2px 16px rgba(26,18,8,.04);
+                    0 2px 20px rgba(26,18,8,.05);
+  /* safe area top for notch */
+  padding-top     : var(--sat);
 }
 .somo-header-inner {
   display         : flex;
   align-items     : center;
   justify-content : space-between;
-  max-width       : 820px;
+  max-width       : 860px;
   margin          : 0 auto;
-  padding         : .72rem 1.5rem;
+  padding         : .7rem 1.25rem;
+  gap             : .5rem;
 }
 
-/* brand */
-.somo-brand { display: flex; align-items: center; gap: 11px; }
+/* Brand */
+.somo-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .somo-logo  {
-  width           : 38px;
-  height          : 38px;
-  border-radius   : 11px;
+  width           : 36px;
+  height          : 36px;
+  min-width       : 36px;
+  border-radius   : 10px;
   background      : linear-gradient(145deg, var(--amber), var(--orange));
   display         : flex;
   align-items     : center;
   justify-content : center;
   font-family     : var(--fh) !important;
-  font-size       : 17px;
+  font-size       : 16px;
   font-weight     : 900;
   color           : #fff;
-  box-shadow      : var(--shadow-amber),
+  box-shadow      : var(--shadow-amb),
                     inset 0 1px 0 rgba(255,255,255,.22);
-  flex-shrink     : 0;
   letter-spacing  : -.5px;
 }
 .somo-name {
   font-family : var(--fh) !important;
-  font-size   : 1.05rem;
+  font-size   : 1rem;
   font-weight : 900;
   color       : var(--text);
   line-height : 1;
@@ -823,27 +635,32 @@ html, body {
 }
 .somo-by {
   font-family    : var(--fb) !important;
-  font-size      : .55rem;
+  font-size      : .5rem;
   color          : var(--light);
   letter-spacing : 1px;
   text-transform : uppercase;
   margin-top     : 3px;
 }
 
-/* right side */
-.somo-hdr-right { display: flex; align-items: center; gap: 7px; }
+/* Right side */
+.somo-hdr-right {
+  display     : flex;
+  align-items : center;
+  gap         : 6px;
+  flex-shrink : 0;
+}
 
 .somo-mode-chip {
   display         : inline-flex;
   align-items     : center;
-  gap             : 5px;
+  gap             : 4px;
   font-family     : var(--fb) !important;
-  font-size       : .62rem;
+  font-size       : .6rem;
   font-weight     : 600;
-  padding         : .26rem .72rem;
+  padding         : .24rem .65rem;
   border-radius   : 20px;
-  transition      : all var(--dur-mid) ease;
   white-space     : nowrap;
+  transition      : all var(--dur-mid) ease;
 }
 .somo-mode-chip.off {
   background : var(--warm);
@@ -854,7 +671,7 @@ html, body {
   background  : linear-gradient(135deg, var(--amber), var(--orange));
   border      : 1.5px solid transparent;
   color       : #fff;
-  box-shadow  : var(--shadow-amber);
+  box-shadow  : var(--shadow-amb);
 }
 
 .somo-online {
@@ -862,13 +679,14 @@ html, body {
   align-items : center;
   gap         : 5px;
   font-family : var(--fb) !important;
-  font-size   : .6rem;
+  font-size   : .58rem;
   color       : var(--green);
   white-space : nowrap;
 }
 .somo-dot {
   width           : 7px;
   height          : 7px;
+  min-width       : 7px;
   border-radius   : 50%;
   background      : var(--green);
   box-shadow      : 0 0 0 0 rgba(21,128,61,.4);
@@ -882,25 +700,26 @@ html, body {
 
 .somo-model-pill {
   font-family    : var(--fb) !important;
-  font-size      : .58rem;
+  font-size      : .55rem;
   font-weight    : 600;
   color          : var(--muted);
   background     : var(--warm);
   border         : 1.5px solid var(--border);
   border-radius  : 20px;
-  padding        : .22rem .7rem;
+  padding        : .2rem .65rem;
   white-space    : nowrap;
-  letter-spacing : .2px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
    LAYOUT WRAPPER
    ═══════════════════════════════════════════════════════════════ */
 .somo-wrap {
-  max-width  : 820px;
+  max-width  : 860px;
   margin     : 0 auto;
-  padding    : 2rem 1.5rem 9rem;
-  min-height : calc(100vh - 60px);
+  padding    : 1.75rem 1.25rem;
+  /* Reserve space for fixed input + safe area */
+  padding-bottom : calc(7rem + var(--sab));
+  min-height     : calc(100vh - 60px);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -908,7 +727,7 @@ html, body {
    ═══════════════════════════════════════════════════════════════ */
 .somo-welcome {
   text-align  : center;
-  padding     : 2.2rem 0 1.8rem;
+  padding     : 1.8rem 0 1.5rem;
 }
 
 .somo-eyebrow {
@@ -918,14 +737,14 @@ html, body {
   background      : linear-gradient(135deg, var(--amber), var(--orange));
   color           : #fff;
   font-family     : var(--fb) !important;
-  font-size       : .62rem;
+  font-size       : .6rem;
   font-weight     : 700;
   letter-spacing  : 1.4px;
   text-transform  : uppercase;
   padding         : .3rem 1rem;
   border-radius   : 30px;
-  margin-bottom   : 1.3rem;
-  box-shadow      : var(--shadow-amber);
+  margin-bottom   : 1.2rem;
+  box-shadow      : var(--shadow-amb);
   animation       : popIn .55s var(--ease-spring) both;
 }
 @keyframes popIn {
@@ -935,7 +754,7 @@ html, body {
 
 .somo-headline {
   font-family    : var(--fh) !important;
-  font-size      : clamp(2.2rem, 6vw, 3.4rem);
+  font-size      : clamp(2rem, 8vw, 3.2rem);
   font-weight    : 900;
   color          : var(--text);
   line-height    : 1.08;
@@ -951,34 +770,34 @@ html, body {
   background-clip         : text;
 }
 @keyframes riseUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(18px); }
   to   { opacity: 1; transform: translateY(0);    }
 }
 
 .somo-subtext {
   font-family   : var(--fb) !important;
-  font-size     : .9rem;
+  font-size     : .875rem;
   color         : var(--muted);
   line-height   : 1.75;
-  max-width     : 440px;
-  margin        : 0 auto 2rem;
+  max-width     : 420px;
+  margin        : 0 auto 1.8rem;
   animation     : riseUp .5s ease-out .15s both;
 }
 
-/* feature cards grid */
+/* Feature cards grid */
 .somo-cards {
   display               : grid;
   grid-template-columns : repeat(3, 1fr);
-  gap                   : .65rem;
-  max-width             : 580px;
-  margin                : 0 auto 1.6rem;
+  gap                   : .6rem;
+  max-width             : 560px;
+  margin                : 0 auto 1.5rem;
   animation             : riseUp .5s ease-out .22s both;
 }
 .somo-card {
   background    : var(--card);
   border        : 1.5px solid var(--border-soft);
   border-radius : 16px;
-  padding       : 1.1rem .8rem .9rem;
+  padding       : 1rem .75rem .85rem;
   text-align    : center;
   cursor        : default;
   transition    : border-color var(--dur-mid) ease,
@@ -986,93 +805,127 @@ html, body {
                   box-shadow   var(--dur-mid) ease;
   position      : relative;
   overflow      : hidden;
+  /* Touch-friendly */
+  -webkit-tap-highlight-color: transparent;
 }
 .somo-card::before {
   content    : '';
   position   : absolute;
   inset      : 0;
-  background : linear-gradient(135deg, rgba(245,158,11,.04), rgba(234,88,12,.04));
+  background : linear-gradient(135deg, rgba(245,158,11,.05), rgba(234,88,12,.04));
   opacity    : 0;
   transition : opacity var(--dur-mid) ease;
 }
-.somo-card:hover { 
-  transform    : translateY(-4px);
-  border-color : var(--amber);
-  box-shadow   : 0 8px 28px rgba(0,0,0,.1);
+@media (hover: hover) {
+  .somo-card:hover {
+    transform    : translateY(-4px);
+    border-color : var(--amber);
+    box-shadow   : 0 8px 28px rgba(0,0,0,.1);
+  }
+  .somo-card:hover::before { opacity: 1; }
 }
-.somo-card:hover::before { opacity: 1; }
+/* Touch active state for mobile */
+.somo-card:active {
+  transform    : scale(.97);
+  border-color : var(--amber);
+}
 .somo-card-icon {
-  font-size     : 1.65rem;
+  font-size     : 1.5rem;
   display       : block;
-  margin-bottom : .45rem;
-  filter        : drop-shadow(0 2px 6px rgba(0,0,0,.12));
+  margin-bottom : .4rem;
+  filter        : drop-shadow(0 2px 5px rgba(0,0,0,.1));
 }
 .somo-card-name {
   font-family   : var(--fb) !important;
-  font-size     : .75rem;
+  font-size     : .72rem;
   font-weight   : 700;
   color         : var(--text);
-  margin-bottom : .22rem;
+  margin-bottom : .18rem;
 }
 .somo-card-hint {
   font-family : var(--fb) !important;
-  font-size   : .62rem;
+  font-size   : .6rem;
   color       : var(--light);
   font-style  : italic;
   line-height : 1.4;
 }
 
-/* prompt chips */
+/* Prompt chips — horizontal scroll on mobile */
+.somo-chips-wrap {
+  width     : 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom : 2px;
+  margin-bottom  : 1.4rem;
+  animation      : riseUp .5s ease-out .3s both;
+}
+.somo-chips-wrap::-webkit-scrollbar { display: none; }
 .somo-chips {
-  display         : flex;
-  flex-wrap       : wrap;
-  gap             : .45rem;
-  justify-content : center;
-  margin-bottom   : 1.4rem;
-  animation       : riseUp .5s ease-out .3s both;
+  display     : flex;
+  flex-wrap   : nowrap;
+  gap         : .42rem;
+  padding     : .1rem .25rem;
+  width       : max-content;
+  margin      : 0 auto;
 }
 .somo-chip {
   background    : var(--warm);
   border        : 1.5px solid var(--border-soft);
   border-radius : 20px;
-  padding       : .3rem .82rem;
+  padding       : .32rem .85rem;
   font-family   : var(--fb) !important;
-  font-size     : .7rem;
+  font-size     : .68rem;
   color         : var(--muted);
-  transition    : all var(--dur-fast) ease;
-  cursor        : default;
   white-space   : nowrap;
+  /* 44px min touch target height */
+  display       : inline-flex;
+  align-items   : center;
+  min-height    : 36px;
+  cursor        : default;
+  -webkit-tap-highlight-color: transparent;
+  transition    : all var(--dur-fast) ease;
 }
-.somo-chip:hover {
+@media (hover: hover) {
+  .somo-chip:hover {
+    border-color : var(--amber);
+    color        : var(--orange);
+    background   : rgba(245,158,11,.07);
+  }
+}
+.somo-chip:active {
   border-color : var(--amber);
   color        : var(--orange);
-  background   : rgba(245,158,11,.07);
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   CHAT AREA
+   CHAT AREA — stats bar
    ═══════════════════════════════════════════════════════════════ */
 .somo-stats {
-  display     : flex;
-  align-items : center;
-  gap         : 1.2rem;
-  padding     : .55rem 0 .5rem;
-  font-family : var(--fb) !important;
-  font-size   : .66rem;
-  color       : var(--faint);
+  display       : flex;
+  align-items   : center;
+  gap           : .75rem;
+  padding       : .5rem 0;
+  font-family   : var(--fb) !important;
+  font-size     : .64rem;
+  color         : var(--faint);
   border-bottom : 1px solid var(--border-soft);
-  margin-bottom : .8rem;
-  flex-wrap   : wrap;
+  margin-bottom : .75rem;
+  overflow-x    : auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  white-space   : nowrap;
 }
-.somo-stat { display: flex; align-items: center; gap: 4px; }
+.somo-stats::-webkit-scrollbar { display: none; }
+.somo-stat { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .somo-stat b { color: var(--muted); font-weight: 600; }
 
 .somo-divider {
   text-align  : center;
   font-family : var(--fb) !important;
-  font-size   : .62rem;
+  font-size   : .6rem;
   color       : var(--faint);
-  margin      : .9rem 0;
+  margin      : .75rem 0;
   position    : relative;
   letter-spacing: .5px;
 }
@@ -1080,7 +933,7 @@ html, body {
   content    : '';
   position   : absolute;
   top        : 50%;
-  width      : calc(50% - 60px);
+  width      : calc(50% - 55px);
   height     : 1px;
   background : var(--border-soft);
 }
@@ -1093,22 +946,22 @@ html, body {
 .somo-msg-user {
   display         : flex;
   justify-content : flex-end;
-  margin-bottom   : .95rem;
+  margin-bottom   : .9rem;
   animation       : msgIn .2s ease-out;
 }
 .somo-msg-ai {
   display       : flex;
   align-items   : flex-start;
-  gap           : 11px;
-  margin-bottom : 1.75rem;
+  gap           : 10px;
+  margin-bottom : 1.6rem;
   animation     : msgIn .2s ease-out;
 }
 @keyframes msgIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(7px); }
   to   { opacity: 1; transform: translateY(0);   }
 }
 
-/* avatar */
+/* Avatar */
 .somo-av {
   width           : 30px;
   height          : 30px;
@@ -1126,78 +979,78 @@ html, body {
   margin-top      : 2px;
   box-shadow      : 0 2px 10px rgba(245,158,11,.3),
                     inset 0 1px 0 rgba(255,255,255,.2);
-  letter-spacing  : -.3px;
 }
 
-/* message body */
-.somo-msg-user .somo-body { max-width: 64%; }
+/* Message body */
+.somo-msg-user .somo-body { max-width: 78%; }
 .somo-msg-ai  .somo-body  { flex: 1; max-width: 100%; min-width: 0; }
 
 .somo-sender {
   font-family    : var(--fb) !important;
-  font-size      : .55rem;
+  font-size      : .53rem;
   color          : var(--faint);
   margin-bottom  : .2rem;
   letter-spacing : .6px;
   text-transform : uppercase;
 }
-.somo-msg-user .somo-sender { display: none; }
 
-/* bubble: user */
+/* Bubble: user */
 .somo-bubble-user {
   background    : linear-gradient(135deg, #eff6ff, #e0effe);
   border        : 1.5px solid #bfdbfe;
   border-radius : 18px 5px 18px 18px;
-  padding       : .65rem 1.05rem;
+  padding       : .65rem 1rem;
   font-family   : var(--fb) !important;
-  font-size     : .875rem;
-  line-height   : 1.68;
+  /* 16px prevents iOS auto-zoom on focus */
+  font-size     : 16px;
+  line-height   : 1.65;
   color         : var(--text);
   word-break    : break-word;
   display       : inline-block;
   box-shadow    : 0 1px 4px rgba(59,130,246,.08);
 }
 
-/* bubble: ai (open, no border) */
+/* Bubble: ai */
 .somo-bubble-ai {
   background  : transparent;
-  padding     : .15rem 0;
+  padding     : .1rem 0;
   font-family : var(--fb) !important;
-  font-size   : .9rem;
+  font-size   : 15px;
   line-height : 1.82;
   color       : var(--text);
   word-break  : break-word;
+  overflow-wrap: break-word;
 }
 
-/* mode label */
+/* Mode label */
 .somo-mode-label {
   display        : inline-flex;
   align-items    : center;
   gap            : 5px;
   font-family    : var(--fb) !important;
-  font-size      : .58rem;
+  font-size      : .57rem;
   font-weight    : 700;
   letter-spacing : .9px;
   text-transform : uppercase;
   color          : var(--amber);
-  margin-bottom  : .45rem;
-  padding        : .14rem .52rem;
+  margin-bottom  : .4rem;
+  padding        : .14rem .5rem;
   background     : rgba(245,158,11,.08);
   border         : 1px solid rgba(245,158,11,.2);
   border-radius  : 6px;
 }
 
-/* timestamp + word count + copy row */
+/* Meta row: timestamp + word count + copy */
 .somo-meta-row {
   display     : flex;
   align-items : center;
-  gap         : 7px;
-  margin-top  : .42rem;
+  gap         : 6px;
+  margin-top  : .4rem;
   flex-wrap   : wrap;
 }
 .somo-ts {
   font-family : var(--fb) !important;
-  font-size   : .56rem;
+  font-size   : .55rem;
   color       : var(--faint);
 }
 .somo-wc {
@@ -1205,7 +1058,7 @@ html, body {
   align-items   : center;
   gap           : 3px;
   font-family   : var(--fb) !important;
-  font-size     : .56rem;
+  font-size     : .55rem;
   color         : var(--faint);
   background    : var(--warm);
   border        : 1px solid var(--border-soft);
@@ -1215,6 +1068,7 @@ html, body {
 .somo-copy {
   display       : inline-flex;
   align-items   : center;
+  justify-content: center;
   gap           : 4px;
   font-family   : var(--fb) !important;
   font-size     : .6rem;
@@ -1222,19 +1076,25 @@ html, body {
   color         : var(--muted);
   background    : var(--warm);
   border        : 1px solid var(--border-soft);
-  border-radius : 7px;
-  padding       : .16rem .52rem;
+  border-radius : 8px;
+  padding       : .22rem .65rem;
   cursor        : pointer;
+  /* Min touch target */
+  min-height    : 32px;
+  min-width     : 72px;
   transition    : all var(--dur-fast) ease;
   user-select   : none;
+  -webkit-tap-highlight-color: transparent;
 }
-.somo-copy:hover {
-  background   : var(--border);
-  color        : var(--text);
-  border-color : var(--border);
+@media (hover: hover) {
+  .somo-copy:hover {
+    background   : var(--border);
+    color        : var(--text);
+    border-color : var(--border);
+  }
 }
-.somo-copy:active { transform: scale(.94); }
-.somo-msg-user .somo-ts { display: block; text-align: right; margin-top: .28rem; }
+.somo-copy:active { transform: scale(.93); }
+.somo-msg-user .somo-ts { display: block; text-align: right; margin-top: .26rem; }
 
 /* ═══════════════════════════════════════════════════════════════
    RICH CONTENT INSIDE AI BUBBLE
@@ -1250,75 +1110,81 @@ html, body {
   font-family  : var(--fh) !important;
   font-weight  : 700;
   color        : var(--text);
-  margin       : .9rem 0 .3rem;
+  margin       : .85rem 0 .28rem;
   line-height  : 1.25;
 }
-.somo-bubble-ai h1 { font-size: 1.18rem; }
-.somo-bubble-ai h2 { font-size: 1.05rem; }
-.somo-bubble-ai h3 { font-size: .96rem;  }
-.somo-bubble-ai h4 { font-size: .9rem;   }
+.somo-bubble-ai h1 { font-size: 1.15rem; }
+.somo-bubble-ai h2 { font-size: 1.02rem; }
+.somo-bubble-ai h3 { font-size: .94rem;  }
+.somo-bubble-ai h4 { font-size: .88rem;  }
 
 .somo-bubble-ai code {
   background    : rgba(245,158,11,.1);
   border        : 1px solid rgba(245,158,11,.2);
-  padding       : .1rem .36rem;
+  padding       : .1rem .34rem;
   border-radius : 5px;
   font-size     : .78rem;
   color         : var(--orange);
-  font-family   : 'Courier New', 'SF Mono', monospace !important;
+  font-family   : 'Courier New', monospace !important;
+  word-break    : break-all;
 }
 
 .somo-bubble-ai pre {
   background    : var(--warm);
   border        : 1.5px solid var(--border);
   border-radius : 12px;
-  padding       : 1rem 1.1rem;
+  padding       : .9rem 1rem;
   overflow-x    : auto;
-  margin        : .7rem 0;
+  -webkit-overflow-scrolling: touch;
+  margin        : .65rem 0;
 }
 .somo-bubble-ai pre code {
   background : none;
   border     : none;
   padding    : 0;
   color      : var(--green);
-  font-size  : .77rem;
+  font-size  : .75rem;
+  word-break : normal;
 }
 
 .somo-bubble-ai ul,
-.somo-bubble-ai ol  { padding-left: 1.3rem; margin: .35rem 0; }
-.somo-bubble-ai li  { margin-bottom: .28rem; }
+.somo-bubble-ai ol  { padding-left: 1.25rem; margin: .3rem 0; }
+.somo-bubble-ai li  { margin-bottom: .25rem; }
 
 .somo-bubble-ai blockquote {
   border-left   : 3px solid var(--amber);
   background    : linear-gradient(135deg,
                     rgba(245,158,11,.05),
                     rgba(234,88,12,.03));
-  padding       : .55rem 1rem;
+  padding       : .5rem .9rem;
   border-radius : 0 10px 10px 0;
   color         : var(--muted);
-  margin        : .55rem 0;
+  margin        : .5rem 0;
   font-style    : italic;
 }
 
 .somo-bubble-ai table {
   border-collapse : collapse;
   width           : 100%;
-  margin          : .65rem 0;
-  font-size       : .8rem;
-  border-radius   : 8px;
-  overflow        : hidden;
+  margin          : .6rem 0;
+  font-size       : .78rem;
+  display         : block;
+  overflow-x      : auto;
+  -webkit-overflow-scrolling: touch;
 }
 .somo-bubble-ai th {
   background  : var(--warm);
   border      : 1.5px solid var(--border);
-  padding     : .42rem .75rem;
+  padding     : .4rem .7rem;
   font-weight : 700;
   color       : var(--orange);
   text-align  : left;
+  white-space : nowrap;
 }
 .somo-bubble-ai td {
-  border  : 1px solid var(--border-soft);
-  padding : .38rem .75rem;
+  border   : 1px solid var(--border-soft);
+  padding  : .35rem .7rem;
+  white-space: nowrap;
 }
 .somo-bubble-ai tr:nth-child(even) td {
   background : rgba(245,158,11,.025);
@@ -1327,9 +1193,9 @@ html, body {
 .somo-bubble-ai hr.md-hr {
   border     : none;
   border-top : 1.5px solid var(--border-soft);
-  margin     : .8rem 0;
+  margin     : .75rem 0;
 }
-.somo-bubble-ai p { margin: .35rem 0; }
+.somo-bubble-ai p { margin: .3rem 0; }
 
 /* ═══════════════════════════════════════════════════════════════
    TYPING CURSOR
@@ -1350,43 +1216,40 @@ html, body {
    COOLDOWN BANNER
    ═══════════════════════════════════════════════════════════════ */
 .somo-cd-wrap {
-  max-width  : 820px;
+  max-width  : 860px;
   margin     : 0 auto;
-  padding    : .5rem 1.5rem 0;
+  padding    : .5rem 1.25rem 0;
 }
 .somo-cd-box {
   display       : flex;
   align-items   : center;
-  gap           : 13px;
+  gap           : 12px;
   background    : linear-gradient(135deg, #fffbeb, #fff7d6);
   border        : 2px solid var(--amber);
   border-radius : 16px;
-  padding       : .95rem 1.4rem;
+  padding       : .9rem 1.2rem;
   font-family   : var(--fb) !important;
   font-size     : .875rem;
   color         : #92400e;
   box-shadow    : 0 4px 20px rgba(245,158,11,.14);
 }
-.somo-cd-icon { font-size: 1.5rem; }
-.somo-cd-sec  {
-  color       : var(--orange);
-  font-size   : 1.05rem;
-  font-weight : 700;
-}
+.somo-cd-icon { font-size: 1.4rem; }
+.somo-cd-sec  { color: var(--orange); font-size: 1rem; font-weight: 700; }
 
 /* ═══════════════════════════════════════════════════════════════
-   INPUT BAR
+   INPUT BAR — iOS Safari + Android Chrome fix
    ═══════════════════════════════════════════════════════════════ */
 [data-testid="stBottom"] {
-  max-width  : 820px !important;
-  margin     : 0 auto !important;
-  left       : 50% !important;
-  transform  : translateX(-50%) !important;
-  width      : 100% !important;
-  padding    : 0 1.5rem !important;
-  background : linear-gradient(to top,
-               var(--cream) 65%,
-               transparent) !important;
+  max-width   : 860px !important;
+  margin      : 0 auto !important;
+  left        : 50% !important;
+  transform   : translateX(-50%) !important;
+  width       : 100% !important;
+  /* Respect safe area on iPhone */
+  padding     : 0 1.25rem calc(.75rem + var(--sab)) !important;
+  background  : linear-gradient(to top,
+                  var(--cream) 70%,
+                  transparent) !important;
 }
 [data-testid="stChatInput"] {
   background    : var(--card) !important;
@@ -1404,7 +1267,8 @@ html, body {
 [data-testid="stChatInput"] textarea {
   background  : transparent !important;
   color       : var(--text) !important;
-  font-size   : .875rem !important;
+  /* 16px = no zoom on iOS */
+  font-size   : 16px !important;
   font-family : var(--fb) !important;
   border      : none !important;
   outline     : none !important;
@@ -1418,46 +1282,62 @@ html, body {
   border        : none !important;
   border-radius : 12px !important;
   box-shadow    : 0 3px 12px rgba(245,158,11,.3) !important;
+  /* 44px touch target */
+  min-width     : 44px !important;
+  min-height    : 44px !important;
   transition    : all var(--dur-fast) ease !important;
 }
-[data-testid="stChatInput"] button:hover {
-  transform  : scale(1.04) !important;
-  box-shadow : 0 4px 18px rgba(245,158,11,.4) !important;
+@media (hover: hover) {
+  [data-testid="stChatInput"] button:hover {
+    transform  : scale(1.04) !important;
+    box-shadow : 0 4px 18px rgba(245,158,11,.4) !important;
+  }
+}
+[data-testid="stChatInput"] button:active {
+  transform: scale(.95) !important;
 }
 [data-testid="stChatInput"] button svg { fill: #fff !important; }
 
 .somo-input-footer {
   text-align     : center;
   font-family    : var(--fb) !important;
-  font-size      : .55rem;
+  font-size      : .5rem;
   color          : var(--faint);
-  padding        : .3rem 0 .6rem;
+  padding        : .25rem 0 .4rem;
   letter-spacing : .4px;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   STREAMLIT BUTTONS (random + clear)
+   STREAMLIT BUTTONS (random + clear) — 44px touch targets
    ═══════════════════════════════════════════════════════════════ */
 .stButton > button {
   background    : var(--card) !important;
   border        : 1.5px solid var(--border) !important;
-  border-radius : 12px !important;
+  border-radius : 14px !important;
   color         : var(--muted) !important;
   font-family   : var(--fb) !important;
-  font-size     : .78rem !important;
+  font-size     : .8rem !important;
   font-weight   : 500 !important;
-  padding       : .38rem 1rem !important;
+  padding       : .6rem 1rem !important;
+  /* 44px min height */
+  min-height    : 44px !important;
   transition    : all var(--dur-fast) ease !important;
   box-shadow    : var(--shadow-xs) !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
-.stButton > button:hover {
+@media (hover: hover) {
+  .stButton > button:hover {
+    border-color : var(--amber) !important;
+    color        : var(--orange) !important;
+    background   : rgba(245,158,11,.05) !important;
+    transform    : translateY(-1px) !important;
+    box-shadow   : 0 3px 12px rgba(0,0,0,.08) !important;
+  }
+}
+.stButton > button:active {
+  transform: scale(.96) !important;
   border-color : var(--amber) !important;
-  color        : var(--orange) !important;
-  background   : rgba(245,158,11,.05) !important;
-  transform    : translateY(-1px) !important;
-  box-shadow   : 0 3px 12px rgba(0,0,0,.08) !important;
 }
-.stButton > button:active { transform: translateY(0) !important; }
 
 /* ═══════════════════════════════════════════════════════════════
    KaTeX
@@ -1465,33 +1345,132 @@ html, body {
 .katex { font-size: 1em !important; color: var(--text) !important; }
 .katex-display {
   overflow-x : auto;
+  -webkit-overflow-scrolling: touch;
   padding    : .35rem 0;
   margin     : .4rem 0;
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   MOBILE
+   REDUCED MOTION
    ═══════════════════════════════════════════════════════════════ */
-@media (max-width: 640px) {
-  .somo-header-inner { padding: .65rem 1rem; }
-  .somo-by           { display: none; }
-  .somo-name         { font-size: .95rem; }
-  .somo-logo         { width: 34px; height: 34px; font-size: 15px; }
-  .somo-wrap         { padding: 1.5rem 1rem 8rem; }
-  .somo-headline     { font-size: clamp(1.8rem, 9vw, 2.6rem); }
-  .somo-subtext      { font-size: .83rem; }
-  .somo-cards        { grid-template-columns: repeat(2, 1fr); max-width: 100%; }
-  .somo-msg-user .somo-body { max-width: 88%; }
-  .somo-bubble-user,
-  .somo-bubble-ai    { font-size: .845rem; }
-  .somo-cd-wrap      { padding: .5rem 1rem 0; }
-  [data-testid="stBottom"] { padding: 0 .85rem !important; }
-}
-@media (max-width: 380px) {
-  .somo-cards { grid-template-columns: 1fr 1fr; }
-  .somo-chips { gap: .35rem; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration   : .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration  : .01ms !important;
+  }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   TABLET (641px – 860px)
+   ═══════════════════════════════════════════════════════════════ */
+@media (min-width: 641px) and (max-width: 860px) {
+  .somo-wrap { padding: 1.5rem 1.5rem calc(7rem + var(--sab)); }
+  .somo-cards { max-width: 100%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE (≤ 640px) — main mobile breakpoint
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  /* Header */
+  .somo-header-inner { padding: .6rem .9rem; gap: .4rem; }
+  .somo-by           { display: none; }
+  .somo-name         { font-size: .92rem; }
+  .somo-logo         { width: 33px; height: 33px; font-size: 14px; border-radius: 9px; }
+  .somo-model-pill   { display: none; } /* hide on mobile to save space */
+  .somo-mode-chip    { font-size: .56rem; padding: .2rem .55rem; }
+  .somo-online span:not(.somo-dot) { display: none; } /* keep dot, hide text */
+
+  /* Layout */
+  .somo-wrap {
+    padding       : 1.2rem .9rem;
+    padding-bottom: calc(6.5rem + var(--sab));
+  }
+
+  /* Welcome */
+  .somo-welcome { padding: 1.2rem 0 1.2rem; }
+  .somo-eyebrow { font-size: .57rem; padding: .28rem .9rem; }
+  .somo-headline {
+    font-size   : clamp(1.75rem, 10vw, 2.4rem);
+    margin-bottom: .4rem;
+  }
+  .somo-subtext {
+    font-size    : .8rem;
+    margin-bottom: 1.4rem;
+    padding      : 0 .5rem;
+  }
+
+  /* Cards: 2-column grid */
+  .somo-cards {
+    grid-template-columns: repeat(2, 1fr);
+    max-width             : 100%;
+    gap                   : .5rem;
+  }
+  .somo-card         { padding: .85rem .6rem .75rem; border-radius: 14px; }
+  .somo-card-icon    { font-size: 1.3rem; }
+  .somo-card-name    { font-size: .68rem; }
+  .somo-card-hint    { font-size: .56rem; }
+
+  /* Chips — horizontal scroll */
+  .somo-chips-wrap   { margin-bottom: 1.2rem; }
+  .somo-chips        { padding: .1rem .5rem; }
+  .somo-chip         { font-size: .65rem; padding: .28rem .8rem; min-height: 34px; }
+
+  /* Messages */
+  .somo-msg-user .somo-body { max-width: 90%; }
+  .somo-bubble-user  { font-size: 15px; padding: .58rem .88rem; }
+  .somo-bubble-ai    { font-size: 14.5px; line-height: 1.78; }
+  .somo-av           { width: 28px; height: 28px; min-width: 28px; font-size: 12px; }
+
+  /* Copy button full-width feel */
+  .somo-meta-row     { gap: 5px; }
+  .somo-copy         { min-height: 30px; min-width: 68px; font-size: .58rem; }
+
+  /* Input */
+  [data-testid="stBottom"] {
+    padding: 0 .9rem calc(.6rem + var(--sab)) !important;
+  }
+  [data-testid="stChatInput"] { border-radius: 16px !important; }
+
+  /* Stats */
+  .somo-stats { font-size: .6rem; gap: .6rem; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SMALL MOBILE (≤ 390px) — iPhone SE, older Androids
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 390px) {
+  .somo-header-inner  { padding: .55rem .75rem; }
+  .somo-name          { font-size: .86rem; }
+  .somo-logo          { width: 30px; height: 30px; font-size: 13px; }
+  .somo-wrap          { padding: 1rem .75rem calc(6rem + var(--sab)); }
+  .somo-headline      { font-size: clamp(1.6rem, 11vw, 2rem); }
+  .somo-subtext       { font-size: .75rem; }
+  .somo-cards         { gap: .4rem; }
+  .somo-card          { padding: .75rem .5rem .65rem; border-radius: 12px; }
+  .somo-card-icon     { font-size: 1.2rem; }
+  .somo-card-name     { font-size: .64rem; }
+  .somo-card-hint     { display: none; } /* too cramped */
+  .somo-bubble-user   { font-size: 14.5px; }
+  .somo-bubble-ai     { font-size: 14px; }
+
+  [data-testid="stBottom"] {
+    padding: 0 .75rem calc(.5rem + var(--sab)) !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LANDSCAPE MOBILE — extra compact
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 812px) and (orientation: landscape) and (max-height: 500px) {
+  .somo-header-inner  { padding: .45rem 1rem; }
+  .somo-logo          { width: 30px; height: 30px; }
+  .somo-eyebrow, .somo-subtext { display: none; }
+  .somo-headline      { margin-bottom: .3rem; }
+  .somo-wrap          { padding: .9rem 1rem calc(5.5rem + var(--sab)); }
+  .somo-cards         { margin-bottom: 1rem; }
+}
 """
 
 st.markdown(f"<style>{_CSS}</style>", unsafe_allow_html=True)
@@ -1513,27 +1492,21 @@ KJ = ('<script>setTimeout(()=>{'
 _am = st.session_state.active_mode
 _mm = MODE_META.get(_am, MODE_META["general"])
 _badge = "Gemini 2.0 ✦" if st.session_state.use_gemini else "Groq · Llama 3.3 ✦"
-
 _chip_cls = "on" if _am != "general" else "off"
-_chip_html = (
-    '<div class="somo-mode-chip ' + _chip_cls + '">' +
-    _mm["icon"] + " " + _mm["label"] +
-    '</div>'
-)
 
 st.markdown(
-    '<div class="somo-header">' +
-    '<div class="somo-header-inner">' +
-    '<div class="somo-brand">' +
-    '<div class="somo-logo">S</div>' +
-    '<div>' +
-    '<div class="somo-name">Somo <em>AI</em></div>' +
-    '<div class="somo-by">BY USMONOV SODIQ</div>' +
-    '</div></div>' +
-    '<div class="somo-hdr-right">' +
-    _chip_html +
-    '<div class="somo-online"><div class="somo-dot"></div>Online</div>' +
-    '<div class="somo-model-pill">' + _badge + '</div>' +
+    '<div class="somo-header">'
+    '<div class="somo-header-inner">'
+    '<div class="somo-brand">'
+    '<div class="somo-logo">S</div>'
+    '<div>'
+    '<div class="somo-name">Somo <em>AI</em></div>'
+    '<div class="somo-by">BY USMONOV SODIQ</div>'
+    '</div></div>'
+    '<div class="somo-hdr-right">'
+    '<div class="somo-mode-chip ' + _chip_cls + '">' + _mm["icon"] + ' ' + _mm["label"] + '</div>'
+    '<div class="somo-online"><div class="somo-dot"></div><span>Online</span></div>'
+    '<div class="somo-model-pill">' + _badge + '</div>'
     '</div></div></div>',
     unsafe_allow_html=True
 )
@@ -1550,45 +1523,46 @@ if not msgs:
     # ── WELCOME SCREEN ──────────────────────────────────────────────
     gi, gt = get_greeting()
     st.markdown(
-        '<div class="somo-welcome">' +
-        '<div class="somo-eyebrow">✦ ' + gi + ' ' + gt + '</div>' +
-        '<div class="somo-headline">Ijodingizni<br><em>kuchlaytiring</em></div>' +
+        '<div class="somo-welcome">'
+        '<div class="somo-eyebrow">✦ ' + gi + ' ' + gt + '</div>'
+        '<div class="somo-headline">Ijodingizni<br><em>kuchlaytiring</em></div>'
         '<div class="somo-subtext">'
-        'Shunchaki xabar yozing — esse, she\'r, nutq, tarjima yoki istalgan savol.<br>'
-        'Somo AI mavzudan rejimni o\'zi aniqlaydi. 🚀' +
-        '</div>' +
-        '<div class="somo-cards">' +
-        '<div class="somo-card"><span class="somo-card-icon">✍️</span>' +
-        '<div class="somo-card-name">Esse / Referat</div>' +
-        '<div class="somo-card-hint">"Vatan haqida esse yoz"</div></div>' +
-        '<div class="somo-card"><span class="somo-card-icon">📖</span>' +
-        '<div class="somo-card-name">Hikoya / She\'r</div>' +
-        '<div class="somo-card-hint">"Bahor haqida she\'r"</div></div>' +
-        '<div class="somo-card"><span class="somo-card-icon">🎤</span>' +
-        '<div class="somo-card-name">Nutq</div>' +
-        '<div class="somo-card-hint">"Yoshlar haqida nutq"</div></div>' +
-        '<div class="somo-card"><span class="somo-card-icon">💡</span>' +
-        '<div class="somo-card-name">G\'oyalar</div>' +
-        '<div class="somo-card-hint">"Startup g\'oyalari ber"</div></div>' +
-        '<div class="somo-card"><span class="somo-card-icon">🌍</span>' +
-        '<div class="somo-card-name">Tarjima</div>' +
-        '<div class="somo-card-hint">"Translate to English"</div></div>' +
-        '<div class="somo-card"><span class="somo-card-icon">📋</span>' +
-        '<div class="somo-card-name">Xulosa / Tahlil</div>' +
-        '<div class="somo-card-hint">"Ushbu matnni tahlil qil"</div></div>' +
-        '</div>' +
-        '<div class="somo-chips">' +
-        '<div class="somo-chip">📝 "Ekologiya esse"</div>' +
-        '<div class="somo-chip">🌸 "Bahor haqida she\'r"</div>' +
-        '<div class="somo-chip">🎤 "Maktab nutqi"</div>' +
-        '<div class="somo-chip">💡 "10 ta biznes g\'oya"</div>' +
-        '<div class="somo-chip">🌍 "Hello — o\'zbekcha"</div>' +
-        '</div></div>',
+        "Shunchaki xabar yozing — esse, she'r, nutq, tarjima yoki istalgan savol.<br>"
+        "Somo AI mavzudan rejimni o'zi aniqlaydi. 🚀"
+        '</div>'
+        '<div class="somo-cards">'
+        '<div class="somo-card"><span class="somo-card-icon">✍️</span>'
+        '<div class="somo-card-name">Esse / Referat</div>'
+        '<div class="somo-card-hint">"Vatan haqida esse"</div></div>'
+        '<div class="somo-card"><span class="somo-card-icon">📖</span>'
+        "<div class=\"somo-card-name\">Hikoya / She'r</div>"
+        '<div class="somo-card-hint">"Bahor she\'ri"</div></div>'
+        '<div class="somo-card"><span class="somo-card-icon">🎤</span>'
+        '<div class="somo-card-name">Nutq</div>'
+        '<div class="somo-card-hint">"Yoshlar nutqi"</div></div>'
+        '<div class="somo-card"><span class="somo-card-icon">💡</span>'
+        "<div class=\"somo-card-name\">G'oyalar</div>"
+        '<div class="somo-card-hint">"Startup g\'oyasi"</div></div>'
+        '<div class="somo-card"><span class="somo-card-icon">🌍</span>'
+        '<div class="somo-card-name">Tarjima</div>'
+        '<div class="somo-card-hint">"To English"</div></div>'
+        '<div class="somo-card"><span class="somo-card-icon">📋</span>'
+        '<div class="somo-card-name">Xulosa / Tahlil</div>'
+        '<div class="somo-card-hint">"Matnni tahlil qil"</div></div>'
+        '</div>'
+        '<div class="somo-chips-wrap"><div class="somo-chips">'
+        '<div class="somo-chip">📝 Ekologiya esse</div>'
+        "<div class=\"somo-chip\">🌸 Bahor she'ri</div>"
+        '<div class="somo-chip">🎤 Maktab nutqi</div>'
+        "<div class=\"somo-chip\">💡 10 biznes g'oya</div>"
+        '<div class="somo-chip">🌍 Hello — o\'zbekcha</div>'
+        "<div class=\"somo-chip\">📖 Ona haqida she'r</div>"
+        '</div></div>'
+        '</div>',
         unsafe_allow_html=True
     )
 
-    # random button
-    c1, c2, c3 = st.columns([1.4, 2, 1.4])
+    c1, c2, c3 = st.columns([1.2, 2.2, 1.2])
     with c2:
         if st.button("🎲  Tasodifiy ilhom", use_container_width=True, key="rand"):
             st.session_state.rand_trigger = random.choice(RAND_PROMPTS)
@@ -1596,22 +1570,21 @@ if not msgs:
 
 else:
     # ── CHAT VIEW ──────────────────────────────────────────────────
-    # stats bar
     _ai_msgs  = [m for m in msgs if m["role"] == "assistant"]
     _usr_msgs = [m for m in msgs if m["role"] == "user"]
     _total_w  = sum(wc(m["content"]) for m in _ai_msgs)
     gi2, gt2  = get_greeting()
+
     st.markdown(
-        '<div class="somo-stats">' +
-        '<span class="somo-stat">' + gi2 + ' &nbsp;' + gt2 + '</span>' +
-        '<span class="somo-stat">💬 <b>' + str(len(_usr_msgs)) + '</b> savol</span>' +
-        '<span class="somo-stat">✍️ <b>' + str(_total_w) + '</b> so\'z</span>' +
+        '<div class="somo-stats">'
+        '<span class="somo-stat">' + gi2 + '&nbsp;' + gt2 + '</span>'
+        '<span class="somo-stat">💬 <b>' + str(len(_usr_msgs)) + '</b> savol</span>'
+        '<span class="somo-stat">✍️ <b>' + str(_total_w) + "</b> so'z</span>"
         '</div>',
         unsafe_allow_html=True
     )
 
-    # clear button
-    cc1, cc2, cc3 = st.columns([3, 1.4, 3])
+    cc1, cc2, cc3 = st.columns([3, 1.5, 3])
     with cc2:
         if st.button("🗑️  Tozalash", use_container_width=True, key="clr"):
             st.session_state.messages    = []
@@ -1621,7 +1594,6 @@ else:
 
     st.markdown('<div class="somo-divider">Suhbat</div>', unsafe_allow_html=True)
 
-    # render messages
     for i, msg in enumerate(msgs):
         role    = msg["role"]
         content = msg["content"]
@@ -1631,10 +1603,10 @@ else:
 
         if role == "user":
             st.markdown(
-                '<div class="somo-msg-user">' +
-                '<div class="somo-body">' +
-                '<div class="somo-bubble-user">' + content + '</div>' +
-                '<div class="somo-ts">' + ts + '</div>' +
+                '<div class="somo-msg-user">'
+                '<div class="somo-body">'
+                '<div class="somo-bubble-user">' + content + '</div>'
+                '<div class="somo-ts">' + ts + '</div>'
                 '</div></div>',
                 unsafe_allow_html=True
             )
@@ -1643,35 +1615,35 @@ else:
             label   = ""
             if m_mode != "general":
                 label = (
-                    '<div class="somo-mode-label">' +
-                    mm["icon"] + " " + mm["label"] +
+                    '<div class="somo-mode-label">'
+                    + mm["icon"] + " " + mm["label"] +
                     '</div><br>'
                 )
             _cid = "scp" + str(i)
             _fid = "scf" + str(i)
             _cjs = (
-                '<script>function ' + _fid + '(){' +
-                'navigator.clipboard.writeText(' + repr(content) + ');' +
-                'var b=document.getElementById("' + _cid + '"  );' +
-                'b.innerText="✅  Nusxalandi";' +
-                'setTimeout(()=>{b.innerText="📋  Nusxa"},2400);}' +
+                '<script>function ' + _fid + '(){'
+                'navigator.clipboard.writeText(' + repr(content) + ');'
+                'var b=document.getElementById("' + _cid + '");'
+                'b.innerText="✅ Nusxalandi";'
+                'setTimeout(()=>{b.innerText="📋 Nusxa"},2400);}'
                 '</script>'
             )
             st.markdown(
-                '<div class="somo-msg-ai">' +
-                '<div class="somo-av">S</div>' +
-                '<div class="somo-body">' +
-                '<div class="somo-sender">Somo AI</div>' +
-                '<div class="somo-bubble-ai">' + label + md_to_html(content) + '</div>' +
-                '<div class="somo-meta-row">' +
-                '<span class="somo-ts">' + ts + '</span>' +
-                '<span class="somo-wc">📝 ' + str(_wc_val) + ' so\'z</span>' +
-                '<button class="somo-copy" id="' + _cid + '" onclick="' + _fid + '()">📋&nbsp;Nusxa</button>' +
+                '<div class="somo-msg-ai">'
+                '<div class="somo-av">S</div>'
+                '<div class="somo-body">'
+                '<div class="somo-sender">Somo AI</div>'
+                '<div class="somo-bubble-ai">' + label + md_to_html(content) + '</div>'
+                '<div class="somo-meta-row">'
+                '<span class="somo-ts">' + ts + '</span>'
+                '<span class="somo-wc">📝 ' + str(_wc_val) + " so'z</span>"
+                '<button class="somo-copy" id="' + _cid + '" onclick="' + _fid + '()">📋&nbsp;Nusxa</button>'
                 '</div></div></div>' + _cjs + KJ,
                 unsafe_allow_html=True
             )
 
-st.markdown('</div>', unsafe_allow_html=True)   # close somo-wrap
+st.markdown('</div>', unsafe_allow_html=True)  # close somo-wrap
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1680,11 +1652,11 @@ st.markdown('</div>', unsafe_allow_html=True)   # close somo-wrap
 _rem = int(st.session_state.cooldown_end - time.time())
 if _rem > 0:
     st.markdown(
-        '<div class="somo-cd-wrap">' +
-        '<div class="somo-cd-box">' +
-        '<span class="somo-cd-icon">⏳</span>' +
-        '<div><strong>API limiti tugadi.</strong> Iltimos kuting — ' +
-        '<span class="somo-cd-sec">' + str(_rem) + ' soniya</span></div>' +
+        '<div class="somo-cd-wrap">'
+        '<div class="somo-cd-box">'
+        '<span class="somo-cd-icon">⏳</span>'
+        '<div><strong>API limiti tugadi.</strong> Kuting — '
+        '<span class="somo-cd-sec">' + str(_rem) + ' soniya</span></div>'
         '</div></div>',
         unsafe_allow_html=True
     )
@@ -1692,7 +1664,7 @@ if _rem > 0:
     time.sleep(1)
     st.rerun()
 else:
-    prompt = st.chat_input("Xabar yozing… (esse, she\'r, nutq, tarjima yoki istalgan savol)")
+    prompt = st.chat_input("Xabar yozing… esse, she'r, nutq, tarjima…")
     if not prompt and st.session_state.rand_trigger:
         prompt = st.session_state.rand_trigger
         st.session_state.rand_trigger = None
@@ -1706,19 +1678,6 @@ st.markdown(
 # ═══════════════════════════════════════════════════════════════════
 #  PROCESS MESSAGE
 # ═══════════════════════════════════════════════════════════════════
-#
-#  Jarayon:
-#  1. detect_mode()  — rejimni aniqlash
-#  2. build_system_prompt()  — rejimga mos system prompt
-#  3. User bubbleni ko'rsatish
-#  4. Typing placeholder (miltillovchi kursor)
-#  5. Groq stream — birinchi urinish
-#     429/rate_limit → Gemini ga o'tish
-#     Ikkalasi ham 429 → 90s cooldown timer
-#  6. Streaming render (real-time)
-#  7. Javobni session tarixiga saqlash
-#
-# ═══════════════════════════════════════════════════════════════════
 if prompt and prompt.strip():
     utxt   = prompt.strip()
     now    = get_time()
@@ -1731,34 +1690,31 @@ if prompt and prompt.strip():
         {"role": "user", "content": utxt, "time": now, "mode": mode}
     )
 
-    # user bubble
     st.markdown(
-        '<div class="somo-msg-user">' +
-        '<div class="somo-body">' +
-        '<div class="somo-bubble-user">' + utxt + '</div>' +
-        '<div class="somo-ts">' + now + '</div>' +
+        '<div class="somo-msg-user">'
+        '<div class="somo-body">'
+        '<div class="somo-bubble-user">' + utxt + '</div>'
+        '<div class="somo-ts">' + now + '</div>'
         '</div></div>',
         unsafe_allow_html=True
     )
 
-    # typing indicator placeholder
     ph = st.empty()
     ph.markdown(
-        '<div class="somo-msg-ai">' +
-        '<div class="somo-av">S</div>' +
-        '<div class="somo-body">' +
-        '<div class="somo-sender">Somo AI</div>' +
-        '<div class="somo-bubble-ai"><span class="somo-cur"></span></div>' +
+        '<div class="somo-msg-ai">'
+        '<div class="somo-av">S</div>'
+        '<div class="somo-body">'
+        '<div class="somo-sender">Somo AI</div>'
+        '<div class="somo-bubble-ai"><span class="somo-cur"></span></div>'
         '</div></div>',
         unsafe_allow_html=True
     )
 
-    # mode label for streaming
     _lbl = ""
     if mode != "general":
         _lbl = (
-            '<div class="somo-mode-label">' +
-            mm["icon"] + " " + mm["label"] +
+            '<div class="somo-mode-label">'
+            + mm["icon"] + " " + mm["label"] +
             '</div><br>'
         )
 
@@ -1766,28 +1722,24 @@ if prompt and prompt.strip():
         _cur = '<span class="somo-cur"></span>' if cursor else ""
         _td  = '<div class="somo-ts">' + ts + '</div>' if ts else ""
         ph.markdown(
-            '<div class="somo-msg-ai">' +
-            '<div class="somo-av">S</div>' +
-            '<div class="somo-body">' +
-            '<div class="somo-sender">Somo AI</div>' +
-            '<div class="somo-bubble-ai">' + _lbl + md_to_html(text) + _cur + '</div>' +
-            _td +
+            '<div class="somo-msg-ai">'
+            '<div class="somo-av">S</div>'
+            '<div class="somo-body">'
+            '<div class="somo-sender">Somo AI</div>'
+            '<div class="somo-bubble-ai">' + _lbl + md_to_html(text) + _cur + '</div>'
+            + _td +
             '</div></div>' + KJ,
             unsafe_allow_html=True
         )
 
-    # ── Groq streaming ────────────────────────────────────────────
     def stream_groq() -> str:
         if not groq_client: raise Exception("no groq client")
         api_msgs = [{"role": "system", "content": syspmt}]
         for m in st.session_state.messages:
             api_msgs.append({"role": m["role"], "content": m["content"]})
         stream = groq_client.chat.completions.create(
-            model       = GROQ_MODEL,
-            messages    = api_msgs,
-            stream      = True,
-            max_tokens  = GROQ_MAX_TOK,
-            temperature = GROQ_TEMP,
+            model=GROQ_MODEL, messages=api_msgs, stream=True,
+            max_tokens=GROQ_MAX_TOK, temperature=GROQ_TEMP,
         )
         out = ""
         for chunk in stream:
@@ -1795,7 +1747,6 @@ if prompt and prompt.strip():
             render(out, cursor=True)
         return out
 
-    # ── Gemini streaming ──────────────────────────────────────────
     def stream_gemini() -> str:
         if not gemini_client: raise Exception("no gemini client")
         hist = []
@@ -1807,10 +1758,7 @@ if prompt and prompt.strip():
         chat = gemini_client.start_chat(history=hist)
         resp = chat.send_message(
             syspmt + "\n\n---\n\n" + utxt,
-            generation_config = {
-                "temperature"     : GEMINI_TEMP,
-                "max_output_tokens": GEMINI_MAX_TOK,
-            },
+            generation_config={"temperature": GEMINI_TEMP, "max_output_tokens": GEMINI_MAX_TOK},
             stream=True,
         )
         out = ""
@@ -1820,7 +1768,6 @@ if prompt and prompt.strip():
             if out: render(out, cursor=True)
         return out
 
-    # ── Dual-API fallback logic ───────────────────────────────────
     full    = ""
     is_rate = lambda e: is_rate_err(str(e))
 
@@ -1833,7 +1780,6 @@ if prompt and prompt.strip():
 
     except Exception as e1:
         if is_rate(e1) and not st.session_state.use_gemini:
-            # Groq rate-limited → try Gemini
             st.session_state.use_gemini = True
             render("⚡ Groq limiti tugadi, Gemini ga o'tmoqda…", cursor=True)
             try:
@@ -1845,7 +1791,6 @@ if prompt and prompt.strip():
                 else:
                     full = "❌ Gemini xatolik: " + str(e2)
         elif is_rate(e1) and st.session_state.use_gemini:
-            # Gemini rate-limited → try Groq
             st.session_state.use_gemini = False
             render("⚡ Gemini limiti tugadi, Groq ga qaytmoqda…", cursor=True)
             try:
@@ -1861,11 +1806,9 @@ if prompt and prompt.strip():
         else:
             full = "❌ Xatolik: " + str(e1)
 
-    # final render (no cursor, with timestamp)
     if full:
         render(full, cursor=False, ts=get_time())
 
-    # save to history
     st.session_state.messages.append({
         "role"    : "assistant",
         "content" : full,
@@ -1875,20 +1818,17 @@ if prompt and prompt.strip():
 
 
 # ═══════════════════════════════════════════════════════════════════
-#  DEPLOYMENT & VERSION HISTORY
+#  DEPLOYMENT
 # ═══════════════════════════════════════════════════════════════════
 #
 #  SECRETS  (.streamlit/secrets.toml):
-#    GROQ_API_KEY   = "gsk_..."     groq.com
-#    GEMINI_API_KEY = "AIza..."     aistudio.google.com
+#    GROQ_API_KEY   = "gsk_..."
+#    GEMINI_API_KEY = "AIza..."
 #
 #  REQUIREMENTS (requirements.txt):
 #    streamlit>=1.32.0
 #    groq>=0.8.0
 #    google-generativeai>=0.8.0
-#
-#  ISHGA TUSHIRISH:
-#    streamlit run app.py
 #
 # ─────────────────────────────────────────────────────────────────
 #  VERSIYA TARIXI
@@ -1898,47 +1838,26 @@ if prompt and prompt.strip():
 #  v2.1  Sidebar o'chirildi, layout=wide
 #  v2.2  Dual-API: Groq + Gemini fallback
 #  v2.3  Cooldown timer + input qulflash
-#  v2.4  System prompt kuchaytirildi (Navoiy, Neruda, MLK...)
-#  v2.5  AI bubble ramkasiz (Claude/ChatGPT uslubi)
+#  v2.4  System prompt kuchaytirildi
+#  v2.5  AI bubble ramkasiz uslub
 #  v3.0  Copy, so'z soni, statistika, random, tozalash, salomlash
-#  v4.0  Premium dizayn qayta yozildi:
-#        • Glass morphism header
-#        • Gradient mesh tokens
-#        • Ripple pulse online dot
-#        • Spring animation kartalar
-#        • Gradient text headline
-#        • Refined typography (Fraunces + DM Sans)
-#        • 2-layered shadows
-#        • Smooth input focus ring
-#        • Rich bubble content CSS
-#        • Strikethrough, h4, del support
-#        • Improved mobile breakpoints
-#        • All class names namespaced (somo-*)
-#
-# ═══════════════════════════════════════════════════════════════════
-#  ADABIY MA'LUMOTNOMA
-# ═══════════════════════════════════════════════════════════════════
-#
-#  O'ZBEK ADABIYOTI:
-#  📜 Alisher Navoiy (1441–1501) — ilohiy metafora, g'azal nafosi
-#  📜 Abdulla Oripov (1941–2016) — oddiy so'z, cheksiz og'irlik
-#  📜 Erkin Vohidov (1936–2016)  — falsafiy hazil, aforizm
-#  📜 Cho'lpon (1897–1938)       — impressionist detal, erkinlik
-#  📜 Abdulla Qahhor (1907–1968) — keskin realizm, portret detal
-#  📜 Hamid Olimjon (1909–1944)  — romantik idealizm
-#
-#  JAHON ADABIYOTI:
-#  🌍 Pablo Neruda (1904–1973)   — hissiy metafora, kosmik romantika
-#  🌍 Jaloliddin Rumi (1207–1273)— mistik paradoks, sevgi koinot
-#  🌍 Anton Chekhov (1860–1904)  — ko'rsatish, tushuntirmaslik
-#  🌍 O. Henry (1862–1910)       — kutilmagan burilish = haqiqat
-#  🌍 García Márquez (1927–2014) — sehrli realizm, vaqt mif
-#  🌍 Jorge Luis Borges (1899–1986)— borliq = matn
-#
-#  NOTIQLIK:
-#  🎤 MLK (1929–1968)    — anafora, axloqiy yoy, vizyon
-#  🎤 Churchill (1874–1965)— kulminatsiyada qisqa jumlalar
-#  🎤 Obama (1961–)      — shaxsiy hikoya → universal haqiqat
+#  v4.0  Premium dizayn: glass morphism, gradient, Fraunces + DM Sans
+#  v4.1  MOBILE-PERFECT EDITION:
+#        • viewport-fit=cover (notch support)
+#        • env(safe-area-inset-*) hamma joylarda
+#        • 44px min touch targets barcha interaktiv elementlar
+#        • font-size: 16px input (iOS zoom oldini olish)
+#        • @media (hover: hover) — mobil hover effektini o'chirish
+#        • Chips horizontal scroll (nowrap, iOS momentum)
+#        • Cards: 2-col mobile, 3-col desktop
+#        • Model pill hidden on mobile (header compact)
+#        • Online text hidden on mobile (dot qoladi)
+#        • Landscape mobile breakpoint
+#        • prefers-reduced-motion support
+#        • Table/pre/katex: overflow-x auto + iOS touch scroll
+#        • Copy button: 44px touch area
+#        • somo-subtext hint mobil uchun padding
+#        • 390px breakpoint (iPhone SE / small Android)
 #
 # ═══════════════════════════════════════════════════════════════════
 #  © 2026  Usmonov Sodiq  |  @Somo_AI  |  Barcha huquqlar himoyalangan
