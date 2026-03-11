@@ -781,10 +781,35 @@ html, body {
 [data-testid="stMain"], .main,
 .stApp { background: var(--cream) !important; }
 
+/* Remove Streamlit's default top padding */
+.main .block-container { padding-top: 0 !important; }
+section.main > div { padding-top: 0 !important; }
+[data-testid="stMain"] > div:first-child { padding-top: 0 !important; }
+
 .block-container,
 [data-testid="stMainBlockContainer"] {
-  padding   : 0 !important;
-  max-width : 100% !important;
+  padding    : 0 !important;
+  max-width  : 100% !important;
+}
+/* remove streamlit default top padding */
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stVerticalBlock"],
+.stVerticalBlock {
+  padding-top    : 0 !important;
+  margin-top     : 0 !important;
+}
+/* iframe wrapper takes 0 space */
+[data-testid="stCustomComponentV1"],
+[data-testid="stCustomComponentV1"] > div,
+[data-testid="stCustomComponentV1"] iframe {
+  height     : 0 !important;
+  min-height : 0 !important;
+  max-height : 0 !important;
+  overflow   : hidden !important;
+  margin     : 0 !important;
+  padding    : 0 !important;
+  border     : none !important;
+  display    : block !important;
 }
 
 /* scrollbar */
@@ -2067,7 +2092,7 @@ body {{
 </script>
 </body>
 </html>
-""", height=110, scrolling=False)
+""", height=0, scrolling=False)
 
 # ── Listen for postMessage from iframe ──────────────────────────
 st.markdown("""
