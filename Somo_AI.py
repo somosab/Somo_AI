@@ -798,18 +798,26 @@ section.main > div { padding-top: 0 !important; }
   padding-top    : 0 !important;
   margin-top     : 0 !important;
 }
-/* iframe wrapper takes 0 space */
-[data-testid="stCustomComponentV1"],
-[data-testid="stCustomComponentV1"] > div,
-[data-testid="stCustomComponentV1"] iframe {
-  height     : 0 !important;
+/* iframe wrapper - invisible but JS still runs */
+[data-testid="stCustomComponentV1"] {
+  height     : 1px !important;
   min-height : 0 !important;
-  max-height : 0 !important;
   overflow   : hidden !important;
   margin     : 0 !important;
   padding    : 0 !important;
-  border     : none !important;
-  display    : block !important;
+}
+[data-testid="stCustomComponentV1"] > div {
+  height     : 1px !important;
+  overflow   : hidden !important;
+  margin     : 0 !important;
+  padding    : 0 !important;
+}
+[data-testid="stCustomComponentV1"] iframe {
+  height     : 1px !important;
+  min-height : 0 !important;
+  opacity    : 0 !important;
+  pointer-events: none;
+  position   : absolute !important;
 }
 
 /* scrollbar */
@@ -1829,147 +1837,16 @@ _cd_msg = f"""
 </div>
 """
 
-# ── inject custom bar via components (JS executes properly) ──
+# ── inject custom bar HTML via st.markdown (renders in parent window) ──
 _cd_active_str = "true" if _cooldown_active else "false"
 _cd_rem_str    = str(_rem) if _cooldown_active else "0"
-_stc.html(f"""
-<!DOCTYPE html>
-<html>
-<head>
-<style>
-:root {{
-  --cream  : #fdf7ee;
-  --card   : #fffef9;
-  --border : #ede8e0;
-  --amber  : #f59e0b;
-  --orange : #f97316;
-  --text   : #1c1917;
-  --muted  : #78716c;
-  --light  : #c5bfb8;
-  --faint  : #d6cec4;
-  --fb     : "Plus Jakarta Sans", system-ui, sans-serif;
-  --shadow-sm: 0 1px 4px rgba(0,0,0,.06);
-}}
-* {{ box-sizing:border-box; margin:0; padding:0; }}
-body {{
-  font-family : var(--fb);
-  background  : transparent;
-}}
-#somo-bar {{
-  position   : fixed;
-  bottom     : 0; left:0; right:0;
-  background : linear-gradient(to top, #fdf7ee 72%, transparent);
-  padding    : .4rem 0 .55rem;
-  padding-bottom: max(.55rem, env(safe-area-inset-bottom));
-  z-index    : 9999;
-}}
-#somo-bar-inner {{
-  max-width  : 820px;
-  margin     : 0 auto;
-  padding    : 0 1.1rem;
-  display    : flex;
-  flex-direction: column;
-  gap        : .3rem;
-}}
-#somo-cd-notice {{
-  text-align : center;
-  padding    : .3rem;
-  font-size  : .78rem;
-  color      : #b45309;
-  display    : none;
-}}
-#somo-cd-notice.show {{ display:block; }}
-#somo-img-preview {{
-  display    : none;
-  align-items: center;
-  gap        : .5rem;
-  background : var(--card);
-  border     : 1.5px solid var(--border);
-  border-radius: 12px;
-  padding    : .35rem .7rem;
-  font-size  : .75rem;
-  color      : var(--muted);
-}}
-#somo-img-preview.show {{ display:flex; }}
-#somo-prev-img {{
-  height: 38px; width:38px;
-  border-radius: 7px;
-  object-fit: cover;
-}}
-#somo-prev-name {{
-  flex:1;
-  overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
-}}
-#somo-img-rm {{
-  cursor:pointer; font-size:.9rem;
-  color:var(--light); margin-left:auto; line-height:1;
-}}
-#somo-img-rm:hover {{ color:var(--orange); }}
-#somo-row {{
-  display    : flex;
-  align-items: flex-end;
-  gap        : .45rem;
-}}
-#somo-plus {{
-  flex-shrink : 0;
-  width:40px; height:40px;
-  border-radius:50%;
-  background:var(--card);
-  border:1.5px solid var(--border);
-  display:flex; align-items:center; justify-content:center;
-  cursor:pointer; font-size:1.3rem; font-weight:300;
-  color:var(--muted);
-  box-shadow:var(--shadow-sm);
-  transition:all .15s ease;
-  user-select:none;
-}}
-#somo-plus:hover {{ border-color:var(--amber); color:var(--amber); transform:scale(1.07); }}
-#somo-ta-wrap {{
-  flex:1;
-  background:var(--card);
-  border:2px solid var(--border);
-  border-radius:18px;
-  box-shadow:var(--shadow-sm);
-  display:flex; align-items:flex-end;
-  padding:.42rem .48rem .42rem .8rem;
-  transition:border-color .15s, box-shadow .15s;
-}}
-#somo-ta-wrap:focus-within {{
-  border-color:var(--amber);
-  box-shadow:0 0 0 3px rgba(245,158,11,.12),var(--shadow-sm);
-}}
-#somo-ta {{
-  flex:1; background:transparent;
-  border:none; outline:none; resize:none;
-  font-family:var(--fb); font-size:.88rem;
-  color:var(--text); line-height:1.45;
-  max-height:120px; overflow-y:auto;
-  padding:0; scrollbar-width:none;
-}}
-#somo-ta::-webkit-scrollbar {{ display:none; }}
-#somo-ta::placeholder {{ color:var(--light); }}
-#somo-send {{
-  flex-shrink:0;
-  width:36px; height:36px; border-radius:11px;
-  background:linear-gradient(135deg,#f59e0b,#f97316);
-  border:none; cursor:pointer;
-  display:flex; align-items:center; justify-content:center;
-  box-shadow:0 3px 10px rgba(245,158,11,.35);
-  transition:all .15s; color:#fff; font-size:1.1rem;
-}}
-#somo-send:hover {{ transform:scale(1.08); box-shadow:0 4px 16px rgba(245,158,11,.45); }}
-#somo-send:disabled {{ opacity:.4; cursor:default; transform:none; }}
-.somo-footer {{
-  text-align:center; font-size:.52rem;
-  color:var(--faint); padding:.2rem 0 0;
-  letter-spacing:.3px;
-}}
-</style>
-</head>
-<body>
+_dis           = "disabled" if _cooldown_active else ""
+_cd_show       = "show" if _cooldown_active else ""
+
+st.markdown(f"""
 <div id="somo-bar">
   <div id="somo-bar-inner">
-    <div id="somo-cd-notice" class="{{'show' if _cooldown_active else ''}}">
+    <div id="somo-cd-notice" class="{_cd_show}">
       ⏳ <strong>API limiti.</strong> Kuting — <span id="somo-cd-s">{_cd_rem_str}</span> soniya
     </div>
     <div id="somo-img-preview">
@@ -1983,9 +1860,9 @@ body {{
       </div>
       <div id="somo-ta-wrap">
         <textarea id="somo-ta" rows="1"
-          placeholder="Xabar yozing… (esse, she\'r, rasm tahlil…)"
-          {{'disabled' if _cooldown_active else ''}}></textarea>
-        <button id="somo-send" {{'disabled' if _cooldown_active else ''}}>↑</button>
+          placeholder="Xabar yozing… (esse, she'r, rasm tahlil…)"
+          {_dis}></textarea>
+        <button id="somo-send" {_dis}>↑</button>
       </div>
     </div>
     <div class="somo-footer">Somo AI &middot; Usmonov Sodiq (@Somo_AI) &middot; DeepSeek R1 + Gemini</div>
@@ -2000,67 +1877,44 @@ body {{
   const prev = document.getElementById('somo-img-preview');
   const pimg = document.getElementById('somo-prev-img');
   const pnam = document.getElementById('somo-prev-name');
-  const prm  = document.getElementById('somo-img-rm');
+
+  if(!ta) return;
 
   let imgB64=null, imgMime=null, imgName=null;
 
-  // auto-resize
   function resize(){{
     ta.style.height='auto';
     ta.style.height=Math.min(ta.scrollHeight,120)+'px';
   }}
   ta.addEventListener('input', resize);
 
-  // image preview
-  function showPreview(b64,mime,name){{
-    imgB64=b64; imgMime=mime; imgName=name;
-    pimg.src='data:'+mime+';base64,'+b64;
-    pnam.textContent='📎 '+name;
-    prev.classList.add('show');
-  }}
-  function clearPreview(){{
-    imgB64=null; imgMime=null; imgName=null;
-    pimg.src=''; prev.classList.remove('show');
-    finp.value='';
-  }}
-  prm.addEventListener('click',clearPreview);
-
-  // file pick
   plus.addEventListener('click',function(e){{
-    if(e.target!==finp) finp.click();
+    if(e.target===finp) return;
+    finp.click();
   }});
+
   finp.addEventListener('change',function(){{
-    if(!finp.files.length) return;
-    const f=finp.files[0];
-    const r=new FileReader();
-    r.onload=function(ev){{
-      showPreview(ev.target.result.split(',')[1],f.type,f.name);
+    const f=finp.files[0]; if(!f) return;
+    imgName=f.name; imgMime=f.type;
+    const rd=new FileReader();
+    rd.onload=function(ev){{
+      imgB64=ev.target.result.split(',')[1];
+      pimg.src=ev.target.result;
+      pnam.textContent=f.name;
+      prev.classList.add('show');
     }};
-    r.readAsDataURL(f);
+    rd.readAsDataURL(f);
   }});
 
-  // ctrl+v paste
-  window.parent.document.addEventListener('paste',function(e){{
-    const items=(e.clipboardData||e.originalEvent.clipboardData).items;
-    for(let i=0;i<items.length;i++){{
-      if(items[i].type.indexOf('image')===0){{
-        e.preventDefault();
-        const blob=items[i].getAsFile();
-        const r=new FileReader();
-        r.onload=function(ev){{
-          showPreview(ev.target.result.split(',')[1],blob.type,'paste-'+Date.now()+'.png');
-          ta.focus();
-        }};
-        r.readAsDataURL(blob);
-        return;
-      }}
-    }}
+  document.getElementById('somo-img-rm').addEventListener('click',function(){{
+    imgB64=null; imgMime=null; imgName=null;
+    prev.classList.remove('show');
+    pimg.src=''; pnam.textContent=''; finp.value='';
   }});
 
-  // SEND — post to parent via postMessage
   function doSend(){{
     const txt=ta.value.trim();
-    if(!txt && !imgB64) return;
+    if(!txt&&!imgB64) return;
     const payload={{
       type:'somo_send',
       txt:txt||'',
@@ -2068,8 +1922,11 @@ body {{
       mime:imgMime||null,
       name:imgName||null
     }};
-    window.parent.postMessage(payload,'*');
-    ta.value=''; resize(); clearPreview();
+    window.postMessage(payload,'*');
+    ta.value=''; resize();
+    imgB64=null; imgMime=null; imgName=null;
+    prev.classList.remove('show');
+    pimg.src=''; pnam.textContent=''; finp.value='';
   }}
 
   send.addEventListener('click',doSend);
@@ -2090,9 +1947,15 @@ body {{
   ta.focus();
 }})();
 </script>
-</body>
-</html>
-""", height=0, scrolling=False)
+""", unsafe_allow_html=True)
+
+# ── small iframe just for postMessage relay (height=1) ──
+_stc.html("""<script>
+window.addEventListener('message',function(e){
+  if(!e.data||e.data.type!=='somo_send')return;
+  window.parent.postMessage(e.data,'*');
+});
+</script>""", height=1, scrolling=False)
 
 # ── Listen for postMessage from iframe ──────────────────────────
 st.markdown("""
