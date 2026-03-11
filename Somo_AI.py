@@ -248,6 +248,8 @@ _init("active_mode",  "general")
 _init("cooldown_end", 0.0)
 _init("use_gemini",   False)
 _init("rand_trigger", None)
+_init("show_upload",  False)
+_init("uploaded_img", None)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1413,6 +1415,45 @@ html, body {
                var(--cream) 65%,
                transparent) !important;
 }
+/* ── input row wrapper (+ button + input + send) ── */
+.somo-input-row {
+  display       : flex;
+  align-items   : center;
+  gap           : 8px;
+  padding       : 0 1rem .5rem;
+}
+.somo-plus-btn {
+  flex-shrink   : 0;
+  width         : 42px;
+  height        : 42px;
+  border-radius : 50%;
+  background    : var(--card);
+  border        : 1.5px solid var(--border);
+  display       : flex;
+  align-items   : center;
+  justify-content: center;
+  cursor        : pointer;
+  font-size     : 1.3rem;
+  color         : var(--muted);
+  box-shadow    : var(--shadow-sm);
+  transition    : all .15s ease;
+}
+.somo-plus-btn:hover {
+  border-color  : var(--amber);
+  color         : var(--amber);
+  transform     : scale(1.08);
+}
+/* upload panel */
+.somo-upload-panel {
+  background    : var(--card);
+  border        : 1.5px solid var(--border);
+  border-radius : 14px;
+  padding       : .75rem 1rem;
+  margin        : 0 1rem .4rem;
+  font-size     : .8rem;
+  color         : var(--muted);
+  box-shadow    : var(--shadow-sm);
+}
 [data-testid="stChatInput"] {
   background    : var(--card) !important;
   border        : 2px solid var(--border) !important;
@@ -1420,6 +1461,7 @@ html, body {
   box-shadow    : var(--shadow-sm) !important;
   transition    : border-color var(--dur-fast) ease,
                   box-shadow   var(--dur-fast) ease !important;
+  flex          : 1 !important;
 }
 [data-testid="stChatInput"]:focus-within {
   border-color : var(--amber) !important;
@@ -1717,13 +1759,41 @@ if _rem > 0:
     time.sleep(1)
     st.rerun()
 else:
-    prompt = st.chat_input("Xabar yozing… (esse, she\'r, nutq, tarjima yoki istalgan savol)")
+    # ── + button + chat input row ────────────────────────────────
+    col_plus, col_inp = st.columns([0.07, 0.93])
+    with col_plus:
+        plus_label = "✕" if st.session_state.show_upload else "＋"
+        if st.button(plus_label, key="plus_btn", help="Rasm / fayl yuklash"):
+            st.session_state.show_upload = not st.session_state.show_upload
+            if not st.session_state.show_upload:
+                st.session_state.uploaded_img = None
+    with col_inp:
+        prompt = st.chat_input("Xabar yozing… (esse, she'r, rasm tahlil…)")
     if not prompt and st.session_state.rand_trigger:
         prompt = st.session_state.rand_trigger
         st.session_state.rand_trigger = None
 
+    # ── file upload panel ────────────────────────────────────────
+    if st.session_state.show_upload:
+        st.markdown(
+            '<div class="somo-upload-panel">📎 Rasm yoki fayl tanlang — AI tahlil qiladi</div>',
+            unsafe_allow_html=True
+        )
+        uploaded = st.file_uploader(
+            "", type=["png","jpg","jpeg","webp","gif","pdf"],
+            key="file_up", label_visibility="collapsed"
+        )
+        if uploaded:
+            import base64 as _b64
+            _bytes = uploaded.read()
+            _b64str = _b64.b64encode(_bytes).decode()
+            st.session_state.uploaded_img = {
+                "b64": _b64str, "mime": uploaded.type, "name": uploaded.name
+            }
+            st.success(f"✅ {uploaded.name} yuklandi — endi xabar yozing!")
+
 st.markdown(
-    '<div class="somo-input-footer">Somo AI · Usmonov Sodiq (@Somo_AI) · Groq + Gemini</div>',
+    '<div class="somo-input-footer">Somo AI · Usmonov Sodiq (@Somo_AI) · DeepSeek R1 + Gemini</div>',
     unsafe_allow_html=True
 )
 
@@ -1751,16 +1821,26 @@ if prompt and prompt.strip():
     mm     = MODE_META.get(mode, MODE_META["general"])
     syspmt = build_system_prompt(mode)
 
+    # ── check if image attached ──────────────────────────────────
+    _img_data = st.session_state.get("uploaded_img", None)
+
     st.session_state.active_mode = mode
     st.session_state.messages.append(
         {"role": "user", "content": utxt, "time": now, "mode": mode}
     )
 
-    # user bubble
+    # user bubble (show image thumbnail if attached)
+    _img_preview = ""
+    if _img_data:
+        _img_preview = (
+            '<img src="data:' + _img_data["mime"] + ';base64,' + _img_data["b64"] +
+            '" style="max-width:160px;border-radius:10px;margin-bottom:6px;display:block">' +
+            '<span style="font-size:.7rem;color:#888">📎 ' + _img_data["name"] + '</span>'
+        )
     st.markdown(
         '<div class="somo-msg-user">' +
         '<div class="somo-body">' +
-        '<div class="somo-bubble-user">' + utxt + '</div>' +
+        '<div class="somo-bubble-user">' + _img_preview + utxt + '</div>' +
         '<div class="somo-ts">' + now + '</div>' +
         '</div></div>',
         unsafe_allow_html=True
@@ -1829,8 +1909,39 @@ if prompt and prompt.strip():
         return strip_think(out)
 
     # ── Gemini streaming ──────────────────────────────────────────
-    def stream_gemini() -> str:
+    def stream_gemini(img_data=None) -> str:
         if not gemini_client: raise Exception("no gemini client")
+        import google.generativeai as _genai
+        import base64 as _b64
+
+        # ── image mode: use vision model directly ─────────────────
+        if img_data:
+            vision_model = _genai.GenerativeModel("gemini-2.0-flash")
+            img_part = {
+                "mime_type": img_data["mime"],
+                "data"     : _b64.b64decode(img_data["b64"])
+            }
+            full_prompt = (
+                syspmt + "\n\n---\n\n"
+                "Foydalanuvchi quyidagi rasm/faylni yubordi va shunday dedi:\n"
+                + utxt + "\n\nRasmni diqqat bilan tahlil qilib, ijodiy va chuqur javob ber."
+            )
+            resp = vision_model.generate_content(
+                [full_prompt, img_part],
+                generation_config={
+                    "temperature": GEMINI_TEMP,
+                    "max_output_tokens": GEMINI_MAX_TOK,
+                },
+                stream=True,
+            )
+            out = ""
+            for chunk in resp:
+                try:    out += chunk.text or ""
+                except: pass
+                if out: render(out, cursor=True)
+            return out
+
+        # ── text mode ─────────────────────────────────────────────
         hist = []
         for m in st.session_state.messages[:-1]:
             hist.append({
@@ -1857,42 +1968,53 @@ if prompt and prompt.strip():
     full    = ""
     is_rate = lambda e: is_rate_err(str(e))
 
-    try:
-        if st.session_state.use_gemini:
-            full = stream_gemini()
-        else:
-            full = stream_groq()
-            st.session_state.use_gemini = False
-
-    except Exception as e1:
-        if is_rate(e1) and not st.session_state.use_gemini:
-            # Groq rate-limited → try Gemini
-            st.session_state.use_gemini = True
-            render("⚡ Groq limiti tugadi, Gemini ga o'tmoqda…", cursor=True)
-            try:
+    # image attached → always use Gemini Vision
+    if _img_data:
+        render("🔍 Rasm tahlil qilinmoqda…", cursor=True)
+        try:
+            full = stream_gemini(img_data=_img_data)
+        except Exception as _ve:
+            full = "❌ Rasm tahlil xatolik: " + str(_ve)
+        # clear image after use
+        st.session_state.uploaded_img = None
+        st.session_state.show_upload  = False
+    else:
+        try:
+            if st.session_state.use_gemini:
                 full = stream_gemini()
-            except Exception as e2:
-                if is_rate(e2):
-                    st.session_state.cooldown_end = time.time() + COOLDOWN_LONG
-                    full = "⏳ Ikkala API limiti tugadi. " + str(COOLDOWN_LONG) + " soniya kuting."
-                else:
-                    full = "❌ Gemini xatolik: " + str(e2)
-        elif is_rate(e1) and st.session_state.use_gemini:
-            # Gemini rate-limited → try Groq
-            st.session_state.use_gemini = False
-            render("⚡ Gemini limiti tugadi, Groq ga qaytmoqda…", cursor=True)
-            try:
+            else:
                 full = stream_groq()
-            except Exception as e3:
-                if is_rate(e3):
-                    st.session_state.cooldown_end = time.time() + COOLDOWN_LONG
-                    full = "⏳ Ikkala API limiti tugadi. " + str(COOLDOWN_LONG) + " soniya kuting."
-                else:
-                    full = "❌ Xatolik: " + str(e3)
-        elif "api_key" in str(e1).lower() or "auth" in str(e1).lower():
-            full = "❌ API kalit xato. Secrets faylini tekshiring."
-        else:
-            full = "❌ Xatolik: " + str(e1)
+                st.session_state.use_gemini = False
+
+        except Exception as e1:
+            if is_rate(e1) and not st.session_state.use_gemini:
+                # Groq rate-limited → try Gemini
+                st.session_state.use_gemini = True
+                render("⚡ Groq limiti tugadi, Gemini ga o'tmoqda…", cursor=True)
+                try:
+                    full = stream_gemini()
+                except Exception as e2:
+                    if is_rate(e2):
+                        st.session_state.cooldown_end = time.time() + COOLDOWN_LONG
+                        full = "⏳ Ikkala API limiti tugadi. " + str(COOLDOWN_LONG) + " soniya kuting."
+                    else:
+                        full = "❌ Gemini xatolik: " + str(e2)
+            elif is_rate(e1) and st.session_state.use_gemini:
+                # Gemini rate-limited → try Groq
+                st.session_state.use_gemini = False
+                render("⚡ Gemini limiti tugadi, Groq ga qaytmoqda…", cursor=True)
+                try:
+                    full = stream_groq()
+                except Exception as e3:
+                    if is_rate(e3):
+                        st.session_state.cooldown_end = time.time() + COOLDOWN_LONG
+                        full = "⏳ Ikkala API limiti tugadi. " + str(COOLDOWN_LONG) + " soniya kuting."
+                    else:
+                        full = "❌ Xatolik: " + str(e3)
+            elif "api_key" in str(e1).lower() or "auth" in str(e1).lower():
+                full = "❌ API kalit xato. Secrets faylini tekshiring."
+            else:
+                full = "❌ Xatolik: " + str(e1)
 
     # final render (no cursor, with timestamp)
     if full:
