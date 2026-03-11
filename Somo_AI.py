@@ -248,8 +248,9 @@ _init("active_mode",  "general")
 _init("cooldown_end", 0.0)
 _init("use_gemini",   False)
 _init("rand_trigger", None)
-_init("show_upload",  False)
 _init("uploaded_img", None)
+_init("_pending_txt", "")
+_init("_pending_img", None)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1778,6 +1779,8 @@ st.markdown('</div>', unsafe_allow_html=True)   # close somo-wrap
 # ═══════════════════════════════════════════════════════════════════
 #  COOLDOWN CHECK
 # ═══════════════════════════════════════════════════════════════════
+#  COOLDOWN CHECK
+# ═══════════════════════════════════════════════════════════════════
 _rem = int(st.session_state.cooldown_end - time.time())
 _cooldown_active = _rem > 0
 if _cooldown_active:
@@ -1785,161 +1788,256 @@ if _cooldown_active:
     st.rerun()
 
 # ═══════════════════════════════════════════════════════════════════
-#  CUSTOM FIXED INPUT BAR (pure HTML/JS — no st.chat_input)
+#  HIDDEN STREAMLIT INPUTS (real widgets, JS clicks them)
 # ═══════════════════════════════════════════════════════════════════
-_cd_html = ""
-if _cooldown_active:
-    _cd_html = (
-        '<div style="text-align:center;padding:.4rem 0;font-size:.8rem;color:#b45309">' +
-        '⏳ <strong>API limiti.</strong> Iltimos kuting — ' + str(_rem) + ' soniya</div>'
-    )
+# These are rendered but hidden via CSS. JS writes to them + clicks button.
+_HIDDEN_CSS = """
+<style>
+#somo-hidden-wrap {
+  position : absolute !important;
+  opacity  : 0 !important;
+  pointer-events: none !important;
+  height   : 0 !important;
+  overflow : hidden !important;
+}
+</style>
+"""
+st.markdown(_HIDDEN_CSS, unsafe_allow_html=True)
 
-st.markdown(
-    '<div id="somo-bar">' +
-    '<div id="somo-bar-inner">' +
-    _cd_html +
-    '<div id="somo-img-preview">' +
-    '  <img id="somo-prev-img" src="" alt="preview">' +
-    '  <span id="somo-prev-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>' +
-    '  <span id="somo-img-rm" title="Olib tashlash">✕</span>' +
-    '</div>' +
-    '<div id="somo-row">' +
-    '  <div id="somo-plus" title="Rasm / fayl yuklash">+' +
-    '    <input type="file" id="somo-file-inp" accept="image/*,.pdf">' +
-    '  </div>' +
-    '  <div id="somo-ta-wrap">' +
-    '    <textarea id="somo-ta" rows="1" placeholder="Xabar yozing… (esse, she\'r, rasm tahlil…)"></textarea>' +
-    '    <button id="somo-send" title="Yuborish">↑</button>' +
-    '  </div>' +
-    '</div>' +
-    '<div class="somo-input-footer">Somo AI · Usmonov Sodiq (@Somo_AI) · DeepSeek R1 + Gemini</div>' +
-    '</div></div>',
-    unsafe_allow_html=True
-)
+# Wrap hidden widgets
+st.markdown('<div id="somo-hidden-wrap">', unsafe_allow_html=True)
+_txt_val = st.text_input("_msg", key="_somo_txt", label_visibility="collapsed")
+_img_val = st.text_input("_img", key="_somo_img", label_visibility="collapsed")
+_sub_btn = st.button("Send", key="_somo_sub")
+st.markdown('</div>', unsafe_allow_html=True)
 
-# ── JS: textarea auto-resize, send, paste image, file pick ──────
-st.markdown("""
-<script>
-(function(){
-  const ta   = document.getElementById('somo-ta');
-  const send = document.getElementById('somo-send');
-  const plus = document.getElementById('somo-plus');
-  const finp = document.getElementById('somo-file-inp');
-  const prev = document.getElementById('somo-img-preview');
-  const pimg = document.getElementById('somo-prev-img');
-  const pnam = document.getElementById('somo-prev-name');
-  const prm  = document.getElementById('somo-img-rm');
-
-  let imgB64 = null; let imgMime = null; let imgName = null;
-
-  // auto-resize textarea
-  function resize(){
-    ta.style.height = 'auto';
-    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
-  }
-  ta.addEventListener('input', resize);
-
-  // show preview
-  function showPreview(b64, mime, name){
-    imgB64 = b64; imgMime = mime; imgName = name;
-    pimg.src = 'data:' + mime + ';base64,' + b64;
-    pnam.textContent = '📎 ' + name;
-    prev.classList.add('visible');
-  }
-  function clearPreview(){
-    imgB64 = null; imgMime = null; imgName = null;
-    pimg.src = ''; prev.classList.remove('visible');
-    finp.value = '';
-  }
-  prm.addEventListener('click', clearPreview);
-
-  // file input
-  plus.addEventListener('click', function(e){
-    if(!e.target.closest('#somo-file-inp')) finp.click();
-  });
-  finp.addEventListener('change', function(){
-    if(!finp.files.length) return;
-    const f = finp.files[0];
-    const r = new FileReader();
-    r.onload = function(ev){
-      const b64 = ev.target.result.split(',')[1];
-      showPreview(b64, f.type, f.name);
-    };
-    r.readAsDataURL(f);
-  });
-
-  // ctrl+v / paste image
-  document.addEventListener('paste', function(e){
-    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-    for(let i=0;i<items.length;i++){
-      if(items[i].type.indexOf('image')===0){
-        e.preventDefault();
-        const blob = items[i].getAsFile();
-        const r = new FileReader();
-        r.onload = function(ev){
-          const b64 = ev.target.result.split(',')[1];
-          showPreview(b64, blob.type, 'clipboard-'+Date.now()+'.png');
-          ta.focus();
-        };
-        r.readAsDataURL(blob);
-        break;
-      }
-    }
-  });
-
-  // send via Streamlit query param trick
-  function doSend(){
-    const txt = ta.value.trim();
-    if(!txt && !imgB64) return;
-    // pack as JSON in URL param → Streamlit reads via query_params
-    const payload = JSON.stringify({
-      txt  : txt,
-      img  : imgB64  || null,
-      mime : imgMime || null,
-      name : imgName || null
-    });
-    const url = new URL(window.location.href);
-    url.searchParams.set('_somo_msg', payload);
-    window.location.href = url.toString();
-  }
-
-  send.addEventListener('click', doSend);
-  ta.addEventListener('keydown', function(e){
-    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); doSend(); }
-  });
-
-  // focus textarea on load
-  setTimeout(()=>ta.focus(), 200);
-})();
-</script>
-""", unsafe_allow_html=True)
-
-# ── Read message from query param ───────────────────────────────
-import json as _json
-_qp    = st.query_params.to_dict()
-_raw   = _qp.get("_somo_msg", "")
+# ── Read from hidden inputs ──────────────────────────────────────
 prompt = None
-
-if _raw:
-    try:
-        _pkg = _json.loads(_raw)
-        prompt = _pkg.get("txt", "").strip() or None
-        _img_b64  = _pkg.get("img")
-        _img_mime = _pkg.get("mime", "image/png")
-        _img_name = _pkg.get("name", "image.png")
-        if _img_b64:
-            st.session_state.uploaded_img = {
-                "b64": _img_b64, "mime": _img_mime, "name": _img_name
-            }
-        # clear param so it doesn't re-fire
-        st.query_params.clear()
-    except:
-        pass
+if _sub_btn and _txt_val.strip():
+    prompt = _txt_val.strip()
+    if _img_val:
+        try:
+            import json as _j2
+            _ipkg = _j2.loads(_img_val)
+            st.session_state.uploaded_img = _ipkg
+        except:
+            pass
 
 if not prompt and st.session_state.rand_trigger:
     prompt = st.session_state.rand_trigger
     st.session_state.rand_trigger = None
 
+# ═══════════════════════════════════════════════════════════════════
+#  CUSTOM FIXED INPUT BAR (HTML/JS — writes to hidden inputs above)
+# ═══════════════════════════════════════════════════════════════════
+_cd_msg = f"""
+<div id="somo-cd-notice" style="display:{'block' if _cooldown_active else 'none'};
+  text-align:center;padding:.35rem;font-size:.78rem;color:#b45309;font-family:var(--fb)">
+  ⏳ <strong>API limiti.</strong> Kuting — <span id="somo-cd-s">{_rem}</span> soniya
+</div>
+"""
+
+st.markdown(f"""
+<div id="somo-bar">
+  <div id="somo-bar-inner">
+    {_cd_msg}
+    <div id="somo-img-preview">
+      <img id="somo-prev-img" src="" alt="">
+      <span id="somo-prev-name"></span>
+      <span id="somo-img-rm" title="Olib tashlash">✕</span>
+    </div>
+    <div id="somo-row">
+      <div id="somo-plus" title="Rasm yuklash / Ctrl+V">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <input type="file" id="somo-file-inp" accept="image/*,.pdf" style="display:none">
+      </div>
+      <div id="somo-ta-wrap">
+        <textarea id="somo-ta" rows="1"
+          placeholder="Xabar yozing… (esse, she\'r, rasm tahlil…)"
+          {'disabled' if _cooldown_active else ''}></textarea>
+        <button id="somo-send" {'disabled' if _cooldown_active else ''}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="somo-input-footer">Somo AI &middot; Usmonov Sodiq (@Somo_AI) &middot; DeepSeek R1 + Gemini</div>
+  </div>
+</div>
+
+<script>
+(function(){{
+  // ── wait for DOM ──────────────────────────────────────────────
+  function init(){{
+    const ta    = document.getElementById('somo-ta');
+    const send  = document.getElementById('somo-send');
+    const plus  = document.getElementById('somo-plus');
+    const finp  = document.getElementById('somo-file-inp');
+    const prev  = document.getElementById('somo-img-preview');
+    const pimg  = document.getElementById('somo-prev-img');
+    const pnam  = document.getElementById('somo-prev-name');
+    const prm   = document.getElementById('somo-img-rm');
+
+    if(!ta || !send){{ setTimeout(init, 80); return; }}
+
+    let imgB64=null, imgMime=null, imgName=null;
+
+    // ── find hidden Streamlit inputs by label ─────────────────
+    function getSTInput(label){{
+      // Streamlit text_input: find by key in DOM
+      const all = document.querySelectorAll('input[type="text"]');
+      for(let i=0;i<all.length;i++){{
+        const p = all[i].closest('[data-testid="stTextInput"]') ||
+                  all[i].closest('.stTextInput');
+        if(p && p.id && p.id.includes(label)) return all[i];
+      }}
+      return null;
+    }}
+
+    function getHiddenTxtInput(){{
+      // find inside #somo-hidden-wrap
+      const w = document.getElementById('somo-hidden-wrap');
+      if(!w) return null;
+      const ins = w.querySelectorAll('input[type="text"]');
+      return ins[0] || null;
+    }}
+    function getHiddenImgInput(){{
+      const w = document.getElementById('somo-hidden-wrap');
+      if(!w) return null;
+      const ins = w.querySelectorAll('input[type="text"]');
+      return ins[1] || null;
+    }}
+    function getHiddenBtn(){{
+      const w = document.getElementById('somo-hidden-wrap');
+      if(!w) return null;
+      return w.querySelector('button');
+    }}
+
+    // ── native input trigger ─────────────────────────────────
+    function setNativeValue(el, val){{
+      const nativeSetter = Object.getOwnPropertyDescriptor(
+        window.HTMLInputElement.prototype, 'value').set;
+      nativeSetter.call(el, val);
+      el.dispatchEvent(new Event('input', {{bubbles:true}}));
+    }}
+
+    // ── auto-resize textarea ──────────────────────────────────
+    function resize(){{
+      ta.style.height='auto';
+      ta.style.height=Math.min(ta.scrollHeight,130)+'px';
+    }}
+    ta.addEventListener('input', resize);
+
+    // ── image preview ─────────────────────────────────────────
+    function showPreview(b64, mime, name){{
+      imgB64=b64; imgMime=mime; imgName=name;
+      pimg.src='data:'+mime+';base64,'+b64;
+      pnam.textContent='📎 '+name;
+      prev.style.display='flex';
+    }}
+    function clearPreview(){{
+      imgB64=null; imgMime=null; imgName=null;
+      pimg.src=''; prev.style.display='none'; finp.value='';
+    }}
+    prm.addEventListener('click', clearPreview);
+
+    // ── file pick ─────────────────────────────────────────────
+    plus.addEventListener('click', function(e){{
+      if(e.target!==finp) finp.click();
+    }});
+    finp.addEventListener('change', function(){{
+      if(!finp.files.length) return;
+      readFile(finp.files[0]);
+    }});
+    function readFile(f){{
+      const r=new FileReader();
+      r.onload=function(ev){{
+        showPreview(ev.target.result.split(',')[1], f.type, f.name);
+      }};
+      r.readAsDataURL(f);
+    }}
+
+    // ── ctrl+v paste ──────────────────────────────────────────
+    document.addEventListener('paste', function(e){{
+      const items=(e.clipboardData||e.originalEvent.clipboardData).items;
+      for(let i=0;i<items.length;i++){{
+        if(items[i].type.indexOf('image')===0){{
+          e.preventDefault();
+          const blob=items[i].getAsFile();
+          const r=new FileReader();
+          r.onload=function(ev){{
+            showPreview(ev.target.result.split(',')[1], blob.type,
+              'paste-'+Date.now()+'.png');
+            ta.focus();
+          }};
+          r.readAsDataURL(blob);
+          return;
+        }}
+      }}
+    }});
+
+    // ── SEND ─────────────────────────────────────────────────
+    function doSend(){{
+      const txt=ta.value.trim();
+      if(!txt && !imgB64) return;
+
+      const hi = getHiddenTxtInput();
+      const himg = getHiddenImgInput();
+      const hbtn = getHiddenBtn();
+      if(!hi || !hbtn){{
+        console.warn('Somo: hidden inputs not found, retrying...');
+        setTimeout(doSend, 200);
+        return;
+      }}
+
+      // Set text
+      setNativeValue(hi, txt || ' ');
+
+      // Set image JSON
+      if(himg && imgB64){{
+        const ipkg = JSON.stringify({{b64:imgB64, mime:imgMime, name:imgName}});
+        setNativeValue(himg, ipkg);
+      }} else if(himg){{
+        setNativeValue(himg, '');
+      }}
+
+      // Click send button after small delay
+      setTimeout(function(){{
+        hbtn.click();
+        // clear our UI
+        ta.value='';
+        ta.style.height='auto';
+        clearPreview();
+      }}, 50);
+    }}
+
+    send.addEventListener('click', doSend);
+    ta.addEventListener('keydown', function(e){{
+      if(e.key==='Enter' && !e.shiftKey){{ e.preventDefault(); doSend(); }}
+    }});
+
+    // ── countdown timer ───────────────────────────────────────
+    const cdEl = document.getElementById('somo-cd-s');
+    if(cdEl){{
+      let s = parseInt(cdEl.textContent);
+      const iv = setInterval(function(){{
+        s--;
+        cdEl.textContent = s;
+        if(s<=0) clearInterval(iv);
+      }}, 1000);
+    }}
+
+    // ── focus ─────────────────────────────────────────────────
+    setTimeout(()=>ta.focus(), 300);
+  }}
+
+  if(document.readyState==='loading'){{
+    document.addEventListener('DOMContentLoaded', init);
+  }} else {{
+    init();
+  }}
+}})();
+</script>
+""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════════════════════════════
 #  PROCESS MESSAGE
