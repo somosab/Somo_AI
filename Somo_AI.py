@@ -1408,8 +1408,12 @@ html, body {
    ═══════════════════════════════════════════════════════════════ */
 /* hide streamlit's native chat input completely */
 [data-testid="stBottom"],
+[data-testid="stBottom"] > *,
 [data-testid="stChatInput"],
-[data-testid="stChatInputSuggestions"] { display: none !important; }
+[data-testid="stChatInputContainer"],
+[data-testid="stChatInputSuggestions"],
+.stChatInput,
+section[data-testid="stBottom"] { display: none !important; height: 0 !important; }
 
 /* ── CUSTOM FIXED INPUT BAR ── */
 #somo-bar {
@@ -1418,6 +1422,7 @@ html, body {
   z-index       : 9999;
   background    : linear-gradient(to top, var(--cream) 70%, transparent);
   padding       : .5rem 0 .6rem;
+  padding-bottom: max(.6rem, env(safe-area-inset-bottom));
 }
 #somo-bar-inner {
   max-width     : 820px;
@@ -1581,11 +1586,12 @@ html, body {
   .somo-by           { display: none; }
   .somo-name         { font-size: .95rem; }
   .somo-logo         { width: 34px; height: 34px; font-size: 15px; }
-  .somo-wrap         { padding: 1.5rem 1rem 8rem; }
+  .somo-wrap         { padding: 1.5rem 1rem 9rem; }
   .somo-headline     { font-size: clamp(1.8rem, 9vw, 2.6rem); }
   .somo-subtext      { font-size: .83rem; }
   .somo-cards        { grid-template-columns: repeat(2, 1fr); max-width: 100%; }
   .somo-msg-user .somo-body { max-width: 88%; }
+  .somo-msgs-wrap { padding-bottom: 9rem !important; }
   .somo-bubble-user,
   .somo-bubble-ai    { font-size: .845rem; }
   .somo-cd-wrap      { padding: .5rem 1rem 0; }
@@ -1829,6 +1835,7 @@ body {{
   bottom     : 0; left:0; right:0;
   background : linear-gradient(to top, #fdf7ee 72%, transparent);
   padding    : .4rem 0 .55rem;
+  padding-bottom: max(.55rem, env(safe-area-inset-bottom));
   z-index    : 9999;
 }}
 #somo-bar-inner {{
