@@ -926,7 +926,7 @@ html, body {
 .somo-wrap {
   max-width  : 820px;
   margin     : 0 auto;
-  padding    : 2rem 1.5rem 9rem;
+  padding    : 2rem 1.5rem 7rem;
   min-height : calc(100vh - 60px);
 }
 
@@ -1404,94 +1404,129 @@ html, body {
 /* ═══════════════════════════════════════════════════════════════
    INPUT BAR
    ═══════════════════════════════════════════════════════════════ */
-[data-testid="stBottom"] {
-  max-width  : 820px !important;
-  margin     : 0 auto !important;
-  left       : 50% !important;
-  transform  : translateX(-50%) !important;
-  width      : 100% !important;
-  padding    : 0 1.5rem !important;
-  background : linear-gradient(to top,
-               var(--cream) 65%,
-               transparent) !important;
+/* hide streamlit's native chat input completely */
+[data-testid="stBottom"],
+[data-testid="stChatInput"],
+[data-testid="stChatInputSuggestions"] { display: none !important; }
+
+/* ── CUSTOM FIXED INPUT BAR ── */
+#somo-bar {
+  position      : fixed;
+  bottom        : 0; left : 0; right : 0;
+  z-index       : 9999;
+  background    : linear-gradient(to top, var(--cream) 70%, transparent);
+  padding       : .5rem 0 .6rem;
 }
-/* ── input row wrapper (+ button + input + send) ── */
-.somo-input-row {
+#somo-bar-inner {
+  max-width     : 820px;
+  margin        : 0 auto;
+  padding       : 0 1.2rem;
   display       : flex;
-  align-items   : center;
-  gap           : 8px;
-  padding       : 0 1rem .5rem;
+  flex-direction: column;
+  gap           : .35rem;
 }
-.somo-plus-btn {
+/* image preview strip */
+#somo-img-preview {
+  display       : none;
+  align-items   : center;
+  gap           : .5rem;
+  background    : var(--card);
+  border        : 1.5px solid var(--border);
+  border-radius : 12px;
+  padding       : .4rem .7rem;
+  font-size     : .75rem;
+  color         : var(--muted);
+}
+#somo-img-preview img {
+  height        : 40px;
+  border-radius : 6px;
+  object-fit    : cover;
+}
+#somo-img-preview.visible { display: flex; }
+#somo-img-rm {
+  margin-left   : auto;
+  cursor        : pointer;
+  font-size     : 1rem;
+  color         : var(--light);
+  line-height   : 1;
+}
+#somo-img-rm:hover { color: var(--orange); }
+/* input row */
+#somo-row {
+  display       : flex;
+  align-items   : flex-end;
+  gap           : .5rem;
+}
+/* + button */
+#somo-plus {
   flex-shrink   : 0;
-  width         : 42px;
-  height        : 42px;
+  width         : 40px; height : 40px;
   border-radius : 50%;
   background    : var(--card);
   border        : 1.5px solid var(--border);
   display       : flex;
   align-items   : center;
-  justify-content: center;
+  justify-content:center;
   cursor        : pointer;
-  font-size     : 1.3rem;
+  font-size     : 1.25rem;
   color         : var(--muted);
   box-shadow    : var(--shadow-sm);
   transition    : all .15s ease;
+  user-select   : none;
+  position      : relative;
 }
-.somo-plus-btn:hover {
-  border-color  : var(--amber);
-  color         : var(--amber);
-  transform     : scale(1.08);
-}
-/* upload panel */
-.somo-upload-panel {
+#somo-plus:hover { border-color:var(--amber); color:var(--amber); transform:scale(1.08); }
+#somo-file-inp   { display:none; }
+/* textarea wrap */
+#somo-ta-wrap {
+  flex          : 1;
   background    : var(--card);
-  border        : 1.5px solid var(--border);
-  border-radius : 14px;
-  padding       : .75rem 1rem;
-  margin        : 0 1rem .4rem;
-  font-size     : .8rem;
-  color         : var(--muted);
+  border        : 2px solid var(--border);
+  border-radius : 18px;
   box-shadow    : var(--shadow-sm);
+  display       : flex;
+  align-items   : flex-end;
+  padding       : .45rem .55rem .45rem .85rem;
+  transition    : border-color .15s ease, box-shadow .15s ease;
 }
-[data-testid="stChatInput"] {
-  background    : var(--card) !important;
-  border        : 2px solid var(--border) !important;
-  border-radius : 18px !important;
-  box-shadow    : var(--shadow-sm) !important;
-  transition    : border-color var(--dur-fast) ease,
-                  box-shadow   var(--dur-fast) ease !important;
-  flex          : 1 !important;
+#somo-ta-wrap:focus-within {
+  border-color  : var(--amber);
+  box-shadow    : 0 0 0 3px rgba(245,158,11,.12), var(--shadow-sm);
 }
-[data-testid="stChatInput"]:focus-within {
-  border-color : var(--amber) !important;
-  box-shadow   : 0 0 0 3px rgba(245,158,11,.12),
-                 var(--shadow-sm) !important;
+#somo-ta {
+  flex          : 1;
+  background    : transparent;
+  border        : none;
+  outline       : none;
+  resize        : none;
+  font-family   : var(--fb);
+  font-size     : .875rem;
+  color         : var(--text);
+  line-height   : 1.45;
+  max-height    : 120px;
+  overflow-y    : auto;
+  padding       : 0;
+  scrollbar-width: none;
 }
-[data-testid="stChatInput"] textarea {
-  background  : transparent !important;
-  color       : var(--text) !important;
-  font-size   : .875rem !important;
-  font-family : var(--fb) !important;
-  border      : none !important;
-  outline     : none !important;
-  box-shadow  : none !important;
+#somo-ta::placeholder { color: var(--light); }
+/* send button */
+#somo-send {
+  flex-shrink   : 0;
+  width         : 36px; height: 36px;
+  border-radius : 11px;
+  background    : linear-gradient(135deg, var(--amber), var(--orange));
+  border        : none;
+  display       : flex;
+  align-items   : center;
+  justify-content:center;
+  cursor        : pointer;
+  box-shadow    : 0 3px 10px rgba(245,158,11,.35);
+  transition    : all .15s ease;
+  color         : #fff;
+  font-size     : 1rem;
 }
-[data-testid="stChatInput"] textarea::placeholder {
-  color : var(--light) !important;
-}
-[data-testid="stChatInput"] button {
-  background    : linear-gradient(135deg, var(--amber), var(--orange)) !important;
-  border        : none !important;
-  border-radius : 12px !important;
-  box-shadow    : 0 3px 12px rgba(245,158,11,.3) !important;
-  transition    : all var(--dur-fast) ease !important;
-}
-[data-testid="stChatInput"] button:hover {
-  transform  : scale(1.04) !important;
-  box-shadow : 0 4px 18px rgba(245,158,11,.4) !important;
-}
-[data-testid="stChatInput"] button svg { fill: #fff !important; }
+#somo-send:hover { transform:scale(1.07); box-shadow:0 4px 16px rgba(245,158,11,.45); }
+#somo-send:disabled { opacity:.45; cursor:default; transform:none; }
 
 .somo-input-footer {
   text-align     : center;
@@ -1552,7 +1587,7 @@ html, body {
   .somo-bubble-user,
   .somo-bubble-ai    { font-size: .845rem; }
   .somo-cd-wrap      { padding: .5rem 1rem 0; }
-  [data-testid="stBottom"] { padding: 0 .85rem !important; }
+  #somo-bar-inner { padding: 0 .75rem; }
 }
 @media (max-width: 380px) {
   .somo-cards { grid-template-columns: 1fr 1fr; }
@@ -1740,62 +1775,170 @@ else:
 
 st.markdown('</div>', unsafe_allow_html=True)   # close somo-wrap
 
-
 # ═══════════════════════════════════════════════════════════════════
-#  COOLDOWN TIMER
+#  COOLDOWN CHECK
 # ═══════════════════════════════════════════════════════════════════
 _rem = int(st.session_state.cooldown_end - time.time())
-if _rem > 0:
-    st.markdown(
-        '<div class="somo-cd-wrap">' +
-        '<div class="somo-cd-box">' +
-        '<span class="somo-cd-icon">⏳</span>' +
-        '<div><strong>API limiti tugadi.</strong> Iltimos kuting — ' +
-        '<span class="somo-cd-sec">' + str(_rem) + ' soniya</span></div>' +
-        '</div></div>',
-        unsafe_allow_html=True
-    )
-    st.chat_input("Iltimos kuting…", disabled=True)
+_cooldown_active = _rem > 0
+if _cooldown_active:
     time.sleep(1)
     st.rerun()
-else:
-    # ── + button + chat input row ────────────────────────────────
-    col_plus, col_inp = st.columns([0.07, 0.93])
-    with col_plus:
-        plus_label = "✕" if st.session_state.show_upload else "＋"
-        if st.button(plus_label, key="plus_btn", help="Rasm / fayl yuklash"):
-            st.session_state.show_upload = not st.session_state.show_upload
-            if not st.session_state.show_upload:
-                st.session_state.uploaded_img = None
-    with col_inp:
-        prompt = st.chat_input("Xabar yozing… (esse, she'r, rasm tahlil…)")
-    if not prompt and st.session_state.rand_trigger:
-        prompt = st.session_state.rand_trigger
-        st.session_state.rand_trigger = None
 
-    # ── file upload panel ────────────────────────────────────────
-    if st.session_state.show_upload:
-        st.markdown(
-            '<div class="somo-upload-panel">📎 Rasm yoki fayl tanlang — AI tahlil qiladi</div>',
-            unsafe_allow_html=True
-        )
-        uploaded = st.file_uploader(
-            "", type=["png","jpg","jpeg","webp","gif","pdf"],
-            key="file_up", label_visibility="collapsed"
-        )
-        if uploaded:
-            import base64 as _b64
-            _bytes = uploaded.read()
-            _b64str = _b64.b64encode(_bytes).decode()
-            st.session_state.uploaded_img = {
-                "b64": _b64str, "mime": uploaded.type, "name": uploaded.name
-            }
-            st.success(f"✅ {uploaded.name} yuklandi — endi xabar yozing!")
+# ═══════════════════════════════════════════════════════════════════
+#  CUSTOM FIXED INPUT BAR (pure HTML/JS — no st.chat_input)
+# ═══════════════════════════════════════════════════════════════════
+_cd_html = ""
+if _cooldown_active:
+    _cd_html = (
+        '<div style="text-align:center;padding:.4rem 0;font-size:.8rem;color:#b45309">' +
+        '⏳ <strong>API limiti.</strong> Iltimos kuting — ' + str(_rem) + ' soniya</div>'
+    )
 
 st.markdown(
-    '<div class="somo-input-footer">Somo AI · Usmonov Sodiq (@Somo_AI) · DeepSeek R1 + Gemini</div>',
+    '<div id="somo-bar">' +
+    '<div id="somo-bar-inner">' +
+    _cd_html +
+    '<div id="somo-img-preview">' +
+    '  <img id="somo-prev-img" src="" alt="preview">' +
+    '  <span id="somo-prev-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>' +
+    '  <span id="somo-img-rm" title="Olib tashlash">✕</span>' +
+    '</div>' +
+    '<div id="somo-row">' +
+    '  <div id="somo-plus" title="Rasm / fayl yuklash">+' +
+    '    <input type="file" id="somo-file-inp" accept="image/*,.pdf">' +
+    '  </div>' +
+    '  <div id="somo-ta-wrap">' +
+    '    <textarea id="somo-ta" rows="1" placeholder="Xabar yozing… (esse, she\'r, rasm tahlil…)"></textarea>' +
+    '    <button id="somo-send" title="Yuborish">↑</button>' +
+    '  </div>' +
+    '</div>' +
+    '<div class="somo-input-footer">Somo AI · Usmonov Sodiq (@Somo_AI) · DeepSeek R1 + Gemini</div>' +
+    '</div></div>',
     unsafe_allow_html=True
 )
+
+# ── JS: textarea auto-resize, send, paste image, file pick ──────
+st.markdown("""
+<script>
+(function(){
+  const ta   = document.getElementById('somo-ta');
+  const send = document.getElementById('somo-send');
+  const plus = document.getElementById('somo-plus');
+  const finp = document.getElementById('somo-file-inp');
+  const prev = document.getElementById('somo-img-preview');
+  const pimg = document.getElementById('somo-prev-img');
+  const pnam = document.getElementById('somo-prev-name');
+  const prm  = document.getElementById('somo-img-rm');
+
+  let imgB64 = null; let imgMime = null; let imgName = null;
+
+  // auto-resize textarea
+  function resize(){
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
+  }
+  ta.addEventListener('input', resize);
+
+  // show preview
+  function showPreview(b64, mime, name){
+    imgB64 = b64; imgMime = mime; imgName = name;
+    pimg.src = 'data:' + mime + ';base64,' + b64;
+    pnam.textContent = '📎 ' + name;
+    prev.classList.add('visible');
+  }
+  function clearPreview(){
+    imgB64 = null; imgMime = null; imgName = null;
+    pimg.src = ''; prev.classList.remove('visible');
+    finp.value = '';
+  }
+  prm.addEventListener('click', clearPreview);
+
+  // file input
+  plus.addEventListener('click', function(e){
+    if(!e.target.closest('#somo-file-inp')) finp.click();
+  });
+  finp.addEventListener('change', function(){
+    if(!finp.files.length) return;
+    const f = finp.files[0];
+    const r = new FileReader();
+    r.onload = function(ev){
+      const b64 = ev.target.result.split(',')[1];
+      showPreview(b64, f.type, f.name);
+    };
+    r.readAsDataURL(f);
+  });
+
+  // ctrl+v / paste image
+  document.addEventListener('paste', function(e){
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    for(let i=0;i<items.length;i++){
+      if(items[i].type.indexOf('image')===0){
+        e.preventDefault();
+        const blob = items[i].getAsFile();
+        const r = new FileReader();
+        r.onload = function(ev){
+          const b64 = ev.target.result.split(',')[1];
+          showPreview(b64, blob.type, 'clipboard-'+Date.now()+'.png');
+          ta.focus();
+        };
+        r.readAsDataURL(blob);
+        break;
+      }
+    }
+  });
+
+  // send via Streamlit query param trick
+  function doSend(){
+    const txt = ta.value.trim();
+    if(!txt && !imgB64) return;
+    // pack as JSON in URL param → Streamlit reads via query_params
+    const payload = JSON.stringify({
+      txt  : txt,
+      img  : imgB64  || null,
+      mime : imgMime || null,
+      name : imgName || null
+    });
+    const url = new URL(window.location.href);
+    url.searchParams.set('_somo_msg', payload);
+    window.location.href = url.toString();
+  }
+
+  send.addEventListener('click', doSend);
+  ta.addEventListener('keydown', function(e){
+    if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); doSend(); }
+  });
+
+  // focus textarea on load
+  setTimeout(()=>ta.focus(), 200);
+})();
+</script>
+""", unsafe_allow_html=True)
+
+# ── Read message from query param ───────────────────────────────
+import json as _json
+_qp    = st.query_params.to_dict()
+_raw   = _qp.get("_somo_msg", "")
+prompt = None
+
+if _raw:
+    try:
+        _pkg = _json.loads(_raw)
+        prompt = _pkg.get("txt", "").strip() or None
+        _img_b64  = _pkg.get("img")
+        _img_mime = _pkg.get("mime", "image/png")
+        _img_name = _pkg.get("name", "image.png")
+        if _img_b64:
+            st.session_state.uploaded_img = {
+                "b64": _img_b64, "mime": _img_mime, "name": _img_name
+            }
+        # clear param so it doesn't re-fire
+        st.query_params.clear()
+    except:
+        pass
+
+if not prompt and st.session_state.rand_trigger:
+    prompt = st.session_state.rand_trigger
+    st.session_state.rand_trigger = None
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1821,7 +1964,7 @@ if prompt and prompt.strip():
     mm     = MODE_META.get(mode, MODE_META["general"])
     syspmt = build_system_prompt(mode)
 
-    # ── check if image attached ──────────────────────────────────
+    # ── check if image attached (set by JS paste or file pick) ──
     _img_data = st.session_state.get("uploaded_img", None)
 
     st.session_state.active_mode = mode
