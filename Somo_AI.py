@@ -1837,67 +1837,151 @@ _cd_msg = f"""
 </div>
 """
 
-# ── inject custom bar HTML via st.markdown (renders in parent window) ──
+# ── inject custom bar via stc.html → appends to parent window ──
 _cd_active_str = "true" if _cooldown_active else "false"
 _cd_rem_str    = str(_rem) if _cooldown_active else "0"
-_dis           = "disabled" if _cooldown_active else ""
+_dis           = "true" if _cooldown_active else "false"
 _cd_show       = "show" if _cooldown_active else ""
 
-st.markdown(f"""
-<div id="somo-bar">
-  <div id="somo-bar-inner">
-    <div id="somo-cd-notice" class="{_cd_show}">
-      ⏳ <strong>API limiti.</strong> Kuting — <span id="somo-cd-s">{_cd_rem_str}</span> soniya
-    </div>
-    <div id="somo-img-preview">
-      <img id="somo-prev-img" src="" alt="">
-      <span id="somo-prev-name"></span>
-      <span id="somo-img-rm">✕</span>
-    </div>
-    <div id="somo-row">
-      <div id="somo-plus">+
-        <input type="file" id="somo-file-inp" accept="image/*,.pdf" style="display:none">
-      </div>
-      <div id="somo-ta-wrap">
-        <textarea id="somo-ta" rows="1"
-          placeholder="Xabar yozing… (esse, she'r, rasm tahlil…)"
-          {_dis}></textarea>
-        <button id="somo-send" {_dis}>↑</button>
-      </div>
-    </div>
-    <div class="somo-footer">Somo AI &middot; Usmonov Sodiq (@Somo_AI) &middot; DeepSeek R1 + Gemini</div>
-  </div>
-</div>
+_stc.html(f"""<!DOCTYPE html><html><head><style>*{{box-sizing:border-box;margin:0;padding:0}}</style></head>
+<body>
 <script>
 (function(){{
-  const ta   = document.getElementById('somo-ta');
-  const send = document.getElementById('somo-send');
-  const plus = document.getElementById('somo-plus');
-  const finp = document.getElementById('somo-file-inp');
-  const prev = document.getElementById('somo-img-preview');
-  const pimg = document.getElementById('somo-prev-img');
-  const pnam = document.getElementById('somo-prev-name');
+  var par = window.parent.document;
 
-  if(!ta) return;
+  // Remove old bar if exists
+  var old = par.getElementById('somo-bar');
+  if(old) old.remove();
 
-  let imgB64=null, imgMime=null, imgName=null;
+  // ── CSS ──
+  var st = par.createElement('style');
+  st.id = 'somo-bar-css';
+  var old_css = par.getElementById('somo-bar-css');
+  if(old_css) old_css.remove();
+  st.textContent = `
+    #somo-bar {{
+      position:fixed; bottom:0; left:0; right:0; z-index:9999;
+      background:linear-gradient(to top,#fdf7ee 72%,transparent);
+      padding:.4rem 0 max(.55rem, env(safe-area-inset-bottom));
+    }}
+    #somo-bar-inner {{
+      max-width:820px; margin:0 auto; padding:0 1.1rem;
+      display:flex; flex-direction:column; gap:.3rem;
+    }}
+    #somo-cd-notice {{
+      display:none; text-align:center; padding:.3rem;
+      font-size:.78rem; color:#b45309; font-family:sans-serif;
+    }}
+    #somo-cd-notice.show {{ display:block; }}
+    #somo-img-preview {{
+      display:none; align-items:center; gap:.5rem;
+      background:#fffef9; border:1.5px solid #e8dfd3;
+      border-radius:12px; padding:.35rem .7rem;
+      font-size:.75rem; color:#8a7968;
+    }}
+    #somo-img-preview.show {{ display:flex; }}
+    #somo-prev-img {{ height:38px;width:38px;border-radius:7px;object-fit:cover; }}
+    #somo-prev-name {{ flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis; }}
+    #somo-img-rm {{ cursor:pointer;font-size:.9rem;color:#b8a898;margin-left:auto; }}
+    #somo-img-rm:hover {{ color:#f97316; }}
+    #somo-row {{ display:flex; align-items:flex-end; gap:.45rem; }}
+    #somo-plus {{
+      flex-shrink:0; width:40px; height:40px; border-radius:50%;
+      background:#fffef9; border:1.5px solid #e8dfd3;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; font-size:1.3rem; color:#8a7968;
+      box-shadow:0 1px 4px rgba(0,0,0,.06); user-select:none;
+    }}
+    #somo-plus:hover {{ border-color:#f59e0b; color:#f59e0b; }}
+    #somo-ta-wrap {{
+      flex:1; background:#fffef9; border:2px solid #e8dfd3;
+      border-radius:18px; box-shadow:0 1px 4px rgba(0,0,0,.06);
+      display:flex; align-items:flex-end;
+      padding:.42rem .48rem .42rem .8rem;
+      transition:border-color .15s,box-shadow .15s;
+    }}
+    #somo-ta-wrap:focus-within {{
+      border-color:#f59e0b;
+      box-shadow:0 0 0 3px rgba(245,158,11,.12),0 1px 4px rgba(0,0,0,.06);
+    }}
+    #somo-ta {{
+      flex:1; background:transparent; border:none; outline:none;
+      resize:none; font-family:sans-serif; font-size:.88rem;
+      color:#3d2c1e; line-height:1.45; max-height:120px;
+      overflow-y:auto; padding:0; scrollbar-width:none;
+    }}
+    #somo-ta::placeholder {{ color:#c4b49e; }}
+    #somo-send {{
+      flex-shrink:0; width:36px; height:36px; border-radius:11px;
+      background:linear-gradient(135deg,#f59e0b,#f97316);
+      border:none; cursor:pointer; color:#fff; font-size:1.1rem;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 3px 10px rgba(245,158,11,.35);
+    }}
+    #somo-send:hover {{ transform:scale(1.08); }}
+    #somo-send:disabled {{ opacity:.4; cursor:default; transform:none; }}
+    .somo-bar-footer {{
+      text-align:center; font-size:.52rem; color:#d4c4b0;
+      padding:.2rem 0 0; letter-spacing:.3px; font-family:sans-serif;
+    }}
+  `;
+  par.head.appendChild(st);
 
-  function resize(){{
+  // ── HTML ──
+  var bar = par.createElement('div');
+  bar.id = 'somo-bar';
+  bar.innerHTML = `
+    <div id="somo-bar-inner">
+      <div id="somo-cd-notice" class="{_cd_show}">
+        ⏳ <strong>API limiti.</strong> Kuting — <span id="somo-cd-s">{_cd_rem_str}</span> soniya
+      </div>
+      <div id="somo-img-preview">
+        <img id="somo-prev-img" src="" alt="">
+        <span id="somo-prev-name"></span>
+        <span id="somo-img-rm">✕</span>
+      </div>
+      <div id="somo-row">
+        <div id="somo-plus">+<input type="file" id="somo-file-inp" accept="image/*,.pdf" style="display:none"></div>
+        <div id="somo-ta-wrap">
+          <textarea id="somo-ta" rows="1" placeholder="Xabar yozing… (esse, she\'r, nutq…)"></textarea>
+          <button id="somo-send">↑</button>
+        </div>
+      </div>
+      <div class="somo-bar-footer">Somo AI · Usmonov Sodiq (@Somo_AI) · DeepSeek R1 + Gemini</div>
+    </div>
+  `;
+  par.body.appendChild(bar);
+
+  // ── JS ──
+  var ta   = par.getElementById('somo-ta');
+  var send = par.getElementById('somo-send');
+  var plus = par.getElementById('somo-plus');
+  var finp = par.getElementById('somo-file-inp');
+  var prev = par.getElementById('somo-img-preview');
+  var pimg = par.getElementById('somo-prev-img');
+  var pnam = par.getElementById('somo-prev-name');
+
+  var disabled = {_dis};
+  if(disabled) {{ ta.disabled=true; send.disabled=true; }}
+
+  var imgB64=null, imgMime=null, imgName=null;
+
+  function resize() {{
     ta.style.height='auto';
     ta.style.height=Math.min(ta.scrollHeight,120)+'px';
   }}
   ta.addEventListener('input', resize);
 
-  plus.addEventListener('click',function(e){{
+  plus.addEventListener('click', function(e) {{
     if(e.target===finp) return;
     finp.click();
   }});
 
-  finp.addEventListener('change',function(){{
-    const f=finp.files[0]; if(!f) return;
+  finp.addEventListener('change', function() {{
+    var f=finp.files[0]; if(!f) return;
     imgName=f.name; imgMime=f.type;
-    const rd=new FileReader();
-    rd.onload=function(ev){{
+    var rd=new FileReader();
+    rd.onload=function(ev) {{
       imgB64=ev.target.result.split(',')[1];
       pimg.src=ev.target.result;
       pnam.textContent=f.name;
@@ -1906,56 +1990,46 @@ st.markdown(f"""
     rd.readAsDataURL(f);
   }});
 
-  document.getElementById('somo-img-rm').addEventListener('click',function(){{
+  par.getElementById('somo-img-rm').addEventListener('click', function() {{
     imgB64=null; imgMime=null; imgName=null;
     prev.classList.remove('show');
     pimg.src=''; pnam.textContent=''; finp.value='';
   }});
 
-  function doSend(){{
-    const txt=ta.value.trim();
+  function doSend() {{
+    var txt=ta.value.trim();
     if(!txt&&!imgB64) return;
-    const payload={{
-      type:'somo_send',
-      txt:txt||'',
-      img:imgB64||null,
-      mime:imgMime||null,
-      name:imgName||null
-    }};
-    window.postMessage(payload,'*');
+    window.parent.postMessage({{
+      type:'somo_send', txt:txt||'',
+      img:imgB64||null, mime:imgMime||null, name:imgName||null
+    }},'*');
     ta.value=''; resize();
     imgB64=null; imgMime=null; imgName=null;
     prev.classList.remove('show');
     pimg.src=''; pnam.textContent=''; finp.value='';
+    ta.focus();
   }}
 
-  send.addEventListener('click',doSend);
-  ta.addEventListener('keydown',function(e){{
+  send.addEventListener('click', doSend);
+  ta.addEventListener('keydown', function(e) {{
     if(e.key==='Enter'&&!e.shiftKey){{e.preventDefault();doSend();}}
   }});
 
   // cooldown countdown
-  const cdEl=document.getElementById('somo-cd-s');
-  if(cdEl&&parseInt(cdEl.textContent)>0){{
-    let s=parseInt(cdEl.textContent);
-    const iv=setInterval(function(){{
+  var cdEl=par.getElementById('somo-cd-s');
+  if(cdEl&&parseInt(cdEl.textContent)>0) {{
+    var s=parseInt(cdEl.textContent);
+    var iv=setInterval(function() {{
       s--; cdEl.textContent=s;
-      if(s<=0)clearInterval(iv);
+      if(s<=0) clearInterval(iv);
     }},1000);
   }}
 
-  ta.focus();
+  setTimeout(function(){{ ta.focus(); }}, 200);
 }})();
 </script>
-""", unsafe_allow_html=True)
-
-# ── small iframe just for postMessage relay (height=1) ──
-_stc.html("""<script>
-window.addEventListener('message',function(e){
-  if(!e.data||e.data.type!=='somo_send')return;
-  window.parent.postMessage(e.data,'*');
-});
-</script>""", height=1, scrolling=False)
+</body></html>
+""", height=1, scrolling=False)
 
 # ── Listen for postMessage from iframe ──────────────────────────
 st.markdown("""
