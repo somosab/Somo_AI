@@ -678,11 +678,55 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
   .cards-grid { grid-template-columns: repeat(2,1fr) !important; gap:8px !important; }
   .somo-card { padding:16px 10px !important; }
   .stat-row { grid-template-columns: repeat(2,1fr) !important; }
-  [data-testid="stSidebar"] { width: 100% !important; max-width: 280px !important; }
+
+  /* Mobilda sidebar — kichik, overlay shaklida */
+  [data-testid="stSidebar"] {
+    width: 75vw !important;
+    max-width: 260px !important;
+    min-width: 0 !important;
+    position: fixed !important;
+    top: 0 !important; left: 0 !important;
+    height: 100vh !important;
+    z-index: 9999 !important;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.6) !important;
+  }
+  /* Sidebar yopilganda main content to'liq ko'rinsin */
+  [data-testid="stSidebar"][aria-expanded="false"] {
+    transform: translateX(-100%) !important;
+    box-shadow: none !important;
+  }
+  [data-testid="stSidebar"][aria-expanded="true"] {
+    transform: translateX(0) !important;
+  }
+  /* Main content sidebar yopilganda to'liq kenglik */
+  [data-testid="stMain"],
+  section[data-testid="stMainBlockContainer"] {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+  /* Sidebar toggle tugmasi mobilda ko'rinsin */
+  [data-testid="collapsedControl"] {
+    display: flex !important;
+    position: fixed !important;
+    top: 8px !important;
+    left: 8px !important;
+    z-index: 10000 !important;
+    background: rgba(15,15,34,0.95) !important;
+    border: 1px solid rgba(100,108,255,0.35) !important;
+    border-radius: 10px !important;
+    width: 38px !important;
+    height: 38px !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
 }
 @media(max-width:480px) {
   .somo-hero h1 { font-size:20px !important; }
   .cards-grid { grid-template-columns:repeat(2,1fr) !important; gap:6px !important; }
+  [data-testid="stSidebar"] {
+    width: 85vw !important;
+    max-width: 280px !important;
+  }
 }
 /* ── GLOBAL DARK OVERRIDE ── */
 .stApp, .stApp > div, [data-testid="stAppViewContainer"],
