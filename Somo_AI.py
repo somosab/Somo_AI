@@ -1380,40 +1380,38 @@ elif st.session_state.page == "chat":
             sys_base = styles_map.get(st.session_state.ai_style, styles_map["Aqlli yordamchi"])
 
             if intent in ("excel","word","html","csv","code"):
-                GENERATORS = {
-                    "excel": (gen_excel,"📊 Excel fayl","xlsx",  st.session_state.excel_provider),
-                    "word":  (gen_word, "📝 Word hujjat","docx", st.session_state.word_provider),
-                    "code":  (gen_code, "💻 Python kodi","py",   st.session_state.code_provider),
-                    "html":  (gen_html, "🌐 HTML sahifa","html", st.session_state.html_provider),
-                    "csv":   (gen_csv,  "📋 CSV dataset","csv",  st.session_state.csv_provider),
+                # ── Fayl so'raldi → Generatorga yo'naltirish tugmasi ──
+                PAGE_MAP = {
+                    "excel": ("excel", "📊", "Excel Generator", "Formulalar, ranglar, professional jadvallar"),
+                    "word":  ("word",  "📝", "Word Generator",  "Rezyume, shartnoma, biznes reja"),
+                    "code":  ("code",  "💻", "Kod Generator",   "Python bot, API, ML modeli"),
+                    "html":  ("html",  "🌐", "HTML Generator",  "Portfolio, landing page, dashboard"),
+                    "csv":   ("csv",   "📋", "CSV Generator",   "Dataset, ma'lumotlar to'plami"),
                 }
-                gfunc, glabel, gext, gen_prov = GENERATORS[intent]
-                em = {"excel":"📊","word":"📝","code":"💻","html":"🌐","csv":"📋"}[intent]
-                st.markdown(f'<div class="somo-notify">{em} {glabel} yaratilmoqda... {api_status_html(gen_prov)}</div>', unsafe_allow_html=True)
-                prog = st.progress(0)
-                for i in range(0,70,14): time.sleep(0.25); prog.progress(i)
-                try:
-                    fb, fn = gfunc(prompt, provider=gen_prov)
-                    prog.progress(100); time.sleep(0.15); prog.empty()
-                    if fb and isinstance(fb, bytes):
-                        resp_txt = f"✅ **{glabel}** tayyor! — `{fn}`"
-                        file_info = {"bytes":fb,"name":fn,"label":glabel}
-                        st.markdown(f'<div style="margin-bottom:8px;">{api_status_html(gen_prov)}</div>', unsafe_allow_html=True)
-                        st.markdown(resp_txt)
-                        download_block(fb, fn, glabel)
-                        st.session_state.files_cnt += 1
-                        st.session_state.last_files.append(fn)
-                        db_log("Somo AI","Assistant",resp_txt,intent,gen_prov)
-                        # bytes ni session_state da saqlamaymiz — faqat meta
-                        msg_d = {"role":"assistant","content":resp_txt,
-                                 "file_data":{"name":fn,"label":glabel,"bytes":None},
-                                 "provider":gen_prov}
-                    else:
-                        prog.empty(); resp_txt = f"❌ Xatolik: {fn}"; st.error(resp_txt)
-                        msg_d = {"role":"assistant","content":resp_txt,"provider":gen_prov}
-                except Exception as e:
-                    prog.empty(); resp_txt = f"❌ {e}"; st.error(resp_txt)
-                    msg_d = {"role":"assistant","content":resp_txt,"provider":cur_prov}
+                _page, _em, _title, _desc = PAGE_MAP[intent]
+
+                # Promptni sahifaga uzatib, u yerda foydalanish uchun saqlaymiz
+                st.session_state[f"{_page}_prompt"] = prompt
+
+                resp_txt = f"{_em} **{_title}** da yaxshiroq natija olasiz!"
+                st.markdown(f"""
+                <div style="background:linear-gradient(135deg,rgba(100,108,255,0.1),rgba(167,139,250,0.06));
+                            border:1px solid rgba(100,108,255,0.25);border-radius:16px;padding:18px 20px;margin:8px 0;">
+                    <div style="font-size:28px;margin-bottom:8px;">{_em}</div>
+                    <div style="font-size:15px;font-weight:700;color:#f0f0ff;margin-bottom:4px;font-family:'Syne',sans-serif;">{_title}</div>
+                    <div style="font-size:12.5px;color:#a0a0c0;margin-bottom:14px;">{_desc}</div>
+                    <div style="font-size:12px;color:#818cf8;background:rgba(100,108,255,0.08);
+                                border-radius:8px;padding:8px 12px;margin-bottom:14px;font-family:'JetBrains Mono',monospace;">
+                        📝 So'rovingiz saqlandi: "{prompt[:60]}{'...' if len(prompt)>60 else ''}"
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                if st.button(f"{_em}  {_title} ga o'tish →", key=f"goto_{_page}_{len(st.session_state.messages)}", type="primary", use_container_width=True):
+                    st.session_state.page = _page
+                    st.rerun()
+
+                msg_d = {"role":"assistant","content":resp_txt,"provider":"none"}
                 st.session_state.messages.append(msg_d)
             else:
                 msgs_for_ai = [{"role":"system","content":sys_base}]
