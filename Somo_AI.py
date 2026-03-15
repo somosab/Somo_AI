@@ -385,8 +385,10 @@ button[data-testid="baseButton-headerNoPadding"] {
 .stChatMessage pre  { background: #04040f !important; border: 1px solid var(--border) !important; border-radius: var(--r-sm) !important; }
 
 /* Chat input */
-[data-testid="stChatInputContainer"] > div {
-  background: rgba(13,13,30,0.8) !important;
+[data-testid="stChatInputContainer"],
+[data-testid="stChatInputContainer"] > div,
+[data-testid="stChatInputContainer"] > div > div {
+  background: rgba(13,13,30,0.9) !important;
   border: 1px solid var(--border) !important;
   border-radius: 14px !important;
 }
@@ -403,11 +405,72 @@ button[data-testid="baseButton-headerNoPadding"] {
   border: none !important; border-radius: var(--r-sm) !important;
   color: white !important;
 }
-div[data-testid="stBottom"] {
-  background: rgba(5,5,15,0.95) !important;
+div[data-testid="stBottom"],
+div[data-testid="stBottom"] > div,
+div[data-testid="stBottom"] > div > div {
+  background: rgba(5,5,15,0.97) !important;
   backdrop-filter: blur(20px) !important;
   border-top: 1px solid var(--border) !important;
-  padding: 12px 16px !important;
+}
+div[data-testid="stBottom"] { padding: 8px 16px 12px !important; }
+
+/* File uploader — dark */
+[data-testid="stFileUploader"] {
+  background: rgba(100,108,255,0.04) !important;
+  border: 2px dashed rgba(100,108,255,0.2) !important;
+  border-radius: var(--r) !important; padding: 16px !important;
+}
+[data-testid="stFileUploader"] > div,
+[data-testid="stFileUploader"] section,
+[data-testid="stFileUploader"] section > div {
+  background: transparent !important;
+}
+[data-testid="stFileUploader"] * { color: var(--text-2) !important; }
+[data-testid="stFileUploader"] small { color: var(--text-3) !important; }
+
+/* File uploader drag area */
+[data-testid="stFileUploaderDropzone"] {
+  background: rgba(13,13,30,0.6) !important;
+  border: 1px dashed rgba(100,108,255,0.25) !important;
+  border-radius: 12px !important;
+}
+[data-testid="stFileUploaderDropzone"]:hover {
+  background: rgba(100,108,255,0.06) !important;
+  border-color: rgba(100,108,255,0.4) !important;
+}
+[data-testid="stFileUploaderDropzone"] * { color: var(--text-2) !important; }
+[data-testid="stFileUploaderDropzone"] button {
+  background: rgba(100,108,255,0.1) !important;
+  color: #818cf8 !important;
+  border: 1px solid rgba(100,108,255,0.25) !important;
+  border-radius: 8px !important;
+}
+
+/* Expander dark */
+.streamlit-expanderHeader,
+[data-testid="stExpander"] summary {
+  background: rgba(15,15,34,0.8) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r-sm) !important;
+  color: var(--text-1) !important;
+}
+[data-testid="stExpander"] details {
+  background: transparent !important;
+  border: none !important;
+}
+[data-testid="stExpander"] details > div {
+  background: rgba(13,13,30,0.5) !important;
+  border: 1px solid var(--border) !important;
+  border-top: none !important;
+  border-radius: 0 0 var(--r-sm) var(--r-sm) !important;
+}
+
+/* All white backgrounds in main area — force dark */
+.main *, [data-testid="stMainBlockContainer"] * {
+  scrollbar-color: #2a2a55 transparent;
+}
+div[class*="element-container"] > div[data-testid="stVerticalBlock"] {
+  background: transparent !important;
 }
 
 /* ══════════════════
@@ -620,6 +683,40 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
 @media(max-width:480px) {
   .somo-hero h1 { font-size:20px !important; }
   .cards-grid { grid-template-columns:repeat(2,1fr) !important; gap:6px !important; }
+}
+/* ── GLOBAL DARK OVERRIDE ── */
+.stApp, .stApp > div, [data-testid="stAppViewContainer"],
+[data-testid="stMain"], [data-testid="stMainBlockContainer"] {
+  background: var(--bg-0) !important;
+}
+.stChatFloatingInputContainer, div[class*="stChatInputContainer"],
+[data-testid="stBottom"], [data-testid="stBottom"] > * {
+  background: rgba(5,5,15,0.97) !important;
+}
+[data-testid="stFileUploaderDropzone"],
+[data-testid="stFileUploaderDropzone"] > div {
+  background: rgba(9,9,22,0.8) !important;
+  border-color: rgba(100,108,255,0.2) !important;
+}
+[data-testid="stFileUploaderDropzone"] * { color: var(--text-2) !important; }
+[data-testid="stFileUploaderDropzone"] button {
+  background: rgba(100,108,255,0.1) !important;
+  color: #818cf8 !important;
+  border: 1px solid rgba(100,108,255,0.25) !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+}
+[data-testid="stExpander"] {
+  background: transparent !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r-sm) !important;
+}
+[data-testid="stExpander"] summary {
+  background: rgba(15,15,34,0.8) !important;
+  color: var(--text-1) !important;
+}
+[data-testid="stExpander"] [data-testid="stVerticalBlock"] {
+  background: rgba(9,9,22,0.6) !important;
 }
 </style>
 """, unsafe_allow_html=True)
