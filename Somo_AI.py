@@ -175,9 +175,23 @@ header[data-testid="stHeader"],
   border-right: 1px solid rgba(100,108,255,0.15) !important;
   width: 260px !important;
   min-width: 260px !important;
+  display: block !important;
+  visibility: visible !important;
+  transform: none !important;
 }
 [data-testid="stSidebar"] > div:first-child {
   padding: 0 !important;
+}
+/* Sidebar toggle arrow — always visible */
+[data-testid="collapsedControl"] {
+  display: flex !important;
+  visibility: visible !important;
+  color: #818cf8 !important;
+  background: rgba(100,108,255,0.1) !important;
+  border-radius: 8px !important;
+}
+button[data-testid="baseButton-headerNoPadding"] {
+  color: #818cf8 !important;
 }
 /* Sidebar butonlar */
 [data-testid="stSidebar"] .stButton > button {
@@ -1159,7 +1173,7 @@ for k,v in DEFS.items():
 # SIDEBAR
 # ══════════════════════════════════════════════════════════════════
 with st.sidebar:
-    uname = st.session_state.username
+    uname = st.session_state.get("username", "User")
     avail_providers = [p for p in ["groq","gemini","cohere","mistral"] if p in ai_clients]
 
     st.markdown(f"""
