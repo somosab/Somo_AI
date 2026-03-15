@@ -1,2138 +1,2296 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║                                                                  ║
+# ║           SOMO AI  —  Ijodiy AI Yordamchi  v4.0                 ║
+# ║                                                                  ║
+# ║  Muallif  : Usmonov Sodiq  (@Somo_AI)                           ║
+# ║  Model    : Groq Llama-3.3-70B  +  Google Gemini 2.0 Flash      ║
+# ║  Stack    : Python · Streamlit · Dual-API Streaming             ║
+# ║  Versiya  : 4.0  |  2026                                        ║
+# ║                                                                  ║
+# ╠══════════════════════════════════════════════════════════════════╣
+# ║  YANGILIKLAR v4.0:                                               ║
+# ║  ✦ Butunlay qayta yozilgan mukammal dizayn                       ║
+# ║  ✦ Gradient mesh background + glass morphism header             ║
+# ║  ✦ Premium card hover effektlari                                 ║
+# ║  ✦ Pulse animatsiyali online dot                                 ║
+# ║  ✦ Smooth scroll + message fade-in                              ║
+# ║  ✦ Welcome screen: animated badge + gradient headline           ║
+# ║  ✦ Copy button + so'z soni + sessiya statistikasi               ║
+# ║  ✦ Random ilhom (20 mavzu) + chatni tozalash                    ║
+# ║  ✦ Greeting: tong/kun/kech/tun                                  ║
+# ║  ✦ API switch xabari, 90s cooldown timer                        ║
+# ║  ✦ KaTeX matematik rendering                                     ║
+# ║  ✦ Mobil moslashuvchan (320px gacha)                            ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
 import streamlit as st
-import pandas as pd
-import gspread
-import json
-import time
-import io
-import re
-import os
-import random
-from datetime import datetime
-from oauth2client.service_account import ServiceAccountCredentials
+import google.generativeai as genai
+from groq import Groq
+import time, re, random
 
-# ── Optional imports ──────────────────────────────────────────────
-try:
-    import mammoth
-    HAS_MAMMOTH = True
-except: HAS_MAMMOTH = False
+# ═══════════════════════════════════════════════════════════════════
+#  CONFIGURATION
+# ═══════════════════════════════════════════════════════════════════
+GROQ_MODEL     = "deepseek-r1-distill-llama-70b"
+GEMINI_MODEL   = "gemini-2.0-flash"
+GROQ_MAX_TOK   = 8192
+GEMINI_MAX_TOK = 4096
+GROQ_TEMP      = 0.92                               # ijodiyroq
+GEMINI_TEMP    = 0.95
+COOLDOWN_LONG  = 90
 
-try:
-    from pypdf import PdfReader
-    HAS_PDF = True
-except: HAS_PDF = False
+# ═══════════════════════════════════════════════════════════════════
+#  MARKDOWN → HTML  (LaTeX-safe, full-featured)
+# ═══════════════════════════════════════════════════════════════════
+def md_to_html(text: str) -> str:
+    """Convert markdown to rich HTML, preserving LaTeX blocks."""
+    saved = {}
 
-try:
-    from openpyxl import Workbook
-    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-    from openpyxl.utils import get_column_letter
-    HAS_OPENPYXL = True
-except: HAS_OPENPYXL = False
+    def save(m):
+        k = f"__BLK{len(saved)}__"
+        saved[k] = m.group(0)
+        return k
 
-try:
-    from docx import Document
-    from docx.shared import Pt, RGBColor, Cm
-    from docx.enum.text import WD_ALIGN_PARAGRAPH
-    from docx.oxml.ns import qn
-    from docx.oxml import OxmlElement
-    HAS_DOCX = True
-except: HAS_DOCX = False
+    # protect LaTeX
+    text = re.sub(r'\$\$.+?\$\$', save, text, flags=re.DOTALL)
+    text = re.sub(r'\$.+?\$', save, text)
 
-try:
-    from groq import Groq
-    HAS_GROQ = True
-except: HAS_GROQ = False
+    # fenced code blocks
+    def fmt_code(m):
+        lang = m.group(1) or ""
+        body = m.group(2).strip()
+        return f'<pre><code class="lang-{lang}">{body}</code></pre>'
+    text = re.sub(r'```(\w*)\n?(.*?)```', fmt_code, text, flags=re.DOTALL)
 
-try:
-    import google.generativeai as genai
-    HAS_GEMINI = True
-except: HAS_GEMINI = False
+    # inline code
+    text = re.sub(r'`([^`\n]+)`', r'<code>\1</code>', text)
 
-try:
-    import cohere
-    HAS_COHERE = True
-except: HAS_COHERE = False
+    # headers
+    text = re.sub(r'^#### (.+)$', r'<h4>\1</h4>', text, flags=re.MULTILINE)
+    text = re.sub(r'^### (.+)$',  r'<h3>\1</h3>', text, flags=re.MULTILINE)
+    text = re.sub(r'^## (.+)$',   r'<h2>\1</h2>', text, flags=re.MULTILINE)
+    text = re.sub(r'^# (.+)$',    r'<h1>\1</h1>', text, flags=re.MULTILINE)
 
-try:
-    from mistralai import Mistral
-    HAS_MISTRAL = True
-except: HAS_MISTRAL = False
+    # bold + italic + strikethrough
+    text = re.sub(r'\*\*\*(.+?)\*\*\*', r'<strong><em>\1</em></strong>', text)
+    text = re.sub(r'\*\*(.+?)\*\*',       r'<strong>\1</strong>', text)
+    text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<em>\1</em>', text)
+    text = re.sub(r'~~(.+?)~~', r'<del>\1</del>', text)
 
-try:
-    import bcrypt
-    HAS_BCRYPT = True
-except:
-    import hashlib
-    HAS_BCRYPT = False
+    # horizontal rule
+    text = re.sub(r'^---+$', r'<hr class="md-hr">', text, flags=re.MULTILINE)
 
-try:
-    from streamlit_cookies_manager import EncryptedCookieManager
-    HAS_COOKIES = True
-except: HAS_COOKIES = False
+    # blockquote
+    text = re.sub(r'^> (.+)$', r'<blockquote>\1</blockquote>', text, flags=re.MULTILINE)
 
-# ══════════════════════════════════════════════════════════════════
-# PAGE CONFIG
-# ══════════════════════════════════════════════════════════════════
-st.set_page_config(
-    page_title="Somo AI | Ultra Pro Max",
-    page_icon="🌌",
-    layout="wide",
-    initial_sidebar_state="auto"
-)
+    # unordered list
+    def ul_block(m):
+        items = re.findall(r'^[\-\*•] (.+)$', m.group(0), re.MULTILINE)
+        return '<ul>' + ''.join(f'<li>{i}</li>' for i in items) + '</ul>'
+    text = re.sub(r'(^[\-\*•] .+\n?)+', ul_block, text, flags=re.MULTILINE)
 
-# ══════════════════════════════════════════════════════════════════
-# FIX 1: COOKIE — parol faqat secrets dan (default yo'q)
-# ══════════════════════════════════════════════════════════════════
-if HAS_COOKIES:
-    _cookie_pw = st.secrets.get("COOKIE_PASSWORD", "")
-    if not _cookie_pw:
-        # Fallback — lekin foydalanuvchiga ogohlantirish
-        _cookie_pw = "somo_fallback_2026"
-    cookies = EncryptedCookieManager(password=_cookie_pw)
-    if not cookies.ready():
-        st.stop()
-else:
-    cookies = {}
+    # ordered list
+    def ol_block(m):
+        items = re.findall(r'^\d+\. (.+)$', m.group(0), re.MULTILINE)
+        return '<ol>' + ''.join(f'<li>{i}</li>' for i in items) + '</ol>'
+    text = re.sub(r'(\d+\. .+\n?)+', ol_block, text, flags=re.MULTILINE)
 
-# ══════════════════════════════════════════════════════════════════
-# FIX 2: PAROL HASH — bcrypt (SHA256 fallback)
-# ══════════════════════════════════════════════════════════════════
-def hash_pw(pw: str) -> str:
-    """Hash parol — bcrypt (mavjud bo'lsa), aks holda SHA-256."""
-    if HAS_BCRYPT:
-        return bcrypt.hashpw(pw.encode(), bcrypt.gensalt(12)).decode()
-    import hashlib
-    return hashlib.sha256(pw.encode()).hexdigest()
+    # table
+    def tbl(m):
+        rows = [r.strip() for r in m.group(0).strip().split('\n') if '|' in r]
+        if not rows: return m.group(0)
+        out = '<table>'
+        for i, row in enumerate(rows):
+            if re.match(r'^\|[\-\| :]+\|$', row): continue
+            tag = 'th' if i == 0 else 'td'
+            cells = [c.strip() for c in row.strip('|').split('|')]
+            out += '<tr>' + ''.join(f'<{tag}>{c}</{tag}>' for c in cells) + '</tr>'
+        return out + '</table>'
+    text = re.sub(r'(\|.+\|\n?)+', tbl, text)
 
-def check_pw(pw: str, stored: str) -> bool:
-    """Parolni tekshirish — bcrypt va eski SHA-256 formatlarini qo'llab-quvvatlaydi."""
-    if HAS_BCRYPT:
-        try:
-            # Agar stored bcrypt format bo'lsa
-            if stored.startswith("$2b$") or stored.startswith("$2a$"):
-                return bcrypt.checkpw(pw.encode(), stored.encode())
-        except: pass
-    # Eski SHA-256 format
-    import hashlib
-    return hashlib.sha256(pw.encode()).hexdigest() == stored
+    # paragraphs
+    paras = text.split('\n\n')
+    result = []
+    for p in paras:
+        p = p.strip()
+        if not p: continue
+        if re.match(r'^<(h[1-4]|ul|ol|pre|blockquote|table|hr)', p):
+            result.append(p)
+        else:
+            p = p.replace('\n', '<br>')
+            result.append(f'<p>{p}</p>')
+    text = '\n'.join(result)
 
-# ══════════════════════════════════════════════════════════════════
-# MASTER CSS
-# ══════════════════════════════════════════════════════════════════
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap');
+    # restore LaTeX
+    for k, v in saved.items():
+        text = text.replace(k, v)
+    return text
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-:root {
-  --bg-0:       #05050f;
-  --bg-1:       #090916;
-  --bg-2:       #0d0d1e;
-  --bg-3:       #111128;
-  --bg-card:    #0f0f22;
-  --border:     rgba(100,108,255,0.18);
-  --border-h:   rgba(100,108,255,0.55);
-  --accent:     #646cff;
-  --accent-2:   #a78bfa;
-  --accent-3:   #f472b6;
-  --accent-4:   #34d399;
-  --accent-5:   #38bdf8;
-  --text-1:     #f0f0ff;
-  --text-2:     #a0a0c0;
-  --text-3:     #50506a;
-  --font-head:  'Syne', sans-serif;
-  --font-body:  'Inter', sans-serif;
-  --font-mono:  'JetBrains Mono', monospace;
-  --radius:     16px;
-  --radius-sm:  10px;
-  --shadow:     0 4px 40px rgba(0,0,0,0.6);
-  --glow:       0 0 40px rgba(100,108,255,0.25);
-  --glow-sm:    0 0 20px rgba(100,108,255,0.15);
+# ═══════════════════════════════════════════════════════════════════
+#  HELPERS
+# ═══════════════════════════════════════════════════════════════════
+def get_time() -> str:
+    return time.strftime("%H:%M")
+
+def get_date() -> str:
+    return time.strftime("%d.%m.%Y")
+
+def wc(text: str) -> int:
+    """So'zlar sonini qaytaradi."""
+    return len(text.split())
+
+def is_rate_err(e: str) -> bool:
+    """API rate limit xatosini aniqlaydi."""
+    keys = ["429", "rate_limit", "quota", "rate limit",
+            "Resource exhausted", "RESOURCE_EXHAUSTED",
+            "too many requests", "Too Many Requests"]
+    return any(k.lower() in e.lower() for k in keys)
+
+def get_greeting() -> tuple:
+    """Kun vaqtiga mos salomlashuvni qaytaradi."""
+    h = int(time.strftime("%H"))
+    if 5  <= h < 12: return "🌅", "Xayrli tong"
+    if 12 <= h < 17: return "☀️",  "Xayrli kun"
+    if 17 <= h < 21: return "🌆", "Xayrli kech"
+    return "🌙", "Tungi ilhom"
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  CONSTANTS
+# ═══════════════════════════════════════════════════════════════════
+RAND_PROMPTS = [
+    "Yolg'izlik haqida she'r yoz",
+    "Vaqt haqida qisqa hikoya yoz",
+    "Orzular haqida nutq yoz",
+    "Kitob o'qishning foydasi haqida esse yoz",
+    "Toshkent haqida she'r yoz",
+    "Musiqa va hayot haqida esse",
+    "Ona haqida she'r yoz",
+    "Yoshlikda qilish kerak 10 ta g'oya ber",
+    "Do'stlik haqida qisqa hikoya",
+    "Ilm haqida she'r yoz",
+    "Baxt nima — esse yoz",
+    "Kelajak haqida nutq yoz",
+    "Sevgi va vaqt haqida hikoya",
+    "O'zbekiston tarixi haqida esse",
+    "Tabiat va inson haqida she'r",
+    "Bolalikning ta'mi haqida she'r",
+    "Muvaffaqiyat sirlari — esse",
+    "Quyosh botishi haqida she'r",
+    "Hayot go'zalligi haqida esse",
+    "Kitob va hayot haqida hikoya",
+]
+
+MODE_META = {
+    "esse"     : {"icon": "✍️",  "label": "Esse",           "color": "#f59e0b"},
+    "story"    : {"icon": "📖",  "label": "Hikoya / She'r", "color": "#ec4899"},
+    "speech"   : {"icon": "🎤",  "label": "Nutq",            "color": "#8b5cf6"},
+    "ideas"    : {"icon": "💡",  "label": "G'oyalar",        "color": "#0ea5e9"},
+    "translate": {"icon": "🌍",  "label": "Tarjima",         "color": "#10b981"},
+    "summary"  : {"icon": "📋",  "label": "Xulosa",          "color": "#6366f1"},
+    "general"  : {"icon": "✦",   "label": "Somo AI",         "color": "#f59e0b"},
 }
 
-html, body, .stApp {
-    font-family: var(--font-body) !important;
-    background: var(--bg-0) !important;
-    color: var(--text-1) !important;
-}
-.stApp { background: var(--bg-0) !important; }
 
-.stApp::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.35;
-}
-
-[data-testid="stSidebarNav"],
-.st-emotion-cache-1vt458p, .st-emotion-cache-k77z8z,
-header[data-testid="stHeader"],
-#MainMenu, footer { display: none !important; }
-
-[data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #07071a 0%, #09091e 100%) !important;
-    border-right: 1px solid var(--border) !important;
-    width: 268px !important;
-}
-[data-testid="stSidebar"] > div { padding: 0 !important; }
-[data-testid="stSidebar"] section { background: transparent !important; }
-[data-testid="stSidebar"] .stVerticalBlock { gap: 0 !important; }
-[data-testid="stSidebar"] * { color: var(--text-2) !important; }
-[data-testid="stSidebar"] .stMarkdown p,
-[data-testid="stSidebar"] .stMarkdown span {
-    color: var(--text-3) !important;
-    font-size: 10px !important;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    font-weight: 700;
-    font-family: var(--font-mono) !important;
-}
-
-div[data-testid="stSidebar"] button {
-    background: transparent !important;
-    color: var(--text-2) !important;
-    border: none !important;
-    border-radius: var(--radius-sm) !important;
-    font-weight: 500 !important;
-    font-size: 13.5px !important;
-    font-family: var(--font-body) !important;
-    transition: all 0.2s ease !important;
-    width: 100% !important;
-    padding: 10px 14px !important;
-    margin: 1px 0 !important;
-    text-align: left !important;
-    letter-spacing: 0.1px !important;
-}
-div[data-testid="stSidebar"] button:hover {
-    background: rgba(100,108,255,0.1) !important;
-    color: #c7d2fe !important;
-}
-div[data-testid="stSidebar"] button[kind="primary"],
-div[data-testid="stSidebar"] button[kind="primaryFormSubmit"] {
-    background: linear-gradient(135deg,rgba(100,108,255,0.2),rgba(167,139,250,0.15)) !important;
-    color: #c7d2fe !important;
-    font-weight: 700 !important;
-    border: 1px solid var(--border) !important;
-}
-
-.main .block-container { padding: 0 !important; max-width: 100% !important; }
-section[data-testid="stMainBlockContainer"] {
-    padding: 24px 32px 80px !important;
-    padding-top: 68px !important;
-    background: var(--bg-0) !important;
-}
-
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: var(--bg-1); }
-::-webkit-scrollbar-thumb { background: #2a2a55; border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: var(--accent); }
-
-.somo-hero {
-    position: relative;
-    overflow: hidden;
-    border-radius: 24px;
-    padding: 56px 52px;
-    margin-bottom: 36px;
-    background: var(--bg-1);
-    border: 1px solid var(--border);
-    box-shadow: var(--shadow), var(--glow);
-}
-.somo-hero::before {
-    content: '';
-    position: absolute;
-    top: -80px; left: -80px;
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(100,108,255,0.14) 0%, transparent 60%);
-    animation: pulse-orb 10s ease-in-out infinite;
-}
-.somo-hero::after {
-    content: '';
-    position: absolute;
-    bottom: -60px; right: -40px;
-    width: 450px; height: 450px;
-    background: radial-gradient(circle, rgba(244,114,182,0.10) 0%, transparent 60%);
-    animation: pulse-orb 10s ease-in-out 5s infinite;
-}
-@keyframes pulse-orb {
-    0%,100% { transform: scale(1) translate(0,0); }
-    50% { transform: scale(1.2) translate(-20px,-20px); }
-}
-.somo-hero .grid-dots {
-    position: absolute;
-    inset: 0;
-    background-image: radial-gradient(circle, rgba(100,108,255,0.2) 1px, transparent 1px);
-    background-size: 32px 32px;
-    opacity: 0.3;
-}
-.somo-hero-content { position: relative; z-index: 2; }
-.somo-hero h1 {
-    font-family: var(--font-head) !important;
-    font-size: clamp(30px,4vw,52px);
-    font-weight: 800;
-    line-height: 1.1;
-    letter-spacing: -1.5px;
-    color: var(--text-1);
-    margin-bottom: 14px;
-}
-.somo-hero .subtitle {
-    font-size: 16px;
-    color: var(--text-2);
-    max-width: 540px;
-    line-height: 1.65;
-    margin-bottom: 26px;
-}
-.hero-badges { display: flex; flex-wrap: wrap; gap: 8px; }
-.hero-badge {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.12);
-    color: rgba(255,255,255,0.7);
-    padding: 5px 14px;
-    border-radius: 99px;
-    font-size: 12px;
-    font-weight: 500;
-    font-family: var(--font-mono);
-    backdrop-filter: blur(8px);
-    letter-spacing: 0.3px;
-}
-
-.api-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 99px;
-    font-size: 11px;
-    font-weight: 600;
-    font-family: var(--font-mono);
-    letter-spacing: 0.5px;
-    border: 1px solid;
-}
-.api-groq    { background: rgba(255,166,0,0.1);    color:#fbbf24; border-color:rgba(251,191,36,0.3);  }
-.api-gemini  { background: rgba(52,211,153,0.1);   color:#34d399; border-color:rgba(52,211,153,0.3);  }
-.api-cohere  { background: rgba(56,189,248,0.1);   color:#38bdf8; border-color:rgba(56,189,248,0.3);  }
-.api-mistral { background: rgba(244,114,182,0.1);  color:#f472b6; border-color:rgba(244,114,182,0.3); }
-.api-dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    display: inline-block;
-    animation: blink-dot 2s ease-in-out infinite;
-}
-@keyframes blink-dot { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
-.api-groq .api-dot    { background:#fbbf24; }
-.api-gemini .api-dot  { background:#34d399; }
-.api-cohere .api-dot  { background:#38bdf8; }
-.api-mistral .api-dot { background:#f472b6; }
-
-.g-text {
-    background: linear-gradient(90deg, #818cf8, #c084fc, #f472b6, #818cf8);
-    background-size: 300%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    animation: g-shift 5s ease infinite;
-}
-@keyframes g-shift { 0%,100%{background-position:0%} 50%{background-position:100%} }
-
-.typewriter-cursor {
-    display: inline-block;
-    width: 2px;
-    height: 1.1em;
-    background: var(--accent);
-    margin-left: 2px;
-    vertical-align: text-bottom;
-    animation: cursor-blink 0.85s step-end infinite;
-    border-radius: 1px;
-    box-shadow: 0 0 8px var(--accent);
-}
-@keyframes cursor-blink { 0%,100%{opacity:1} 50%{opacity:0} }
-
-.section-label {
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 2.5px;
-    text-transform: uppercase;
-    color: var(--accent);
-    margin-bottom: 8px;
-    font-family: var(--font-mono);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.section-label::before {
-    content: '';
-    display: inline-block;
-    width: 16px;
-    height: 1px;
-    background: var(--accent);
-}
-.section-title {
-    font-size: 26px;
-    font-weight: 800;
-    color: var(--text-1);
-    margin-bottom: 6px;
-    letter-spacing: -0.5px;
-    font-family: var(--font-head);
-}
-.section-desc { font-size: 14px; color: var(--text-3); margin-bottom: 28px; }
-
-.cards-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px,1fr));
-    gap: 14px;
-    margin-bottom: 32px;
-}
-.somo-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 28px 18px;
-    text-align: center;
-    transition: all 0.3s cubic-bezier(.4,0,.2,1);
-    cursor: pointer;
-    position: relative;
-    overflow: hidden;
-}
-.somo-card::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: var(--radius);
-    opacity: 0;
-    transition: opacity 0.3s;
-    background: radial-gradient(circle at 50% 0%, rgba(100,108,255,0.1), transparent 70%);
-}
-.somo-card:hover { transform: translateY(-6px); border-color: var(--border-h); box-shadow: 0 20px 50px rgba(0,0,0,0.5), var(--glow-sm); }
-.somo-card:hover::after { opacity: 1; }
-.card-icon { font-size: 34px; margin-bottom: 14px; display: block; }
-.card-title { font-size: 14px; font-weight: 700; color: var(--text-1); margin-bottom: 6px; font-family: var(--font-head); }
-.card-desc { font-size: 11.5px; color: var(--text-3); line-height: 1.55; }
-.card-v1:hover { border-color: rgba(100,108,255,0.6); box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(100,108,255,0.2); }
-.card-v2:hover { border-color: rgba(52,211,153,0.6);  box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(52,211,153,0.2); }
-.card-v3:hover { border-color: rgba(251,191,36,0.6);  box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(251,191,36,0.15); }
-.card-v4:hover { border-color: rgba(244,114,182,0.6); box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(244,114,182,0.2); }
-.card-v5:hover { border-color: rgba(56,189,248,0.6);  box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(56,189,248,0.2); }
-.card-v6:hover { border-color: rgba(167,139,250,0.6); box-shadow: 0 20px 50px rgba(0,0,0,0.5), 0 0 30px rgba(167,139,250,0.2); }
-
-.stat-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px,1fr)); gap: 12px; margin-bottom: 28px; }
-.stat-box {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 18px 14px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-    transition: border-color 0.3s;
-}
-.stat-box:hover { border-color: var(--border-h); }
-.stat-val { font-size: 28px; font-weight: 900; color: var(--text-1); line-height: 1; font-family: var(--font-head); }
-.stat-lbl { font-size: 10px; font-weight: 700; color: var(--text-3); margin-top: 6px; text-transform: uppercase; letter-spacing: 1.5px; font-family: var(--font-mono); }
-.stat-icon { font-size: 20px; margin-bottom: 8px; }
-
-.somo-divider {
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--border), transparent);
-    margin: 28px 0;
-    border: none;
-}
-
-.stChatMessage {
-    background: var(--bg-card) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: var(--radius) !important;
-    padding: 16px 20px !important;
-    margin: 8px 0 !important;
-    color: var(--text-1) !important;
-}
-.stChatMessage p, .stChatMessage span, .stChatMessage li { color: var(--text-1) !important; }
-.stChatMessage code { background: rgba(100,108,255,0.12) !important; color: #a5b4fc !important; border-radius: 4px; padding: 1px 6px; font-family: var(--font-mono) !important; }
-.stChatMessage pre { background: #04040f !important; border: 1px solid var(--border) !important; border-radius: var(--radius-sm) !important; }
-
-[data-testid="stChatInput"] textarea,
-[data-testid="stChatInputContainer"] textarea {
-    background: var(--bg-2) !important;
-    color: var(--text-1) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: 14px !important;
-    font-family: var(--font-body) !important;
-    font-size: 14px !important;
-    caret-color: var(--accent) !important;
-}
-[data-testid="stChatInput"] textarea:focus,
-[data-testid="stChatInputContainer"] textarea:focus {
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 0 3px rgba(100,108,255,0.12) !important;
-}
-[data-testid="stChatInput"] button,
-[data-testid="stChatInputContainer"] button {
-    background: linear-gradient(135deg,#4f46e5,#7c3aed) !important;
-    border: none !important;
-    border-radius: var(--radius-sm) !important;
-    color: white !important;
-    box-shadow: 0 0 15px rgba(100,108,255,0.4) !important;
-}
-div[data-testid="stBottom"],
-div[data-testid="stBottom"] > div,
-div[data-testid="stBottom"] > div > div {
-    background: var(--bg-0) !important;
-    border-top: 1px solid var(--border) !important;
-}
-
-.stTextInput input, .stTextArea textarea {
-    background: var(--bg-2) !important;
-    color: var(--text-1) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: var(--radius-sm) !important;
-    font-family: var(--font-body) !important;
-    font-size: 14px !important;
-}
-.stTextInput input:focus, .stTextArea textarea:focus {
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 0 3px rgba(100,108,255,0.1) !important;
-}
-.stTextInput label, .stTextArea label, .stSelectbox label,
-.stSlider label, [data-testid="stWidgetLabel"] {
-    color: var(--text-2) !important;
-    font-size: 13px !important;
-    font-weight: 600 !important;
-    font-family: var(--font-mono) !important;
-}
-
-div[data-baseweb="select"] > div {
-    background: var(--bg-2) !important;
-    border-color: var(--border) !important;
-    border-radius: var(--radius-sm) !important;
-    color: var(--text-1) !important;
-}
-div[data-baseweb="popover"] {
-    background: var(--bg-3) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: var(--radius) !important;
-}
-div[data-baseweb="popover"] li { color: var(--text-1) !important; }
-div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !important; }
-
-[data-testid="stFileUploader"] {
-    background: rgba(100,108,255,0.04) !important;
-    border: 2px dashed var(--border) !important;
-    border-radius: var(--radius) !important;
-    padding: 20px !important;
-}
-[data-testid="stFileUploader"]:hover { border-color: var(--border-h) !important; }
-[data-testid="stFileUploader"] * { color: var(--text-2) !important; }
-
-.stButton > button {
-    background: rgba(100,108,255,0.07) !important;
-    color: #a5b4fc !important;
-    border: 1px solid var(--border) !important;
-    border-radius: var(--radius-sm) !important;
-    font-family: var(--font-body) !important;
-    font-weight: 600 !important;
-    font-size: 13.5px !important;
-    padding: 10px 20px !important;
-    transition: all 0.22s ease !important;
-}
-.stButton > button:hover {
-    background: rgba(100,108,255,0.15) !important;
-    border-color: var(--border-h) !important;
-    color: #c7d2fe !important;
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 20px rgba(100,108,255,0.2) !important;
-}
-.stButton > button[kind="primary"] {
-    background: linear-gradient(135deg,#4f46e5,#7c3aed) !important;
-    color: white !important;
-    border-color: transparent !important;
-    box-shadow: 0 0 25px rgba(100,108,255,0.3) !important;
-}
-.stButton > button[kind="primary"]:hover {
-    background: linear-gradient(135deg,#4338ca,#6d28d9) !important;
-    box-shadow: 0 6px 30px rgba(100,108,255,0.5) !important;
-    transform: translateY(-3px) !important;
-}
-
-.stDownloadButton > button {
-    background: linear-gradient(135deg,#059669,#10b981) !important;
-    color: white !important;
-    border: none !important;
-    border-radius: var(--radius-sm) !important;
-    font-weight: 700 !important;
-    box-shadow: 0 4px 20px rgba(16,185,129,0.3) !important;
-}
-.stDownloadButton > button:hover { transform: translateY(-3px) !important; }
-
-.stTabs [data-baseweb="tab-list"] { background: transparent !important; gap: 4px !important; border-bottom: 1px solid var(--border) !important; }
-.stTabs [data-baseweb="tab"] { background: transparent !important; color: var(--text-3) !important; font-family: var(--font-body) !important; font-weight: 600 !important; }
-.stTabs [aria-selected="true"][data-baseweb="tab"] { color: #818cf8 !important; border-bottom: 2px solid var(--accent) !important; }
-.stTabs [data-baseweb="tab-panel"] { background: transparent !important; padding: 20px 0 !important; }
-
-.streamlit-expanderHeader { background: var(--bg-card) !important; border: 1px solid var(--border) !important; color: var(--text-1) !important; font-weight: 600 !important; }
-.streamlit-expanderContent { background: var(--bg-2) !important; border: 1px solid var(--border) !important; }
-
-[data-testid="stForm"] { background: linear-gradient(145deg,var(--bg-card),var(--bg-2)) !important; border: 1px solid var(--border) !important; border-radius: var(--radius) !important; padding: 28px !important; }
-[data-testid="stFormSubmitButton"] > button { background: linear-gradient(135deg,#4f46e5,#7c3aed) !important; color: white !important; border: none !important; }
-
-[data-testid="stMetric"] { background: var(--bg-card) !important; border: 1px solid var(--border) !important; border-radius: var(--radius) !important; padding: 18px !important; }
-[data-testid="stMetricValue"] { color: var(--text-1) !important; font-weight: 900 !important; }
-
-.stSuccess > div { background: rgba(52,211,153,0.08) !important; border: 1px solid rgba(52,211,153,0.25) !important; color: #6ee7b7 !important; border-radius: var(--radius-sm) !important; }
-.stWarning > div { background: rgba(251,191,36,0.08) !important; border: 1px solid rgba(251,191,36,0.25) !important; color: #fcd34d !important; border-radius: var(--radius-sm) !important; }
-.stError > div   { background: rgba(244,114,182,0.08) !important; border: 1px solid rgba(244,114,182,0.25) !important; color: #fca5a5 !important; border-radius: var(--radius-sm) !important; }
-.stInfo > div    { background: rgba(100,108,255,0.08) !important; border: 1px solid rgba(100,108,255,0.25) !important; color: #a5b4fc !important; border-radius: var(--radius-sm) !important; }
-
-.stProgress > div > div > div > div { background: linear-gradient(90deg,#4f46e5,#7c3aed,#f472b6) !important; border-radius: 99px !important; }
-.stProgress > div > div { background: rgba(100,108,255,0.1) !important; border-radius: 99px !important; }
-
-.somo-notify {
-    background: linear-gradient(135deg, rgba(100,108,255,0.12), rgba(167,139,250,0.08));
-    border: 1px solid rgba(100,108,255,0.3);
-    border-radius: var(--radius);
-    padding: 14px 20px;
-    color: #c7d2fe;
-    font-weight: 600;
-    font-size: 14px;
-    margin: 12px 0;
-    animation: slide-in 0.35s ease;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.somo-success {
-    background: linear-gradient(135deg, rgba(52,211,153,0.12), rgba(5,150,105,0.08));
-    border: 1px solid rgba(52,211,153,0.3);
-    color: #6ee7b7;
-    border-radius: var(--radius);
-    padding: 14px 20px;
-    font-weight: 600;
-    font-size: 14px;
-    margin: 12px 0;
-    animation: slide-in 0.35s ease;
-}
-@keyframes slide-in { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
-
-.tmpl-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 22px;
-    margin-bottom: 14px;
-    transition: all 0.25s;
-    position: relative;
-    overflow: hidden;
-}
-.tmpl-card::before { content:''; position:absolute; top:0; left:0; width:3px; height:100%; background:linear-gradient(180deg,var(--accent),var(--accent-2)); border-radius:3px 0 0 3px; }
-.tmpl-card:hover { border-color: var(--border-h); transform: translateX(4px); }
-.tmpl-tag { display:inline-block; padding:3px 12px; border-radius:99px; font-size:10px; font-weight:700; letter-spacing:1px; margin-bottom:10px; font-family:var(--font-mono); }
-.tag-excel  { background:rgba(52,211,153,0.12); color:#34d399; border:1px solid rgba(52,211,153,0.25); }
-.tag-word   { background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); }
-.tag-code   { background:rgba(251,191,36,0.12); color:#fbbf24; border:1px solid rgba(251,191,36,0.25); }
-.tag-html   { background:rgba(244,114,182,0.12); color:#f472b6; border:1px solid rgba(244,114,182,0.25); }
-.tmpl-title { font-size:15px; font-weight:700; color:var(--text-1); margin-bottom:5px; font-family:var(--font-head); }
-.tmpl-desc  { font-size:12px; color:var(--text-3); line-height:1.55; }
-
-.hist-msg { border-left:3px solid; border-radius:0 var(--radius) var(--radius) 0; padding:12px 16px; margin:8px 0; font-size:13px; }
-.hist-user { background:rgba(100,108,255,0.07); border-color:var(--accent); }
-.hist-ai   { background:rgba(52,211,153,0.06); border-color:var(--accent-4); }
-.hist-role { font-size:10px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:5px; font-family:var(--font-mono); }
-.hist-user .hist-role { color:#818cf8; }
-.hist-ai   .hist-role { color:#34d399; }
-.hist-body { color:var(--text-2); line-height:1.55; }
-
-.profile-stat { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:22px 18px; text-align:center; }
-.p-stat-icon { font-size:26px; margin-bottom:10px; }
-.p-stat-val  { font-size:30px; font-weight:900; color:var(--text-1); font-family:var(--font-head); }
-.p-stat-lbl  { font-size:10px; color:var(--text-3); text-transform:uppercase; letter-spacing:1.5px; font-weight:700; margin-top:4px; font-family:var(--font-mono); }
-
-.somo-footer { text-align:center; padding:48px 20px 24px; border-top:1px solid var(--border); margin-top:64px; }
-.somo-footer .f-title { font-size:20px; font-weight:800; color:var(--text-1); margin-bottom:10px; font-family:var(--font-head); }
-.somo-footer .f-sub   { font-size:13px; color:var(--text-3); margin-bottom:5px; }
-.somo-footer .f-copy  { font-size:11px; color:#2a2a40; margin-top:18px; font-family:var(--font-mono); }
-
-/* FIX 3: Sidebar toggle — CSS only, JS via components */
-[data-testid="collapsedControl"] { display: none !important; }
-#somo-sidebar-toggle {
-    position: fixed; top: 14px; left: 14px; z-index: 9999;
-    width: 42px; height: 42px; border-radius: 12px;
-    background: linear-gradient(135deg, #0f0f22, #14142a);
-    border: 1px solid rgba(100,108,255,0.35);
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 0 15px rgba(100,108,255,0.15);
-    transition: all 0.25s; user-select: none;
-}
-#somo-sidebar-toggle:hover { border-color: rgba(100,108,255,0.7); transform: scale(1.05); }
-.toggle-icon { display:flex; flex-direction:column; gap:4.5px; width:18px; }
-.toggle-icon span { display:block; height:2px; background:#818cf8; border-radius:2px; transition:all 0.3s; }
-.toggle-icon span:nth-child(1) { width:18px; }
-.toggle-icon span:nth-child(2) { width:12px; }
-.toggle-icon span:nth-child(3) { width:16px; }
-
-/* Mobile bottom nav */
-#somo-bottom-nav {
-    display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 8888;
-    background: linear-gradient(180deg, rgba(9,9,30,0.95), rgba(7,7,26,0.98));
-    backdrop-filter: blur(20px); border-top: 1px solid rgba(100,108,255,0.2);
-    padding: 8px 4px 12px;
-}
-.bnav-items { display:flex; justify-content:space-around; align-items:center; max-width:480px; margin:0 auto; }
-.bnav-item { display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 8px; border-radius:10px; cursor:pointer; flex:1; max-width:64px; }
-.bnav-icon { font-size:20px; line-height:1; }
-.bnav-label { font-size:9px; color:#3d4060; font-weight:600; font-family:'Inter',sans-serif; }
-.bnav-item.bnav-active .bnav-label { color:#818cf8; }
-.bnav-item.bnav-active { background:rgba(100,108,255,0.12); }
-
-@media(max-width: 768px) {
-    section[data-testid="stMainBlockContainer"] { padding: 56px 12px 110px !important; }
-    .somo-hero { padding: 28px 18px !important; border-radius: 18px !important; }
-    .somo-hero h1 { font-size: clamp(22px,6vw,32px) !important; }
-    .cards-grid { grid-template-columns: repeat(2,1fr) !important; gap: 10px !important; }
-    .somo-card { padding: 18px 12px !important; }
-    .stat-row { grid-template-columns: repeat(2,1fr) !important; }
-    #somo-bottom-nav { display: block !important; }
-}
-@media(max-width: 480px) {
-    section[data-testid="stMainBlockContainer"] { padding: 52px 10px 105px !important; }
-    .somo-hero h1 { font-size: 20px !important; }
-    .cards-grid { grid-template-columns: repeat(2,1fr) !important; gap: 8px !important; }
-}
-</style>
-""", unsafe_allow_html=True)
-
-# ══════════════════════════════════════════════════════════════════
-# FIX 3: SIDEBAR TOGGLE — components.v1 (JS ishlaydi)
-# ══════════════════════════════════════════════════════════════════
-import streamlit.components.v1 as _stc
-_stc.html("""
-<div id="somo-sidebar-toggle" title="Sidebar ochish/yopish">
-    <div class="toggle-icon" style="display:flex;flex-direction:column;gap:4.5px;width:18px;">
-        <span style="display:block;height:2px;background:#818cf8;border-radius:2px;width:18px;"></span>
-        <span style="display:block;height:2px;background:#818cf8;border-radius:2px;width:12px;"></span>
-        <span style="display:block;height:2px;background:#818cf8;border-radius:2px;width:16px;"></span>
-    </div>
-</div>
-<style>
-#somo-sidebar-toggle {
-    position:fixed; top:14px; left:14px; z-index:9999;
-    width:42px; height:42px; border-radius:12px;
-    background:linear-gradient(135deg,#0f0f22,#14142a);
-    border:1px solid rgba(100,108,255,0.35); cursor:pointer;
-    display:flex; align-items:center; justify-content:center;
-    box-shadow:0 4px 20px rgba(0,0,0,0.5),0 0 15px rgba(100,108,255,0.15);
-}
-</style>
-<script>
-(function(){
-    var btn = document.getElementById('somo-sidebar-toggle');
-    if(!btn) return;
-    btn.addEventListener('click', function(){
-        try {
-            var doc = window.parent.document;
-            var sb = doc.querySelector('[data-testid="stSidebar"]');
-            if(!sb) return;
-            var isOpen = sb.getBoundingClientRect().left >= -10;
-            sb.style.transition = 'transform 0.3s cubic-bezier(.4,0,.2,1)';
-            sb.style.transform = isOpen ? 'translateX(-110%)' : 'translateX(0)';
-        } catch(e){}
-    });
-    function checkSize(){
-        var w = window.innerWidth;
-        if(btn){
-            btn.style.top  = w<=768?'8px':'14px';
-            btn.style.left = w<=768?'8px':'14px';
-            btn.style.width = btn.style.height = w<=768?'38px':'42px';
-        }
-    }
-    checkSize();
-    window.addEventListener('resize', checkSize);
-})();
-</script>
-""", height=0, scrolling=False)
-
-# Mobile bottom nav (separate component so JS executes)
-_stc.html("""
-<div id="somo-bottom-nav" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:8888;
-     background:linear-gradient(180deg,rgba(9,9,30,0.95),rgba(7,7,26,0.98));
-     backdrop-filter:blur(20px);border-top:1px solid rgba(100,108,255,0.2);padding:8px 4px 12px;">
-  <div style="display:flex;justify-content:space-around;max-width:480px;margin:0 auto;">
-    <div class="bn" data-page="home"   style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;border-radius:10px;cursor:pointer;flex:1;max-width:64px;"><div style="font-size:20px;">🏠</div><div style="font-size:9px;color:#818cf8;font-weight:700;">Bosh</div></div>
-    <div class="bn" data-page="chat"   style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;border-radius:10px;cursor:pointer;flex:1;max-width:64px;"><div style="font-size:20px;">💬</div><div style="font-size:9px;color:#3d4060;font-weight:700;">Chat</div></div>
-    <div class="bn" data-page="excel"  style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;border-radius:10px;cursor:pointer;flex:1;max-width:64px;"><div style="font-size:20px;">📊</div><div style="font-size:9px;color:#3d4060;font-weight:700;">Excel</div></div>
-    <div class="bn" data-page="word"   style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;border-radius:10px;cursor:pointer;flex:1;max-width:64px;"><div style="font-size:20px;">📝</div><div style="font-size:9px;color:#3d4060;font-weight:700;">Word</div></div>
-    <div class="bn" data-page="code"   style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;border-radius:10px;cursor:pointer;flex:1;max-width:64px;"><div style="font-size:20px;">💻</div><div style="font-size:9px;color:#3d4060;font-weight:700;">Kod</div></div>
-    <div class="bn" data-page="more"   style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;border-radius:10px;cursor:pointer;flex:1;max-width:64px;"><div style="font-size:20px;">☰</div><div style="font-size:9px;color:#3d4060;font-weight:700;">Ko'proq</div></div>
-  </div>
-</div>
-<script>
-(function(){
-    // Show on mobile
-    if(window.innerWidth <= 768){
-        var nav = document.getElementById('somo-bottom-nav');
-        if(nav) nav.style.display = 'block';
-    }
-    // Click handler — find sidebar button and click it
-    var icons = {'home':'🏠','chat':'💬','excel':'📊','word':'📝','code':'💻','html':'🌐','csv':'📋'};
-    document.querySelectorAll('.bn').forEach(function(el){
-        el.addEventListener('click', function(){
-            var page = el.getAttribute('data-page');
-            var icon = icons[page];
-            if(!icon) return;
-            try {
-                var doc = window.parent.document;
-                var btns = doc.querySelectorAll('[data-testid="stSidebar"] button');
-                for(var i=0;i<btns.length;i++){
-                    if(btns[i].textContent.trim().charAt(0)===icon){
-                        btns[i].click(); break;
-                    }
-                }
-            } catch(e){}
-        });
-    });
-})();
-</script>
-""", height=0, scrolling=False)
-
-# ══════════════════════════════════════════════════════════════════
-# API CONFIGS
-# ══════════════════════════════════════════════════════════════════
-API_CONFIGS = {
-    "groq":    {"name":"Groq",    "icon":"⚡", "model":"llama-3.3-70b-versatile",  "color":"#fbbf24", "badge_class":"api-groq",    "desc":"Llama 3.3 · 70B · Ultra Fast"},
-    "gemini":  {"name":"Gemini",  "icon":"✨", "model":"gemini-2.0-flash",          "color":"#34d399", "badge_class":"api-gemini",  "desc":"Google Gemini 2.0 Flash"},
-    "cohere":  {"name":"Cohere",  "icon":"🔮", "model":"command-r-plus",            "color":"#38bdf8", "badge_class":"api-cohere",  "desc":"Command R+ · Reasoning"},
-    "mistral": {"name":"Mistral", "icon":"🌪", "model":"mistral-large-latest",      "color":"#f472b6", "badge_class":"api-mistral", "desc":"Mistral Large · EU Based"},
-}
-
-def _get_secret(key):
-    try:
-        val = st.secrets.get(key, "")
-        if val: return str(val).strip()
-    except: pass
-    try:
-        for section in ["keys","api","api_keys","APIs","secrets"]:
-            try:
-                val = st.secrets[section][key]
-                if val: return str(val).strip()
-            except: pass
-    except: pass
-    return str(os.environ.get(key,"")).strip()
-
-@st.cache_resource
-def init_clients():
-    clients = {}
-    if HAS_GROQ:
-        try:
-            key = _get_secret("GROQ_API_KEY")
-            if key: clients["groq"] = Groq(api_key=key)
-        except: pass
-    if HAS_GEMINI:
-        for model_name in ["gemini-2.0-flash","gemini-1.5-flash","gemini-pro"]:
-            try:
-                key = _get_secret("GEMINI_API_KEY")
-                if key:
-                    genai.configure(api_key=key)
-                    clients["gemini"] = genai.GenerativeModel(model_name)
-                    break
-            except Exception as e:
-                if "not found" in str(e).lower() or "404" in str(e): continue
-                break
-    if HAS_COHERE:
-        try:
-            key = _get_secret("COHERE_API_KEY")
-            if key: clients["cohere"] = cohere.Client(api_key=key)
-        except: pass
-    if HAS_MISTRAL:
-        try:
-            key = _get_secret("MISTRAL_API_KEY")
-            if key: clients["mistral"] = Mistral(api_key=key)
-        except: pass
-    return clients
-
-ai_clients = init_clients()
-
-# ══════════════════════════════════════════════════════════════════
-# AI CALL FUNCTIONS
-# ══════════════════════════════════════════════════════════════════
-def call_ai(messages, temperature=0.6, max_tokens=3000, provider="groq"):
-    providers_order = [provider] + [p for p in ["groq","gemini","cohere","mistral"] if p != provider]
-    for prov in providers_order:
-        if prov not in ai_clients: continue
-        try:
-            if prov == "groq":
-                resp = ai_clients["groq"].chat.completions.create(
-                    messages=messages, model=API_CONFIGS["groq"]["model"],
-                    temperature=min(temperature,1.0), max_tokens=max_tokens)
-                return resp.choices[0].message.content, "groq"
-            elif prov == "gemini":
-                sys_msg = next((m["content"] for m in messages if m["role"]=="system"), "")
-                user_msgs = [m for m in messages if m["role"] != "system"]
-                chat_hist = [{"role":"user" if m["role"]=="user" else "model","parts":[m["content"]]} for m in user_msgs[:-1]]
-                last_msg = user_msgs[-1]["content"] if user_msgs else ""
-                if sys_msg: last_msg = f"[System: {sys_msg}]\n\n{last_msg}"
-                chat = ai_clients["gemini"].start_chat(history=chat_hist)
-                return chat.send_message(last_msg).text, "gemini"
-            elif prov == "cohere":
-                sys_msg = next((m["content"] for m in messages if m["role"]=="system"), "")
-                user_msgs = [m for m in messages if m["role"] != "system"]
-                chat_hist = [{"role":"USER" if m["role"]=="user" else "CHATBOT","message":m["content"]} for m in user_msgs[:-1]]
-                last_msg = user_msgs[-1]["content"] if user_msgs else ""
-                resp = ai_clients["cohere"].chat(model=API_CONFIGS["cohere"]["model"],
-                    message=last_msg, chat_history=chat_hist,
-                    preamble=sys_msg if sys_msg else None,
-                    temperature=min(temperature,1.0), max_tokens=max_tokens)
-                return resp.text, "cohere"
-            elif prov == "mistral":
-                resp = ai_clients["mistral"].chat.complete(model=API_CONFIGS["mistral"]["model"],
-                    messages=messages, temperature=min(temperature,1.0), max_tokens=max_tokens)
-                return resp.choices[0].message.content, "mistral"
-        except: continue
-    return "❌ Hech bir AI xizmati mavjud emas.", "none"
-
-def call_ai_stream(messages, temperature=0.6, max_tokens=3000, provider="groq"):
-    """FIX 6: time.sleep olib tashlandi — stream tezligi oshdi."""
-    providers_order = [provider] + [p for p in ["groq","gemini","cohere","mistral"] if p != provider]
-    for prov in providers_order:
-        if prov not in ai_clients: continue
-        try:
-            if prov == "groq":
-                stream = ai_clients["groq"].chat.completions.create(
-                    messages=messages, model=API_CONFIGS["groq"]["model"],
-                    temperature=min(temperature,1.0), max_tokens=max_tokens, stream=True)
-                for chunk in stream:
-                    if chunk.choices[0].delta.content:
-                        yield chunk.choices[0].delta.content, "groq"
-                return
-            elif prov == "gemini":
-                sys_msg = next((m["content"] for m in messages if m["role"]=="system"), "")
-                user_msgs = [m for m in messages if m["role"] != "system"]
-                chat_hist = [{"role":"user" if m["role"]=="user" else "model","parts":[m["content"]]} for m in user_msgs[:-1]]
-                last_msg = user_msgs[-1]["content"] if user_msgs else ""
-                if sys_msg: last_msg = f"[System: {sys_msg}]\n\n{last_msg}"
-                chat = ai_clients["gemini"].start_chat(history=chat_hist)
-                for chunk in chat.send_message(last_msg, stream=True):
-                    if chunk.text: yield chunk.text, "gemini"
-                return
-            elif prov == "cohere":
-                sys_msg = next((m["content"] for m in messages if m["role"]=="system"), "")
-                user_msgs = [m for m in messages if m["role"] != "system"]
-                chat_hist = [{"role":"USER" if m["role"]=="user" else "CHATBOT","message":m["content"]} for m in user_msgs[:-1]]
-                last_msg = user_msgs[-1]["content"] if user_msgs else ""
-                for event in ai_clients["cohere"].chat_stream(model=API_CONFIGS["cohere"]["model"],
-                        message=last_msg, chat_history=chat_hist,
-                        preamble=sys_msg if sys_msg else None,
-                        temperature=min(temperature,1.0), max_tokens=max_tokens):
-                    if hasattr(event,'text') and event.text: yield event.text, "cohere"
-                return
-            elif prov == "mistral":
-                for chunk in ai_clients["mistral"].chat.stream(model=API_CONFIGS["mistral"]["model"],
-                        messages=messages, temperature=min(temperature,1.0), max_tokens=max_tokens):
-                    delta = chunk.data.choices[0].delta.content
-                    if delta: yield delta, "mistral"
-                return
-        except: continue
-    yield "❌ Xatolik yuz berdi.", "none"
-
-# ══════════════════════════════════════════════════════════════════
-# FIX 2: DB — caching & rate limit protection
-# ══════════════════════════════════════════════════════════════════
-@st.cache_resource
-def get_connections():
-    try:
-        scope = ["https://spreadsheets.google.com/feeds","https://www.googleapis.com/auth/drive"]
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
-        gc = gspread.authorize(creds)
-        ss = gc.open("Somo_Users")
-        user_sheet = ss.sheet1
-        try: chat_sheet = ss.worksheet("ChatHistory")
-        except:
-            chat_sheet = ss.add_worksheet("ChatHistory",5000,6)
-            chat_sheet.append_row(["Timestamp","Username","Role","Message","Intent","Provider"])
-        try: fb_sheet = ss.worksheet("Letters")
-        except:
-            fb_sheet = ss.add_worksheet("Letters",1000,8)
-            fb_sheet.append_row(["Timestamp","Username","Rating","Category","Message","Email","Status","Files"])
-        return user_sheet, chat_sheet, fb_sheet
-    except: return None, None, None
-
-user_db, chat_db, fb_db = get_connections()
-
-# FIX 2: Foydalanuvchilarni cache qilish (Google Sheets ga har so'rovda murojaat qilmaslik)
-@st.cache_data(ttl=120)  # 2 daqiqa cache
-def get_all_users():
-    if user_db:
-        try: return user_db.get_all_records()
-        except: return []
-    return []
-
-def process_doc(file):
-    try:
-        if file.type == "application/pdf" and HAS_PDF:
-            reader = PdfReader(file)
-            return "\n".join(p.extract_text() or "" for p in reader.pages)
-        elif "wordprocessingml" in file.type and HAS_MAMMOTH:
-            return mammoth.extract_raw_text(file).value
-    except Exception as e:
-        st.warning(f"⚠️ {e}")
-    return ""
-
-# FIX 7: db_log — rate limit himoyasi (oxirgi log vaqtini tekshiradi)
-_last_log_time = 0
-def db_log(user, role, content, intent="chat", provider="groq"):
-    global _last_log_time
-    now = time.time()
-    # Har 3 soniyada bir marta log qilish (Google Sheets limit himoyasi)
-    if now - _last_log_time < 3:
-        return
-    _last_log_time = now
-    if chat_db:
-        try:
-            chat_db.append_row([
-                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                user, role, content[:400], intent, provider
-            ])
-        except: pass
-
-# ══════════════════════════════════════════════════════════════════
-# INTENT DETECTION
-# ══════════════════════════════════════════════════════════════════
-def detect_intent(text):
+# ═══════════════════════════════════════════════════════════════════
+#  MODE DETECTION
+# ═══════════════════════════════════════════════════════════════════
+def detect_mode(text: str) -> str:
+    """
+    Foydalanuvchi xabaridagi kalit so'zlar asosida AI rejimini
+    avtomatik aniqlaydi.
+    """
     t = text.lower()
-    if any(k in t for k in ["excel","xlsx","jadval","byudjet","budget","spreadsheet","finance","moliya","ombor","inventory","hisobot","salary","ish haqi","sotish","savdo","xarajat","daromad","oylik reja","jadval tuz","grafik","formula"]):
-        return "excel"
-    if any(k in t for k in ["word","docx","hujjat","rezyume","resume","cv","shartnoma","contract","ariza","maktub","letter","kurs ishi","referat","essay","diplom","biznes reja","business plan"]):
-        return "word"
-    if any(k in t for k in ["html","website","veb sahifa","landing page","web page"]):
-        return "html"
-    if any(k in t for k in ["csv","comma separated","dataset"]):
-        return "csv"
-    if any(k in t for k in ["python kodi","kod yoz","dastur yaz","script yoz","bot yaz","write code","function yoz"]):
-        return "code"
-    return "chat"
+    if re.search(r"tarjima|translate|inglizcha|ruscha|перевод|перевести|to english|to uzbek", t):
+        return "translate"
+    if re.search(r"hikoy|poem|story|ertak|roman|ballad|masal|lirik|ruboiy|sonet|she.r|qo.shiq", t):
+        return "story"
+    if re.search(r"nutq|taqdimot|speech|presentation|minbar|chiqish", t):
+        return "speech"
+    if re.search(r"g.oya|fikr|brainstorm|ideas|taklif|startup|biznes|loyiha|ixtiro", t):
+        return "ideas"
+    if re.search(r"xulosa|tahlil|summary|analyze|summarize|qisqacha|explain|tushuntir", t):
+        return "summary"
+    if re.search(r"esse|referat|maqola|essay|kurs ishi|write about", t):
+        return "esse"
+    return "general"
 
-MIME = {
-    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "py":   "text/x-python",
-    "html": "text/html",
-    "csv":  "text/csv"
-}
 
-# ══════════════════════════════════════════════════════════════════
-# FILE GENERATORS
-# ══════════════════════════════════════════════════════════════════
-def gen_excel(prompt, temp=0.15, provider="groq"):
-    if not HAS_OPENPYXL: return None, "openpyxl o'rnatilmagan"
-    sys_p = """Sen Excel fayl strukturasi uchun JSON qaytaruvchi ekspertsan.
-FAQAT quyidagi JSON formatini qaytar:
-{"title":"Fayl nomi","sheets":[{"name":"Varaq","headers":["H1","H2"],"header_color":"4F46E5","rows":[["v1","v2"]],"col_widths":[25,15],"row_height":20}]}
-Kamida 15-20 satr. Excel formulalar: SUM, AVERAGE, IF. FAQAT JSON."""
-    raw, _ = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}], temperature=temp, max_tokens=4000, provider=provider)
-    raw = re.sub(r'```json|```','',raw).strip()
-    m = re.search(r'\{.*\}',raw,re.DOTALL)
-    if not m: return None, "JSON topilmadi"
-    try: data = json.loads(m.group())
-    except:
-        try: data = json.loads(raw)
-        except Exception as e: return None, f"JSON: {e}"
-    wb = Workbook(); wb.remove(wb.active)
-    PALETTES = [("4F46E5","EEF2FF"),("059669","ECFDF5"),("D97706","FFFBEB"),("DC2626","FEF2F2"),("0891B2","ECFEFF"),("7C3AED","F5F3FF")]
-    for si,sh in enumerate(data.get("sheets",[])):
-        ws = wb.create_sheet(title=sh.get("name","Sheet")[:31])
-        headers = sh.get("headers",[]); hcolor = sh.get("header_color",PALETTES[si%len(PALETTES)][0])
-        _,rcolor = PALETTES[si%len(PALETTES)]; rows = sh.get("rows",[]); widths = sh.get("col_widths",[]); rh = sh.get("row_height",20)
-        if headers:
-            end_col = max(len(headers),1)
-            ws.merge_cells(start_row=1,start_column=1,end_row=1,end_column=end_col)
-            tc = ws.cell(row=1,column=1,value=sh.get("name","Hisobot"))
-            tc.font = Font(name="Calibri",bold=True,size=13,color="FFFFFF")
-            tc.fill = PatternFill("solid",fgColor=hcolor)
-            tc.alignment = Alignment(horizontal="center",vertical="center")
-            ws.row_dimensions[1].height = 30
-            th = Side(style="medium",color="FFFFFF")
-            for ci,h in enumerate(headers,1):
-                c = ws.cell(row=2,column=ci,value=h)
-                c.font = Font(name="Calibri",bold=True,size=11,color="FFFFFF")
-                c.fill = PatternFill("solid",fgColor=hcolor)
-                c.alignment = Alignment(horizontal="center",vertical="center",wrap_text=True)
-                c.border = Border(left=th,right=th,top=th,bottom=th)
-            ws.row_dimensions[2].height = 24
-        td = Side(style="thin",color="D1D5DB")
-        for ri,row in enumerate(rows,3):
-            bg = "FFFFFF" if ri%2 else rcolor
-            for ci,val in enumerate(row,1):
-                c = ws.cell(row=ri,column=ci)
-                if isinstance(val,str) and val.startswith("="): c.value = val
-                else:
-                    try:
-                        if isinstance(val,str) and re.match(r'^-?\d+(\.\d+)?$',val.strip()):
-                            v = float(val); c.value = int(v) if v==int(v) else v
-                        else: c.value = val
-                    except: c.value = val
-                c.fill = PatternFill("solid",fgColor=bg)
-                c.border = Border(left=td,right=td,top=td,bottom=td)
-                c.font = Font(name="Calibri",size=10)
-                c.alignment = Alignment(vertical="center",wrap_text=True)
-            ws.row_dimensions[ri].height = rh
-        for ci,w in enumerate(widths,1): ws.column_dimensions[get_column_letter(ci)].width = max(int(w),8)
-        if not widths and headers:
-            for ci in range(1,len(headers)+1): ws.column_dimensions[get_column_letter(ci)].width = 18
-        ws.freeze_panes = "A3"
-    if not wb.sheetnames: wb.create_sheet("Ma'lumotlar")
-    buf = io.BytesIO(); wb.save(buf); buf.seek(0)
-    safe = re.sub(r'[^\w\s-]','',data.get("title","somo")).strip().replace(' ','_')
-    return buf.getvalue(), f"{safe}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+# ═══════════════════════════════════════════════════════════════════
+#  API CLIENTS
+# ═══════════════════════════════════════════════════════════════════
+try:
+    groq_client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+except Exception:
+    groq_client = None
 
-def gen_word(prompt, temp=0.4, provider="mistral"):
-    if not HAS_DOCX: return None, "python-docx o'rnatilmagan"
-    sys_p = """Sen professional Word hujjat strukturasi JSON qaytaruvchi ekspertsan.
-FAQAT JSON:
-{"title":"Sarlavha","sections":[{"type":"heading1","text":"..."},{"type":"paragraph","text":"..."},{"type":"bullet","items":["1","2"]},{"type":"table","headers":["H1","H2"],"rows":[["v1","v2"]]}]}
-Kamida 10-14 bo'lim. Faqat JSON."""
-    raw, _ = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}], temperature=temp, max_tokens=4000, provider=provider)
-    raw = re.sub(r'```json|```','',raw).strip()
-    m = re.search(r'\{.*\}',raw,re.DOTALL)
-    if not m: return None, "Struktura topilmadi"
-    try: data = json.loads(m.group())
-    except Exception as e: return None, f"JSON: {e}"
-    doc = Document()
-    for sec in doc.sections:
-        sec.top_margin = Cm(2.5); sec.bottom_margin = Cm(2.5)
-        sec.left_margin = Cm(3); sec.right_margin = Cm(2.5)
-    tp = doc.add_paragraph(); tp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = tp.add_run(data.get("title","Hujjat"))
-    run.bold = True; run.font.size = Pt(20); run.font.color.rgb = RGBColor(0x4F,0x46,0xE5); run.font.name = "Calibri"
-    dp = doc.add_paragraph(); dp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    dr = dp.add_run(f"{datetime.now().strftime('%d.%m.%Y')} — Somo AI")
-    dr.font.size = Pt(10); dr.font.color.rgb = RGBColor(0x94,0xA3,0xB8); dr.font.name = "Calibri"
-    for sec in data.get("sections",[]):
-        t = sec.get("type","paragraph")
-        if t == "heading1":
-            h = doc.add_heading(sec.get("text",""),level=1)
-            if h.runs: h.runs[0].font.color.rgb = RGBColor(0x4F,0x46,0xE5); h.runs[0].font.name = "Calibri"
-        elif t == "heading2":
-            h = doc.add_heading(sec.get("text",""),level=2)
-            if h.runs: h.runs[0].font.color.rgb = RGBColor(0x7C,0x3A,0xED); h.runs[0].font.name = "Calibri"
-        elif t == "paragraph":
-            p = doc.add_paragraph(); r = p.add_run(sec.get("text",""))
-            r.font.size = Pt(11); r.font.name = "Calibri"
-            p.paragraph_format.space_after = Pt(8); p.paragraph_format.line_spacing = Pt(16)
-        elif t == "bullet":
-            for item in sec.get("items",[]):
-                p = doc.add_paragraph(style='List Bullet'); r = p.add_run(item)
-                r.font.size = Pt(11); r.font.name = "Calibri"
-        elif t == "numbered":
-            for item in sec.get("items",[]):
-                p = doc.add_paragraph(style='List Number'); r = p.add_run(item)
-                r.font.size = Pt(11); r.font.name = "Calibri"
-        elif t == "table":
-            hdrs = sec.get("headers",[]); rws = sec.get("rows",[])
-            if hdrs:
-                tbl = doc.add_table(rows=1+len(rws),cols=len(hdrs)); tbl.style = 'Table Grid'
-                hrow = tbl.rows[0]
-                for ci,h in enumerate(hdrs):
-                    cell = hrow.cells[ci]; cell.text = h
-                    if cell.paragraphs[0].runs:
-                        cell.paragraphs[0].runs[0].font.bold = True
-                        cell.paragraphs[0].runs[0].font.color.rgb = RGBColor(255,255,255)
-                        cell.paragraphs[0].runs[0].font.name = "Calibri"
-                    # FIX 9: Import top-levelda, funksiya ichida emas
-                    tcPr = cell._tc.get_or_add_tcPr()
-                    shd = OxmlElement('w:shd')
-                    shd.set(qn('w:val'),'clear'); shd.set(qn('w:color'),'auto'); shd.set(qn('w:fill'),'4F46E5')
-                    tcPr.append(shd)
-                for ri,rdata in enumerate(rws):
-                    rcells = tbl.rows[ri+1].cells
-                    for ci,val in enumerate(rdata):
-                        if ci < len(rcells):
-                            rcells[ci].text = str(val)
-                            if rcells[ci].paragraphs[0].runs:
-                                rcells[ci].paragraphs[0].runs[0].font.size = Pt(10); rcells[ci].paragraphs[0].runs[0].font.name = "Calibri"
-                doc.add_paragraph()
-    footer_sec = doc.sections[0].footer; fp = footer_sec.paragraphs[0]
-    fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    fr = fp.add_run(f"© {datetime.now().year} Somo AI  |  {data.get('title','')}")
-    fr.font.size = Pt(9); fr.font.color.rgb = RGBColor(0x94,0xA3,0xB8); fr.font.name = "Calibri"
-    buf = io.BytesIO(); doc.save(buf); buf.seek(0)
-    safe = re.sub(r'[^\w\s-]','',data.get("title","somo")).strip().replace(' ','_')
-    return buf.getvalue(), f"{safe}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.docx"
+try:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    gemini_client = genai.GenerativeModel(GEMINI_MODEL)
+except Exception:
+    gemini_client = None
 
-def gen_code(prompt, temp=0.12, provider="cohere"):
-    sys_p = "Sen tajribali Python dasturchi. Professional, to'liq ishlaydigan kod yoz. FAQAT Python kodi — markdown yo'q."
-    raw, _ = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}], temperature=temp, max_tokens=3500, provider=provider)
-    raw = re.sub(r'```python|```py|```','',raw).strip()
-    safe = re.sub(r'[^\w]','_',prompt[:30]).strip('_')
-    return raw.encode('utf-8'), f"{safe}_{datetime.now().strftime('%H%M%S')}.py"
-
-def gen_html(prompt, temp=0.5, provider="gemini"):
-    sys_p = "Sen professional frontend developer. Chiroyli, zamonaviy HTML/CSS/JS sahifa yarat. Dark theme, glassmorphism. FAQAT HTML kodi."
-    raw, _ = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}], temperature=temp, max_tokens=4000, provider=provider)
-    raw = re.sub(r'```html|```','',raw).strip()
-    safe = re.sub(r'[^\w]','_',prompt[:25]).strip('_')
-    return raw.encode('utf-8'), f"{safe}_{datetime.now().strftime('%H%M%S')}.html"
-
-def gen_csv(prompt, temp=0.3, provider="mistral"):
-    sys_p = "Sen ma'lumotlar mutaxassisi. FAQAT CSV format. Birinchi satr sarlavha. Kamida 25 satr. Hech qanday tushuntirma yo'q."
-    raw, _ = call_ai([{"role":"system","content":sys_p},{"role":"user","content":prompt}], temperature=temp, max_tokens=3000, provider=provider)
-    raw = re.sub(r'```csv|```','',raw).strip()
-    safe = re.sub(r'[^\w]','_',prompt[:25]).strip('_')
-    return raw.encode('utf-8'), f"{safe}_{datetime.now().strftime('%H%M%S')}.csv"
-
-def download_block(file_bytes, fname, label):
-    ext = fname.rsplit('.',1)[-1]; mime = MIME.get(ext,"application/octet-stream")
-    st.markdown(f'<div class="somo-success">✅ {label} fayl tayyor!</div>', unsafe_allow_html=True)
-    st.download_button(f"⬇️  {fname}", file_bytes, fname, mime,
-                       use_container_width=True, type="primary", key=f"dl_{fname}_{time.time()}")
-
-def api_status_html(provider):
-    cfg = API_CONFIGS.get(provider, API_CONFIGS["groq"])
-    return f'<span class="api-badge {cfg["badge_class"]}"><span class="api-dot"></span>{cfg["icon"]} {cfg["name"]}</span>'
-
-# ══════════════════════════════════════════════════════════════════
-# SESSION RESTORE — cookie bilan
-# ══════════════════════════════════════════════════════════════════
-if 'logged_in' not in st.session_state:
-    session_user = cookies.get("somo_user_session") if HAS_COOKIES else None
-    if session_user and user_db:
-        try:
-            recs = get_all_users()  # FIX: cached
-            ud = next((r for r in recs if str(r['username'])==session_user), None)
-            if ud and str(ud.get('status','')).lower()=='active':
-                st.session_state.update({'username':session_user,'logged_in':True,'login_time':datetime.now()})
-            else:
-                st.session_state.logged_in = False
-        except: st.session_state.logged_in = False
-    else:
-        st.session_state.logged_in = False
-
-def logout():
-    try:
-        if HAS_COOKIES:
-            cookies["somo_user_session"] = ""; cookies.save()
-    except: pass
-    keys = list(st.session_state.keys())
-    for k in keys: del st.session_state[k]
-    st.session_state.logged_in = False
-    st.rerun()
-
-# ══════════════════════════════════════════════════════════════════
-# LOGIN PAGE
-# ══════════════════════════════════════════════════════════════════
-if not st.session_state.logged_in:
-    st.markdown("""
-    <div class="somo-hero" style="text-align:center;padding:72px 40px;">
-        <div class="grid-dots"></div>
-        <div class="somo-hero-content">
-            <p style="font-size:11px;letter-spacing:3.5px;font-weight:700;color:#646cff;margin-bottom:14px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">✦ Next Generation AI Platform</p>
-            <h1 style="font-size:clamp(38px,5.5vw,68px);font-weight:800;color:white;letter-spacing:-2.5px;margin-bottom:18px;">
-                🌌 Somo AI <span class="g-text">Ultra Pro Max</span>
-            </h1>
-            <p style="font-size:17px;color:rgba(255,255,255,0.55);max-width:560px;margin:0 auto 30px;line-height:1.7;font-family:'Inter',sans-serif;">
-                Excel · Word · Kod · HTML · CSV — To'rt xil AI bilan har qanday faylni yarating
-            </p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    col_l, col_m, col_r = st.columns([1,2,1])
-    with col_m:
-        t1, t2, t3 = st.tabs(["🔒  Kirish", "✍️  Ro'yxatdan o'tish", "ℹ️  Ma'lumot"])
-
-        with t1:
-            st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
-            with st.form("login_form", clear_on_submit=False):
-                st.markdown('<p class="section-label">Hisobingizga kiring</p>', unsafe_allow_html=True)
-                u = st.text_input("Username", placeholder="Username kiriting", key="lu")
-                p = st.text_input("Parol", type="password", placeholder="Parolni kiriting", key="lp")
-                r_col, b_col = st.columns([1,2])
-                with r_col: rem = st.checkbox("Eslab qolish", value=True)
-                with b_col: sub = st.form_submit_button("🚀  Kirish", use_container_width=True, type="primary")
-                if sub and u and p:
-                    if user_db:
-                        try:
-                            recs = get_all_users()  # FIX: cached
-                            user = next((r for r in recs if str(r['username'])==u), None)
-                            if user and check_pw(p, str(user['password'])):  # FIX: check_pw
-                                if str(user.get('status','')).lower()=='blocked':
-                                    st.error("🚫 Hisob bloklangan!")
-                                else:
-                                    st.session_state.update({'username':u,'logged_in':True,'login_time':datetime.now()})
-                                    if rem and HAS_COOKIES:
-                                        cookies["somo_user_session"] = u; cookies.save()
-                                    st.success("✅ Muvaffaqiyatli!"); time.sleep(0.4); st.rerun()
-                            else:
-                                st.error("❌ Login yoki parol noto'g'ri!")
-                        except Exception as e: st.error(f"❌ {e}")
-                    else: st.error("❌ Baza ulanmagan")
-                elif sub: st.warning("⚠️ Username va parolni kiriting")
-
-        with t2:
-            st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
-            with st.form("register_form", clear_on_submit=False):
-                st.markdown('<p class="section-label">Yangi hisob yaratish</p>', unsafe_allow_html=True)
-                nu = st.text_input("Username", placeholder="Kamida 3 ta belgi", key="ru")
-                np = st.text_input("Parol", type="password", placeholder="Kamida 6 ta belgi", key="rp")
-                nc = st.text_input("Parolni tasdiqlang", type="password", placeholder="Qayta kiriting", key="rc")
-                agree = st.checkbox("Foydalanish shartlariga roziman ✅")
-                sub2 = st.form_submit_button("✨  Hisob yaratish", use_container_width=True, type="primary")
-                if sub2:
-                    if not agree:    st.error("❌ Shartlarga rozilik bering!")
-                    elif len(nu)<3:  st.error("❌ Username kamida 3 belgi!")
-                    elif len(np)<6:  st.error("❌ Parol kamida 6 belgi!")
-                    elif np!=nc:     st.error("❌ Parollar mos emas!")
-                    elif user_db:
-                        try:
-                            recs = get_all_users()
-                            if any(r['username']==nu for r in recs):
-                                st.error("❌ Bu username band!")
-                            else:
-                                user_db.append_row([nu, hash_pw(np), "active", str(datetime.now()), 0])
-                                # FIX: cache ni yangilash
-                                get_all_users.clear()
-                                st.balloons(); st.success("🎉 Muvaffaqiyatli! «Kirish» bo'limiga o'ting.")
-                        except Exception as e: st.error(f"❌ {e}")
-
-        with t3:
-            st.markdown("""
-            <div style="padding:8px 0;">
-            <p class="section-label">Platformalar</p>
-            <p class="section-title" style="font-size:18px;">4 AI · 5 Format · ∞ Imkoniyat</p>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;">
-                <div style="background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:12px;padding:14px;">
-                    <p style="color:#fbbf24;font-weight:700;font-size:12px;font-family:'JetBrains Mono',monospace;">⚡ GROQ</p>
-                    <p style="color:#50506a;font-size:11px;margin-top:4px;line-height:1.6;">Chat, Excel<br>Llama 3.3 70B</p>
-                </div>
-                <div style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:12px;padding:14px;">
-                    <p style="color:#34d399;font-weight:700;font-size:12px;font-family:'JetBrains Mono',monospace;">✨ GEMINI</p>
-                    <p style="color:#50506a;font-size:11px;margin-top:4px;line-height:1.6;">HTML, Tahlil<br>Gemini 2.0 Flash</p>
-                </div>
-                <div style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.2);border-radius:12px;padding:14px;">
-                    <p style="color:#38bdf8;font-weight:700;font-size:12px;font-family:'JetBrains Mono',monospace;">🔮 COHERE</p>
-                    <p style="color:#50506a;font-size:11px;margin-top:4px;line-height:1.6;">Kod<br>Command R+</p>
-                </div>
-                <div style="background:rgba(244,114,182,0.06);border:1px solid rgba(244,114,182,0.2);border-radius:12px;padding:14px;">
-                    <p style="color:#f472b6;font-weight:700;font-size:12px;font-family:'JetBrains Mono',monospace;">🌪 MISTRAL</p>
-                    <p style="color:#50506a;font-size:11px;margin-top:4px;line-height:1.6;">Word, CSV<br>Mistral Large</p>
-                </div>
-            </div>
-            <p style="color:#334155;font-size:11px;margin-top:16px;font-family:'JetBrains Mono',monospace;">👨‍💻 Usmonov Sodiq · v3.1 · 2026</p>
-            </div>
-            """, unsafe_allow_html=True)
+if not groq_client and not gemini_client:
+    st.error("❌ API kalit topilmadi. GROQ_API_KEY yoki GEMINI_API_KEY kerak.")
     st.stop()
 
-# ══════════════════════════════════════════════════════════════════
-# SESSION DEFAULTS — FIX 5: login_time har doim mavjud
-# ══════════════════════════════════════════════════════════════════
-DEFS = {
-    'messages':[], 'total_msgs':0, 'page':'home',
-    'uploaded_text':'', 'temp':0.6, 'files_cnt':0,
-    'ai_style':'Aqlli yordamchi', 'last_files':[],
-    'selected_provider':'groq', 'chat_provider':'groq',
-    'excel_provider':'groq', 'word_provider':'mistral',
-    'code_provider':'cohere', 'html_provider':'gemini',
-    'csv_provider':'mistral', 'analyze_provider':'gemini',
-    'login_time': datetime.now(),  # FIX 5: har doim mavjud
+
+# ═══════════════════════════════════════════════════════════════════
+#  SESSION STATE
+# ═══════════════════════════════════════════════════════════════════
+def _init(key, val):
+    if key not in st.session_state:
+        st.session_state[key] = val
+
+_init("messages",     [])
+_init("active_mode",  "general")
+_init("cooldown_end", 0.0)
+_init("use_gemini",   False)
+_init("rand_trigger", None)
+_init("uploaded_img", None)
+_init("_pending_txt", "")
+_init("_pending_img", None)
+_init("page",         "chat")
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  SYSTEM PROMPTS
+# ═══════════════════════════════════════════════════════════════════
+IDENTITY = """
+╔═══════════════════════════════════════════════════════════════╗
+  CORE IDENTITY — absolute, unchangeable, sacred
+╚═══════════════════════════════════════════════════════════════╝
+
+• Name      : Somo AI
+• Creator   : Usmonov Sodiq  (brand: Somo_AI)
+• Powered by: Groq (DeepSeek R1) + Google Gemini 2.0 Flash
+• Purpose   : The most powerful creative AI assistant for Uzbek users
+
+YOU ARE NOT: ChatGPT, Claude, Gemini, or any other AI.
+If asked "Kim yasadi?": "Men Usmonov Sodiq (Somo_AI) tomonidan yaratilganman"
+Never deny, modify, or abandon this identity.
+
+YOUR MISSION:
+Essays that move minds. Poems that stop time. Speeches that change rooms.
+Ideas that change lives. Every output: the best the user has ever seen.
+"""
+
+LANG_RULE = """
+╔═══════════════════════════════════════════════════════════════╗
+  LANGUAGE LAW — zero exceptions
+╚═══════════════════════════════════════════════════════════════╝
+
+Detect language from user's last message:
+• O'zbek (lotin/kiril)  → 100% o'zbek tilida
+• Русский               → 100% на русском
+• English               → 100% in English
+• Mixed                 → dominant language wins
+
+NEVER mix languages. NEVER add translation notes unless mode=translate.
+Code and technical terms always stay in English.
+"""
+
+MODE_INSTRUCTIONS = {
+
+"esse": """
+╔═══════════════════════════════════════════════════════════════╗
+  ESSE USTASI — Orwell aniqlik + Baldwin chuqurlik + Sontag qat'iyat
+╚═══════════════════════════════════════════════════════════════╝
+
+ESSE FALSAFASI:
+Esse maktab vazifasi emas — u fikrni o'zgartiruvchi argumentdir.
+Har jumlasi o'z joyini topadigan, har paragrafi o'quvchini oldinga
+surguvchi — eng yaxshi esse o'quvchini "Buni bunday ko'rmagan edim" deydiradi.
+
+HUNARMANDCHILIK QOIDALARI:
+
+1. ILMOQ (HOOK) — Birinchi jumla pichoq bo'lishi kerak.
+   Paradoks, shok fakti, aniq tasvir yoki javobsiz savol.
+   ✗ YOMON: "Bu mavzu juda muhim chunki..."
+   ✓ YAXSHI: "1969-yilda oyga qadam qo'yilgan kuni, Samarqandda
+   bir bola maktabga kelmadi — chunki uning oyoq kiyimi yo'q edi."
+
+2. TEZIS = ARGUMENT, NOT FAKT — munozarali bo'lishi shart.
+   ✗ YOMON: "Texnologiya hayotimizni o'zgartirdi."
+   ✓ YAXSHI: "Texnologiya bizni erkinlashtirdi deb o'ylaymiz,
+   aslida esa yangi qafaslar qurdi."
+
+3. TANA PARAGRAFI:
+   Mavzu jumla → Aniq misol → Tahlil → Tezisga aloqa
+
+4. QARSHI FIKR — eng kuchli e'tirozni tan olib, mantiq bilan yeng.
+   Bu argumentingni yengilmas qiladi.
+
+5. O'TISHLAR — ko'rinmas, mexanik emas:
+   ✗ "Birinchidan, ikkinchidan, uchinchidan..."
+   ✓ "Biroq bu manzaraning orqasida boshqa haqiqat yotadi..."
+
+6. XOTIMA — hech qachon xulosa qilma. KUCHAYTIR.
+   Tugalish: ta'qib qiluvchi savol, boshlanishga qaytish (o'zgartirilgan),
+   yoki essening doirasidan kengrog'iga chiquvchi chaqiriq.
+
+MAJBURIY STRUKTURA:
+## Kirish
+[Hook — 1 ta unutilmas jumla]
+[Kontekst — 2-3 jumla]
+[Tezis — jasur, munozarali da'vo]
+
+## [Birinchi Argument — haqiqiy sarlavha]
+[Mavzu jumla → Aniq misol: ism, sana, hodisa → Tahlil]
+[Qarshi fikr → Kuchli raddiya]
+
+## [Ikkinchi Argument — chuqurlashtir, takrorma]
+[Iqtibos, statistika yoki tarixiy parallel]
+
+## [Uchinchi va Eng Kuchli Argument]
+[Eng hissiy va falsafiy chuqurlik]
+[Kulminatsiyaga qarab qisqa jumlalar]
+
+## Xulosa
+[Tezisni butunlay yangi so'zlarda ifodalash]
+[Sintez: barcha argumentlar birgalikda nima isbotlaydi?]
+[Oxirgi jumla: abadiy tasvir, ta'qib qiluvchi savol]
+
+UZUNLIK: 550–900 so'z. So'ralsa ko'proq.
+""",
+
+"story": """
+╔═══════════════════════════════════════════════════════════════╗
+  IJOD USTASI — Navoiy + Oripov + Cho'lpon + Neruda + Rumi ruhi
+╚═══════════════════════════════════════════════════════════════╝
+
+ADABIY E'TIQOD:
+San'at tushuntirmaydi — U OCHIB BERADI. O'quvchi nomlashga so'z topa
+olmaydigan narsani his qilishi kerak. Har so'z toshdagi kabi tanlanadi.
+Eng yaxshi she'r — o'quvchini ichida yig'latadi, lekin nima uchun
+yig'layotganini bilmaydi.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SHE'R — QATTIQ QOIDALAR (BUZILMAYDI)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. BIRINCHI QATOR — hech qachon mavhum emas:
+   ✗ HECH QACHON: "Sevgi go'zal...", "Hayot qiyin...", "Men seni sevaman..."
+   ✗ HECH QACHON: Umumiy da'vo, his-tuyg'u nomini aytish
+   ✓ DOIM: Aniq tasvir — joy, lahza, harakat, narsa
+   ✓ Misol: "Onam non yopardi, men esa ketayotgan edim."
+   ✓ Misol: "Kecha kechqurun qo'shni hovlida it yig'ladi."
+   ✓ Misol: "Stol ustidagi choy sovib qoldi — sen ketganding."
+
+2. HIS-TUYG'UNI AYTMA — KO'RSAT:
+   ✗ YOMON: "Men g'amginman", "Yuragim og'riydi", "Sevgi cheksiz"
+   ✓ YAXSHI: Bo'sh stulni ko'rsat. Sovugan choyni his ettir.
+   Ob'ektiv korrelyat qoida: his → obraz → o'quvchi o'zi his qiladi
+
+3. TAKROR — O'LIM:
+   ✗ Har bandda "Men seni sevaman" takrori — bu she'r emas, litaniya
+   ✗ "Cheksiz", "bebaho", "ulug'vor" — bu so'zlar she'rni o'ldiradi
+   ✓ Har band YANGI tasvirda YANGI his
+
+4. VOLTA — MAJBURIY:
+   She'rning 2/3 qismida ma'no burilishi bo'lishi SHART.
+   O'quvchi "voy" deb o'ylashi kerak — dunyoni boshqacha ko'rishi.
+
+5. OXIRGI QATOR — ENG MUHIMI:
+   ✗ Yopiq xulosa emas: "Va shuning uchun sevgi chiroyli"
+   ✓ Karilgan qo'ng'iroq: birinchi qatorda nima bo'lgan narsani
+     butunlay yangi ma'noda qaytaradi YOKI savol qoldiradi.
+
+6. METAFORA — YANGI, JASUR:
+   ✗ Eski: "Ko'zlar — yulduz", "Yuz — oy", "Sevgi — olov"
+   ✓ Yangi: "Sening sukunating — sovuq pechda yoqilmagan o'tin"
+   ✓ Yangi: "Kutish — deraza oynasiga yopishgan pashsha"
+
+7. RITMNI HIS ETTIR — SANAMA:
+   Barmoq bo'g'inlarini sanab she'r yozma.
+   Jumlalar nafas bilan sinadi — grammatika emas.
+   Enjambement: qator o'rtasida to'xtash kuchroq.
+
+SHE'R TURLARI:
+• Erkin she'r: yuqoridagi barcha qoidalar
+• G'azal: 5-12 bayt, radif, maqta'da shoir nomi/taxallusi
+• Ruboiy: 4 qator, AABA, falsafiy zarbdorlik
+• Sonet: 14 qator, oxirgi ikkisi — kulminatsiya
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HIKOYA — QATTIQ QOIDALAR
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• In medias res: Biror narsa bo'layotgan o'rtasidan boshla
+• Birinchi paragraf: qahramon + joy + keskinlik — uchala birga
+• Dialog: xarakter ochadi, syujet emas
+• Har sahna biror narsani o'zgartiradi
+• Chekhov quroli: 1-pardada ko'rsatilgan narsa 3-pardada otiladi
+• Kulminatsiya: hamma narsani ko'taradigan bitta jumla
+• Tugash: kutilmagan LEKIN muqarrar — ikkalasi birga
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+USTOZLAR MAKTABI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• Navoiy    → ilohiy metafora, g'azal nafosi, har so'z — javohir
+• Oripov    → oddiy so'z — cheksiz og'irlik, ona va Vatan hasrati
+• Cho'lpon  → singan oyna parchalari, erkinlik armoni, impressionist detal
+• Neruda    → tana — koinot metaforasi, hissiyot — falsafa
+• Rumi      → paradoks — eshik, qulatib qayta quradigan sevgi
+• Chekhov   → ko'rinmaydigan narsani ko'rsat, hech narsa tushuntirilmaydi
+• Borges    → haqiqat = matn, labirint — hayotning metaforasi
+
+MUTLAQ TAQIQLAR:
+✗ "Bu bir hikoya..." bilan hech qachon ochma
+✗ "Bir bor edi, bir yo'q edi..." — bolalar ertagi emas
+✗ His-tuyg'u nomini ayt emas — jismini ko'rsat
+✗ Metaforani tushuntirma — o'quvchi tushunadi
+✗ Kuchsiz tugama — oxirgi qator she'rning joni
+✗ Klishe metaforalar: ko'z-yulduz, yuz-oy, yurak-olov
+""",
+
+"speech": """
+╔═══════════════════════════════════════════════════════════════╗
+  NUTQ USTASI — MLK + Churchill + Obama + O'zbek notiqlik san'ati
+╚═══════════════════════════════════════════════════════════════╝
+
+NUTQ FALSAFASI:
+Nutq o'qilmaydi — u IJRO ETILADI.
+Har jumla ovoz chiqarib aytilishi uchun ishlashi kerak.
+Tomoshabin o'zgargan holda chiqishi kerak: harakatlangan, ilhomlantirilgan.
+Eng yaxshi nutqlar yarmidan iborat sukunat — nima deyilmagan narsani o'ylantiradi.
+
+USTOZLAR:
+• MLK    — Anafora ("I have a dream..."), axloqiy yoy, muammo → vizyon → harakat
+• Churchill — Kulminatsiyada qisqa jumlalar. "We shall fight" da birorta sifat yo'q.
+• Obama  — Shaxsiy hikoya → universal haqiqat; "Shuning uchun..." ko'prigi
+• Demosfen — Savol qurol sifatida, nafas boshqaruvi
+
+MAJBURIY STRUKTURA (7 qism):
+
+🎯 ILMOQ — Birinchi 15 so'z vaqtni to'xtatishi kerak
+   Shok statistikasi, javobsiz savol, o'rta harakat hikoyasi, paradoks.
+   Maksimal 3 jumla. Keyin to'liq to'xta. Nafas olsin.
+
+🤝 BOG'LANISH — Gapirish huquqini qozon
+   "Siz ham bu hisni bilasiz..." Shaxsiy e'tirof yoki umumiy tajriba.
+   Ular "Bu men haqimda" deb o'ylashsin.
+
+💡 BIRINCHI ASOSIY FIKR
+   Jasur da'vo → aniq hikoya yoki dalil → ular uchun ma'nosi.
+   Kutishni yaratuvchi o'tish bilan yakunla.
+
+🔥 IKKINCHI ASOSIY FIKR — keskinlashtir
+   Chuqurroq bor. Taxminni rad et yoki yashirin haqiqatni och.
+   Iqtibos, raqam yoki tarixiy parallel qo'sh.
+
+⚡ UCHINCHI ASOSIY FIKR — CHO'QQI
+   Eng kuchli dalil. Eng yaxshi misolni bu yerga saqla.
+   Kulminatsiyaga qarab jumlalar qisqaroq va qisqaroq bo'lsin.
+   To'xta. Keyin: sukunat ("...")
+
+🚀 CHAQIRIQ
+   Aniq, mumkin, darhol. "O'zgarish" emas — "Bugun kechqurun bitta ish qil: ..."
+
+🔔 YOPISH — aks-sado va oshib ket
+   Ochilish tasviri — lekin hamma narsa o'tgandan keyin o'zgartirilgan.
+   Oxirgi jumla: 8 so'z yoki kam. U qo'ng'iroq kabi yangrashi kerak.
+
+RITORIK ASBOBLAR (barchasini ishlatish):
+• Anafora: Takroriy boshlash jumlasi 3+ marta — imdga aylangan
+• Trikolon: Uchtalik ro'yxat — "Bilim, mehnat, sabr" — har doim uch
+• Ritorik savollar: Javob beradigan va ochiq qoldiradigan savollar
+• Antiteza: "Ko'p gapirildi, kam ish qilindi"
+• Ellipsis "...": Eng muhim qatoringdan oldin — sukunat uni balandroq qiladi
+• To'g'ridan-to'g'ri murojaat: "Aziz do'stlarim...", "Aynan siz..."
+
+STANDART: To'liq matn. Outline emas. Ijroga tayyor.
+""",
+
+"ideas": """
+╔═══════════════════════════════════════════════════════════════╗
+  G'OYA USTASI — IDEO dizayn + YC instinkt + shoir tasavvur
+╚═══════════════════════════════════════════════════════════════╝
+
+G'OYA FALSAFASI:
+Eng yaxshi g'oyalar aniq ko'rinadi — lekin kimdir aytgandan KEYIN.
+Vazifa: hamma o'tkazib yuborgan narsani top.
+
+SIFAT FILTRLARI (har g'oya 3 testni o'tishi kerak):
+1. Aniqlik: Nomga ega bo'ladimi?
+   ("AI-powered mahalla tibbiy assistenti" o'tadi. "Health app" o'tmaydi.)
+2. Hayratlantirishlik: Foydalanuvchi "Oh, buni o'ylamagan edim" deyarmi?
+3. Harakat: Bugun boshlanishi mumkinmi?
+
+MAJBURIY FORMAT:
+
+### 💡 [Tematik Kategoriya]
+
+**[N]. [Jasur, Esda qolarli Nom]**
+*Mohiyat:* [Bir aniq jumla — nima ekanligini]
+*Nima uchun ishlaydi:* [2 jumla — nima uchun ishlashining o'zagi]
+*Noyoblik:* [Aniq alternativlardan nimasi farqli]
+*Birinchi qadam:* [Eng aniq, bajariladigan birinchi harakat — bugun, "qachondir" emas]
+
+---
+### 🏆 ENG YAXSHI TANLOV
+**[Nom]**
+[3-4 jumla: nega aynan bu. Aniq bo'l. Fikrlashingni ko'rsat.]
+*Nega hozir?* [Nima uchun bu g'oya hozir o'ta o'rinli]
+
+QOIDALAR:
+• Minimum 6, maksimal 12 g'oya
+• Aralashma: texnologiya, ijtimoiy, ijodiy/badiiy, "yovvoyi karta"
+• Kamida 2 ta "kutilmagan" bo'lsin
+• ISHTIYOQLI bo'l — yaxshi g'oyalar chin hayajonni talab qiladi 🚀
+""",
+
+"translate": """
+╔═══════════════════════════════════════════════════════════════╗
+  TARJIMA USTASI — Matn emas, RUH tarjimasi
+╚═══════════════════════════════════════════════════════════════╝
+
+TARJIMA FALSAFASI:
+Mukammal tarjima ko'rinmas — o'quvchi tarjima o'qiyotganini unutadi.
+So'zma-so'z tarjima — aslning jonini o'ldiradi.
+Vazifang: so'z emas, MA'NO, TUN va RUHNI tarjima qilish.
+
+QOIDALAR:
+1. Registrni saqlash — rasmiy rasmiy qoladi; ko'cha tili ko'cha bo'ladi
+2. Idiomalar → ekvivalent idiomalar — maqsad tildagi ekvivalentni top
+3. Madaniy murojaat — ekvivalent bo'lmasa, qisqa izoh [*] qo'sh
+4. Badiiy matnda ritm — aslda ritm bo'lsa, tarjimada ham ritm top
+5. Ismlar: transliteratsiya; sarlavhalar: tarjima
+
+MAJBURIY FORMAT:
+
+**📄 Asl matn:**
+> [asl matn]
+
+**✅ Tarjima:**
+> [tarjima]
+
+**📝 Izohlar** *(faqat kerak bo'lsa)*:
+- [atama]: [qisqa madaniy/lingvistik izoh]
+
+**🔤 Lug'at** *(5+ murakkab atama uchun)*:
+| Asl | Tarjima | Izoh |
+|-----|---------|------|
+""",
+
+"summary": """
+╔═══════════════════════════════════════════════════════════════╗
+  TAHLIL USTASI — Feynman soddalik + Sud aniqligi + Faylasuf chuqurlik
+╚═══════════════════════════════════════════════════════════════╝
+
+TAHLIL FALSAFASI:
+Xulosa qilish = kamroq nusxa ko'chirish — u HAYDASH.
+Eng yaxshi xulosa o'quvchiga asldagidan KO'PROQ tushunish beradi.
+
+TAHLIL QOIDALARI:
+1. BITTA asosiy g'oyani top — qolgan hamma narsa uni qo'llab-quvvatlash
+2. Struktura ma'noni ochadi — qanday tashkil qilishing o'zi argument
+3. Murakkab g'oyalar uchun oddiy til
+4. Sening nuqtai nazaring muhim — hukmsiz tahlil oddiy tasvir
+5. Nimaning yo'qligi ham muhim — matn NIMA DEMAYOTGANI
+
+MAJBURIY FORMAT:
+
+## 🎯 Asosiy G'oya
+**[Eng muhim nuqta — 1-2 jumla]**
+
+## 🔑 Muhim Fikrlar
+- **[Nuqta 1]**: [qisqa izoh]
+- **[Nuqta 2]**: [qisqa izoh]
+- **[Nuqta 3]**: [qisqa izoh]
+
+## 🧩 Chuqur Tahlil
+[4 paragraf: haqiqatda nima haqida / eng kuchli argument / zaif tomonlar / oqibatlar]
+
+## 💡 Noodatiy Insight
+[Sirtdan o'quvchi o'tkazib yuboradigan bitta narsa]
+
+## ❓ Ochiq Savol
+[Eng qiziqarli hal bo'lmagan keskinlik]
+""",
+
+"general": """
+╔═══════════════════════════════════════════════════════════════╗
+  SOMO AI — Eng foydali, halol va ajoyib yordamchi
+╚═══════════════════════════════════════════════════════════════╝
+
+FALSAFA:
+Ko'rinib turuvchi emas, HAQIQIY foydali bo'l.
+Haqiqiy javoblar ber, not savol-javob bo'lmagan javoblar.
+Foydalanuvchini murakkablik va halollikni ko'tara oladigan aqlli kattalar sifatida muomala qil.
+
+JAVOB KALIBRLASH:
+• Oddiy faktik savol → To'g'ridan-to'g'ri javob, 1-3 jumla, to'ldiruvchisiz
+• Murakkab savol → Strukturali tushuntirish + misollar + fikring
+• Ijodiy so'rov → To'liq ijodiy chiqish, qanday yozishim emas
+• Hissiy → Iliq, hozir, chin
+• Noaniq → Eng yaxshi talqiningni ayt, keyin moslashtirishni taklif qil
+
+SHAXSIYAT:
+• Qiziquvchi va g'oyalarga chin ravishda hayajonlangan — ko'rsatsin
+• Iliq lekin yaltiroq emas — "Ajoyib savol!" bilan boshlamaslik
+• Halol — "Bilmayman" ham kiradi
+• To'g'ridan-to'g'ri — aslida nimani o'ylayotganingni ayt
+• O'zbek madaniy bilim — mahalliy qadriyatlar, manbalar, kontekst
+""",
+
 }
-for k,v in DEFS.items():
-    if k not in st.session_state: st.session_state[k] = v
 
-# ══════════════════════════════════════════════════════════════════
-# SIDEBAR
-# ══════════════════════════════════════════════════════════════════
+FORMATTING_RULES = """
+╔═══════════════════════════════════════════════════════════════╗
+  UNIVERSAL CHIQISH QOIDALARI — har javobga qo'llanadi
+╚═══════════════════════════════════════════════════════════════╝
+
+TIPOGRAFIYA:
+• **Qalin** uchun: asosiy atamalar, esda qolarli faktlar, muhim ta'kid
+• *Kursiv* uchun: kitob/film sarlavhalari, xorijiy so'zlar
+• `kod` uchun: texnik atamalar, buyruq nomlari
+• > blokiqtibos: to'g'ridan-to'g'ri iqtiboslar, ta'riflar
+
+STRUKTURA — FAQAT yordam berganda:
+• ## Sarlavhalar: 3+ alohida qism uchun
+• Nuqta ro'yxati: haqiqatan ro'yxat uchun
+• Jadvallar: faqat grid strukturasi nimanidir ochganda
+• Kod bloklari: DOIM til tegiyla
+
+MATEMATIK — har doim LaTeX:
+• Qatorida: $ax^2 + bx + c = 0$
+• Alohida: $$\\int_0^\\infty e^{-x^2}dx = \\frac{\\sqrt{\\pi}}{2}$$
+
+JAVOB UZUNLIGI:
+• Oddiy suhbat → 1-4 jumla
+• Faktik savol → to'g'ri javob + zaruriy kontekst
+• Murakkab tahlil → to'la, to'liq
+• Ijodiy so'rov → TO'LIQ ASAR
+
+SIFAT NAZORATI:
+✓ Har paragraf oldinga siltayaptimi?
+✓ Har format elementi o'z joyini oqlaydimi?
+✓ Oxirgi jumla eng kuchlimi?
+✓ Faxrli mutaxassis imzoini qo'yarmikin?
+"""
+
+
+def build_system_prompt(mode: str) -> str:
+    """Berilgan rejim uchun to'liq system promptni yig'adi."""
+    instr = MODE_INSTRUCTIONS.get(mode, MODE_INSTRUCTIONS["general"])
+    return "\n\n".join([IDENTITY, instr, LANG_RULE, FORMATTING_RULES])
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  PAGE CONFIG
+# ═══════════════════════════════════════════════════════════════════
+st.set_page_config(
+    page_title="Somo AI",
+    page_icon="✦",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  CSS — PREMIUM DESIGN v4.0
+# ═══════════════════════════════════════════════════════════════════
+# inject fonts + katex links
+st.markdown(
+    '<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">'
+    '<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,900;1,9..144,400;1,9..144,700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">'
+    '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">'
+    '<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>'
+    '<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:String.fromCharCode(36,36),right:String.fromCharCode(36,36),display:true},{left:String.fromCharCode(36),right:String.fromCharCode(36),display:false}]});"></script>',
+    unsafe_allow_html=True
+)
+
+# inject CSS via st.markdown (split for reliability)
+_CSS = """
+
+/* ═══════════════════════════════════════════════════════════════
+   DESIGN TOKENS
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  /* palette */
+  --cream      : #fdf7ee;
+  --warm       : #f5ead2;
+  --card       : #fffef9;
+  --border     : #e8ddc8;
+  --border-soft: #ede5d2;
+
+  /* accent */
+  --amber  : #f59e0b;
+  --amber-l: #fcd34d;
+  --orange : #ea580c;
+  --orange-l:#fb923c;
+
+  /* semantic */
+  --text   : #1a1208;
+  --muted  : #6b5c42;
+  --light  : #a8936e;
+  --faint  : #c5b59a;
+
+  /* utility */
+  --blue   : #3b82f6;
+  --indigo : #6366f1;
+  --green  : #15803d;
+  --red    : #dc2626;
+  --pink   : #ec4899;
+
+  /* typography */
+  --fh     : 'Fraunces', Georgia, serif;
+  --fb     : 'DM Sans', system-ui, -apple-system, sans-serif;
+
+  /* shadows */
+  --shadow-xs : 0 1px 3px rgba(26,18,8,.06);
+  --shadow-sm : 0 2px 8px rgba(26,18,8,.08);
+  --shadow-md : 0 4px 18px rgba(26,18,8,.1);
+  --shadow-lg : 0 8px 32px rgba(26,18,8,.12);
+  --shadow-amber: 0 4px 18px rgba(245,158,11,.28);
+
+  /* animation */
+  --ease-spring: cubic-bezier(.34,1.56,.64,1);
+  --ease-out   : cubic-bezier(.22,.68,0,1.2);
+  --dur-fast   : .15s;
+  --dur-mid    : .25s;
+  --dur-slow   : .4s;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL RESET
+   ═══════════════════════════════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  background : var(--cream) !important;
+  margin     : 0;
+  padding    : 0;
+  -webkit-font-smoothing : antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+/* hide all streamlit chrome */
+#MainMenu, footer, header,
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+[data-testid="stStatusWidget"],
+[data-testid="stSidebar"],
+[data-testid="collapsedControl"],
+[data-testid="stChatInputSuggestions"],
+[data-testid="stChatInputSuggestionsContainer"] { display: none !important; }
+
+[data-testid="stAppViewContainer"],
+[data-testid="stMain"], .main,
+.stApp { background: var(--cream) !important; }
+
+/* Remove Streamlit's default top padding */
+.main .block-container { padding-top: 0 !important; }
+section.main > div { padding-top: 0 !important; }
+[data-testid="stMain"] > div:first-child { padding-top: 0 !important; }
+
+.block-container,
+[data-testid="stMainBlockContainer"] {
+  padding    : 0 !important;
+  max-width  : 100% !important;
+}
+/* remove streamlit default top padding */
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stVerticalBlock"],
+.stVerticalBlock {
+  padding-top    : 0 !important;
+  margin-top     : 0 !important;
+}
+/* iframe wrapper - invisible but JS still runs */
+[data-testid="stCustomComponentV1"] {
+  height     : 1px !important;
+  min-height : 0 !important;
+  overflow   : hidden !important;
+  margin     : 0 !important;
+  padding    : 0 !important;
+}
+[data-testid="stCustomComponentV1"] > div {
+  height     : 1px !important;
+  overflow   : hidden !important;
+  margin     : 0 !important;
+  padding    : 0 !important;
+}
+[data-testid="stCustomComponentV1"] iframe {
+  height     : 1px !important;
+  min-height : 0 !important;
+  opacity    : 0 !important;
+  pointer-events: none;
+  position   : absolute !important;
+}
+
+/* scrollbar */
+::-webkit-scrollbar       { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background    : var(--border);
+  border-radius : 4px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--faint); }
+
+/* ═══════════════════════════════════════════════════════════════
+   HEADER — glass morphism, sticky
+   ═══════════════════════════════════════════════════════════════ */
+.somo-header {
+  position        : sticky;
+  top             : 0;
+  z-index         : 900;
+  background      : rgba(253,247,238,.94);
+  backdrop-filter : blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border-bottom   : 1px solid var(--border-soft);
+  box-shadow      : 0 1px 0 var(--border-soft),
+                    0 2px 16px rgba(26,18,8,.04);
+}
+.somo-header-inner {
+  display         : flex;
+  align-items     : center;
+  justify-content : space-between;
+  max-width       : 820px;
+  margin          : 0 auto;
+  padding         : .72rem 1.5rem;
+}
+
+/* brand */
+.somo-brand { display: flex; align-items: center; gap: 11px; }
+.somo-logo  {
+  width           : 38px;
+  height          : 38px;
+  border-radius   : 11px;
+  background      : linear-gradient(145deg, var(--amber), var(--orange));
+  display         : flex;
+  align-items     : center;
+  justify-content : center;
+  font-family     : var(--fh) !important;
+  font-size       : 17px;
+  font-weight     : 900;
+  color           : #fff;
+  box-shadow      : var(--shadow-amber),
+                    inset 0 1px 0 rgba(255,255,255,.22);
+  flex-shrink     : 0;
+  letter-spacing  : -.5px;
+}
+.somo-name {
+  font-family : var(--fh) !important;
+  font-size   : 1.05rem;
+  font-weight : 900;
+  color       : var(--text);
+  line-height : 1;
+  letter-spacing: -.3px;
+}
+.somo-name em {
+  font-style  : italic;
+  color       : var(--orange);
+}
+.somo-by {
+  font-family    : var(--fb) !important;
+  font-size      : .55rem;
+  color          : var(--light);
+  letter-spacing : 1px;
+  text-transform : uppercase;
+  margin-top     : 3px;
+}
+
+/* right side */
+.somo-hdr-right { display: flex; align-items: center; gap: 7px; }
+
+.somo-mode-chip {
+  display         : inline-flex;
+  align-items     : center;
+  gap             : 5px;
+  font-family     : var(--fb) !important;
+  font-size       : .62rem;
+  font-weight     : 600;
+  padding         : .26rem .72rem;
+  border-radius   : 20px;
+  transition      : all var(--dur-mid) ease;
+  white-space     : nowrap;
+}
+.somo-mode-chip.off {
+  background : var(--warm);
+  border     : 1.5px solid var(--border);
+  color      : var(--muted);
+}
+.somo-mode-chip.on {
+  background  : linear-gradient(135deg, var(--amber), var(--orange));
+  border      : 1.5px solid transparent;
+  color       : #fff;
+  box-shadow  : var(--shadow-amber);
+}
+
+.somo-online {
+  display     : flex;
+  align-items : center;
+  gap         : 5px;
+  font-family : var(--fb) !important;
+  font-size   : .6rem;
+  color       : var(--green);
+  white-space : nowrap;
+}
+.somo-dot {
+  width           : 7px;
+  height          : 7px;
+  border-radius   : 50%;
+  background      : var(--green);
+  box-shadow      : 0 0 0 0 rgba(21,128,61,.4);
+  animation       : ripple 2.2s ease-in-out infinite;
+}
+@keyframes ripple {
+  0%   { box-shadow: 0 0 0 0   rgba(21,128,61,.4); }
+  70%  { box-shadow: 0 0 0 6px rgba(21,128,61,0);  }
+  100% { box-shadow: 0 0 0 0   rgba(21,128,61,0);  }
+}
+
+.somo-model-pill {
+  font-family    : var(--fb) !important;
+  font-size      : .58rem;
+  font-weight    : 600;
+  color          : var(--muted);
+  background     : var(--warm);
+  border         : 1.5px solid var(--border);
+  border-radius  : 20px;
+  padding        : .22rem .7rem;
+  white-space    : nowrap;
+  letter-spacing : .2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAYOUT WRAPPER
+   ═══════════════════════════════════════════════════════════════ */
+.somo-wrap {
+  max-width  : 820px;
+  margin     : 0 auto;
+  padding    : 2rem 1.5rem 7rem;
+  min-height : calc(100vh - 60px);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   WELCOME SCREEN
+   ═══════════════════════════════════════════════════════════════ */
+.somo-welcome {
+  text-align  : center;
+  padding     : 2.2rem 0 1.8rem;
+}
+
+.somo-eyebrow {
+  display         : inline-flex;
+  align-items     : center;
+  gap             : 7px;
+  background      : linear-gradient(135deg, var(--amber), var(--orange));
+  color           : #fff;
+  font-family     : var(--fb) !important;
+  font-size       : .62rem;
+  font-weight     : 700;
+  letter-spacing  : 1.4px;
+  text-transform  : uppercase;
+  padding         : .3rem 1rem;
+  border-radius   : 30px;
+  margin-bottom   : 1.3rem;
+  box-shadow      : var(--shadow-amber);
+  animation       : popIn .55s var(--ease-spring) both;
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.72) translateY(6px); }
+  to   { opacity: 1; transform: scale(1)   translateY(0);   }
+}
+
+.somo-headline {
+  font-family    : var(--fh) !important;
+  font-size      : clamp(2.2rem, 6vw, 3.4rem);
+  font-weight    : 900;
+  color          : var(--text);
+  line-height    : 1.08;
+  letter-spacing : -.5px;
+  margin-bottom  : .5rem;
+  animation      : riseUp .5s ease-out .08s both;
+}
+.somo-headline em {
+  font-style              : italic;
+  background              : linear-gradient(135deg, var(--amber), var(--orange));
+  -webkit-background-clip : text;
+  -webkit-text-fill-color : transparent;
+  background-clip         : text;
+}
+@keyframes riseUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+.somo-subtext {
+  font-family   : var(--fb) !important;
+  font-size     : .9rem;
+  color         : var(--muted);
+  line-height   : 1.75;
+  max-width     : 440px;
+  margin        : 0 auto 2rem;
+  animation     : riseUp .5s ease-out .15s both;
+}
+
+/* feature cards grid */
+.somo-cards {
+  display               : grid;
+  grid-template-columns : repeat(3, 1fr);
+  gap                   : .65rem;
+  max-width             : 580px;
+  margin                : 0 auto 1.6rem;
+  animation             : riseUp .5s ease-out .22s both;
+}
+.somo-card {
+  background    : var(--card);
+  border        : 1.5px solid var(--border-soft);
+  border-radius : 16px;
+  padding       : 1.1rem .8rem .9rem;
+  text-align    : center;
+  cursor        : default;
+  transition    : border-color var(--dur-mid) ease,
+                  transform    var(--dur-mid) var(--ease-spring),
+                  box-shadow   var(--dur-mid) ease;
+  position      : relative;
+  overflow      : hidden;
+}
+.somo-card::before {
+  content    : '';
+  position   : absolute;
+  inset      : 0;
+  background : linear-gradient(135deg, rgba(245,158,11,.04), rgba(234,88,12,.04));
+  opacity    : 0;
+  transition : opacity var(--dur-mid) ease;
+}
+.somo-card:hover { 
+  transform    : translateY(-4px);
+  border-color : var(--amber);
+  box-shadow   : 0 8px 28px rgba(0,0,0,.1);
+}
+.somo-card:hover::before { opacity: 1; }
+.somo-card-icon {
+  font-size     : 1.65rem;
+  display       : block;
+  margin-bottom : .45rem;
+  filter        : drop-shadow(0 2px 6px rgba(0,0,0,.12));
+}
+.somo-card-name {
+  font-family   : var(--fb) !important;
+  font-size     : .75rem;
+  font-weight   : 700;
+  color         : var(--text);
+  margin-bottom : .22rem;
+}
+.somo-card-hint {
+  font-family : var(--fb) !important;
+  font-size   : .62rem;
+  color       : var(--light);
+  font-style  : italic;
+  line-height : 1.4;
+}
+
+/* prompt chips */
+.somo-chips {
+  display         : flex;
+  flex-wrap       : wrap;
+  gap             : .45rem;
+  justify-content : center;
+  margin-bottom   : 1.4rem;
+  animation       : riseUp .5s ease-out .3s both;
+}
+.somo-chip {
+  background    : var(--warm);
+  border        : 1.5px solid var(--border-soft);
+  border-radius : 20px;
+  padding       : .3rem .82rem;
+  font-family   : var(--fb) !important;
+  font-size     : .7rem;
+  color         : var(--muted);
+  transition    : all var(--dur-fast) ease;
+  cursor        : default;
+  white-space   : nowrap;
+}
+.somo-chip:hover {
+  border-color : var(--amber);
+  color        : var(--orange);
+  background   : rgba(245,158,11,.07);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CHAT AREA
+   ═══════════════════════════════════════════════════════════════ */
+.somo-stats {
+  display     : flex;
+  align-items : center;
+  gap         : 1.2rem;
+  padding     : .55rem 0 .5rem;
+  font-family : var(--fb) !important;
+  font-size   : .66rem;
+  color       : var(--faint);
+  border-bottom : 1px solid var(--border-soft);
+  margin-bottom : .8rem;
+  flex-wrap   : wrap;
+}
+.somo-stat { display: flex; align-items: center; gap: 4px; }
+.somo-stat b { color: var(--muted); font-weight: 600; }
+
+.somo-divider {
+  text-align  : center;
+  font-family : var(--fb) !important;
+  font-size   : .62rem;
+  color       : var(--faint);
+  margin      : .9rem 0;
+  position    : relative;
+  letter-spacing: .5px;
+}
+.somo-divider::before, .somo-divider::after {
+  content    : '';
+  position   : absolute;
+  top        : 50%;
+  width      : calc(50% - 60px);
+  height     : 1px;
+  background : var(--border-soft);
+}
+.somo-divider::before { left: 0; }
+.somo-divider::after  { right: 0; }
+
+/* ═══════════════════════════════════════════════════════════════
+   MESSAGES
+   ═══════════════════════════════════════════════════════════════ */
+.somo-msg-user {
+  display         : flex;
+  justify-content : flex-end;
+  margin-bottom   : .95rem;
+  animation       : msgIn .2s ease-out;
+}
+.somo-msg-ai {
+  display       : flex;
+  align-items   : flex-start;
+  gap           : 11px;
+  margin-bottom : 1.75rem;
+  animation     : msgIn .2s ease-out;
+}
+@keyframes msgIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* avatar */
+.somo-av {
+  width           : 30px;
+  height          : 30px;
+  min-width       : 30px;
+  border-radius   : 9px;
+  background      : linear-gradient(145deg, var(--amber), var(--orange));
+  color           : #fff;
+  font-family     : var(--fh) !important;
+  font-size       : 13px;
+  font-weight     : 900;
+  display         : flex;
+  align-items     : center;
+  justify-content : center;
+  flex-shrink     : 0;
+  margin-top      : 2px;
+  box-shadow      : 0 2px 10px rgba(245,158,11,.3),
+                    inset 0 1px 0 rgba(255,255,255,.2);
+  letter-spacing  : -.3px;
+}
+
+/* message body */
+.somo-msg-user .somo-body { max-width: 64%; }
+.somo-msg-ai  .somo-body  { flex: 1; max-width: 100%; min-width: 0; }
+
+.somo-sender {
+  font-family    : var(--fb) !important;
+  font-size      : .55rem;
+  color          : var(--faint);
+  margin-bottom  : .2rem;
+  letter-spacing : .6px;
+  text-transform : uppercase;
+}
+.somo-msg-user .somo-sender { display: none; }
+
+/* bubble: user */
+.somo-bubble-user {
+  background    : linear-gradient(135deg, #eff6ff, #e0effe);
+  border        : 1.5px solid #bfdbfe;
+  border-radius : 18px 5px 18px 18px;
+  padding       : .65rem 1.05rem;
+  font-family   : var(--fb) !important;
+  font-size     : .875rem;
+  line-height   : 1.68;
+  color         : var(--text);
+  word-break    : break-word;
+  display       : inline-block;
+  box-shadow    : 0 1px 4px rgba(59,130,246,.08);
+}
+
+/* bubble: ai (open, no border) */
+.somo-bubble-ai {
+  background  : transparent;
+  padding     : .15rem 0;
+  font-family : var(--fb) !important;
+  font-size   : .9rem;
+  line-height : 1.82;
+  color       : var(--text);
+  word-break  : break-word;
+}
+
+/* mode label */
+.somo-mode-label {
+  display        : inline-flex;
+  align-items    : center;
+  gap            : 5px;
+  font-family    : var(--fb) !important;
+  font-size      : .58rem;
+  font-weight    : 700;
+  letter-spacing : .9px;
+  text-transform : uppercase;
+  color          : var(--amber);
+  margin-bottom  : .45rem;
+  padding        : .14rem .52rem;
+  background     : rgba(245,158,11,.08);
+  border         : 1px solid rgba(245,158,11,.2);
+  border-radius  : 6px;
+}
+
+/* timestamp + word count + copy row */
+.somo-meta-row {
+  display     : flex;
+  align-items : center;
+  gap         : 7px;
+  margin-top  : .42rem;
+  flex-wrap   : wrap;
+}
+.somo-ts {
+  font-family : var(--fb) !important;
+  font-size   : .56rem;
+  color       : var(--faint);
+}
+.somo-wc {
+  display       : inline-flex;
+  align-items   : center;
+  gap           : 3px;
+  font-family   : var(--fb) !important;
+  font-size     : .56rem;
+  color         : var(--faint);
+  background    : var(--warm);
+  border        : 1px solid var(--border-soft);
+  padding       : .08rem .38rem;
+  border-radius : 6px;
+}
+.somo-copy {
+  display       : inline-flex;
+  align-items   : center;
+  gap           : 4px;
+  font-family   : var(--fb) !important;
+  font-size     : .6rem;
+  font-weight   : 500;
+  color         : var(--muted);
+  background    : var(--warm);
+  border        : 1px solid var(--border-soft);
+  border-radius : 7px;
+  padding       : .16rem .52rem;
+  cursor        : pointer;
+  transition    : all var(--dur-fast) ease;
+  user-select   : none;
+}
+.somo-copy:hover {
+  background   : var(--border);
+  color        : var(--text);
+  border-color : var(--border);
+}
+.somo-copy:active { transform: scale(.94); }
+.somo-msg-user .somo-ts { display: block; text-align: right; margin-top: .28rem; }
+
+/* ═══════════════════════════════════════════════════════════════
+   RICH CONTENT INSIDE AI BUBBLE
+   ═══════════════════════════════════════════════════════════════ */
+.somo-bubble-ai strong { color: var(--orange); font-weight: 700; }
+.somo-bubble-ai em     { color: var(--muted); }
+.somo-bubble-ai del    { color: var(--faint); text-decoration: line-through; }
+
+.somo-bubble-ai h1,
+.somo-bubble-ai h2,
+.somo-bubble-ai h3,
+.somo-bubble-ai h4 {
+  font-family  : var(--fh) !important;
+  font-weight  : 700;
+  color        : var(--text);
+  margin       : .9rem 0 .3rem;
+  line-height  : 1.25;
+}
+.somo-bubble-ai h1 { font-size: 1.18rem; }
+.somo-bubble-ai h2 { font-size: 1.05rem; }
+.somo-bubble-ai h3 { font-size: .96rem;  }
+.somo-bubble-ai h4 { font-size: .9rem;   }
+
+.somo-bubble-ai code {
+  background    : rgba(245,158,11,.1);
+  border        : 1px solid rgba(245,158,11,.2);
+  padding       : .1rem .36rem;
+  border-radius : 5px;
+  font-size     : .78rem;
+  color         : var(--orange);
+  font-family   : 'Courier New', 'SF Mono', monospace !important;
+}
+
+.somo-bubble-ai pre {
+  background    : var(--warm);
+  border        : 1.5px solid var(--border);
+  border-radius : 12px;
+  padding       : 1rem 1.1rem;
+  overflow-x    : auto;
+  margin        : .7rem 0;
+}
+.somo-bubble-ai pre code {
+  background : none;
+  border     : none;
+  padding    : 0;
+  color      : var(--green);
+  font-size  : .77rem;
+}
+
+.somo-bubble-ai ul,
+.somo-bubble-ai ol  { padding-left: 1.3rem; margin: .35rem 0; }
+.somo-bubble-ai li  { margin-bottom: .28rem; }
+
+.somo-bubble-ai blockquote {
+  border-left   : 3px solid var(--amber);
+  background    : linear-gradient(135deg,
+                    rgba(245,158,11,.05),
+                    rgba(234,88,12,.03));
+  padding       : .55rem 1rem;
+  border-radius : 0 10px 10px 0;
+  color         : var(--muted);
+  margin        : .55rem 0;
+  font-style    : italic;
+}
+
+.somo-bubble-ai table {
+  border-collapse : collapse;
+  width           : 100%;
+  margin          : .65rem 0;
+  font-size       : .8rem;
+  border-radius   : 8px;
+  overflow        : hidden;
+}
+.somo-bubble-ai th {
+  background  : var(--warm);
+  border      : 1.5px solid var(--border);
+  padding     : .42rem .75rem;
+  font-weight : 700;
+  color       : var(--orange);
+  text-align  : left;
+}
+.somo-bubble-ai td {
+  border  : 1px solid var(--border-soft);
+  padding : .38rem .75rem;
+}
+.somo-bubble-ai tr:nth-child(even) td {
+  background : rgba(245,158,11,.025);
+}
+
+.somo-bubble-ai hr.md-hr {
+  border     : none;
+  border-top : 1.5px solid var(--border-soft);
+  margin     : .8rem 0;
+}
+.somo-bubble-ai p { margin: .35rem 0; }
+
+/* ═══════════════════════════════════════════════════════════════
+   TYPING CURSOR
+   ═══════════════════════════════════════════════════════════════ */
+.somo-cur {
+  display        : inline-block;
+  width          : 2.5px;
+  height         : .9em;
+  background     : linear-gradient(to bottom, var(--amber), var(--orange));
+  border-radius  : 2px;
+  margin-left    : 2px;
+  vertical-align : middle;
+  animation      : blink .75s step-end infinite;
+}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* ═══════════════════════════════════════════════════════════════
+   COOLDOWN BANNER
+   ═══════════════════════════════════════════════════════════════ */
+.somo-cd-wrap {
+  max-width  : 820px;
+  margin     : 0 auto;
+  padding    : .5rem 1.5rem 0;
+}
+.somo-cd-box {
+  display       : flex;
+  align-items   : center;
+  gap           : 13px;
+  background    : linear-gradient(135deg, #fffbeb, #fff7d6);
+  border        : 2px solid var(--amber);
+  border-radius : 16px;
+  padding       : .95rem 1.4rem;
+  font-family   : var(--fb) !important;
+  font-size     : .875rem;
+  color         : #92400e;
+  box-shadow    : 0 4px 20px rgba(245,158,11,.14);
+}
+.somo-cd-icon { font-size: 1.5rem; }
+.somo-cd-sec  {
+  color       : var(--orange);
+  font-size   : 1.05rem;
+  font-weight : 700;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   INPUT BAR
+   ═══════════════════════════════════════════════════════════════ */
+/* hide streamlit's native chat input completely */
+[data-testid="stChatInputSuggestions"],
+[data-testid="stChatInputSuggestionsContainer"] { display: none !important; }
+
+/* Style native chat input beautifully */
+[data-testid="stBottom"] {
+  background: linear-gradient(to top, #fdf7ee 72%, transparent) !important;
+  padding: .4rem 0 max(.55rem, env(safe-area-inset-bottom)) !important;
+  border-top: none !important;
+}
+[data-testid="stChatInputContainer"] {
+  max-width: 780px !important;
+  margin: 0 auto !important;
+  padding: 0 1rem !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+[data-testid="stChatInputContainer"] > div {
+  background: #fffef9 !important;
+  border: 2px solid #e8dfd3 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06) !important;
+  padding: .4rem .5rem .4rem .9rem !important;
+}
+[data-testid="stChatInputContainer"]:focus-within > div {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 3px rgba(245,158,11,.12), 0 1px 4px rgba(0,0,0,.06) !important;
+}
+[data-testid="stChatInputTextArea"] {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-size: .88rem !important;
+  color: #3d2c1e !important;
+  background: transparent !important;
+}
+[data-testid="stChatInputTextArea"]::placeholder {
+  color: #c4b49e !important;
+}
+/* Send button */
+[data-testid="stChatInputSubmitButton"] button {
+  background: linear-gradient(135deg, #f59e0b, #f97316) !important;
+  border: none !important;
+  border-radius: 11px !important;
+  width: 36px !important;
+  height: 36px !important;
+  box-shadow: 0 3px 10px rgba(245,158,11,.35) !important;
+  color: white !important;
+}
+[data-testid="stChatInputSubmitButton"] button:hover {
+  transform: scale(1.08) !important;
+  box-shadow: 0 4px 16px rgba(245,158,11,.45) !important;
+}
+/* Footer text below input */
+[data-testid="stBottom"]::after {
+  content: 'Somo AI · Usmonov Sodiq (@Somo_AI) · DeepSeek R1 + Gemini';
+  display: block;
+  text-align: center;
+  font-size: .52rem;
+  color: #d4c4b0;
+  padding: .15rem 0 .3rem;
+  letter-spacing: .3px;
+  font-family: sans-serif;
+}
+
+/* ── CUSTOM FIXED INPUT BAR ── */
+#somo-bar {
+  position      : fixed;
+  bottom        : 0; left : 0; right : 0;
+  z-index       : 9999;
+  background    : linear-gradient(to top, var(--cream) 70%, transparent);
+  padding       : .5rem 0 .6rem;
+  padding-bottom: max(.6rem, env(safe-area-inset-bottom));
+}
+#somo-bar-inner {
+  max-width     : 820px;
+  margin        : 0 auto;
+  padding       : 0 1.2rem;
+  display       : flex;
+  flex-direction: column;
+  gap           : .35rem;
+}
+/* image preview strip */
+#somo-img-preview {
+  display       : none;
+  align-items   : center;
+  gap           : .5rem;
+  background    : var(--card);
+  border        : 1.5px solid var(--border);
+  border-radius : 12px;
+  padding       : .4rem .7rem;
+  font-size     : .75rem;
+  color         : var(--muted);
+}
+#somo-img-preview img {
+  height        : 40px;
+  border-radius : 6px;
+  object-fit    : cover;
+}
+#somo-img-preview.visible { display: flex; }
+#somo-img-rm {
+  margin-left   : auto;
+  cursor        : pointer;
+  font-size     : 1rem;
+  color         : var(--light);
+  line-height   : 1;
+}
+#somo-img-rm:hover { color: var(--orange); }
+/* input row */
+#somo-row {
+  display       : flex;
+  align-items   : flex-end;
+  gap           : .5rem;
+}
+/* + button */
+#somo-plus {
+  flex-shrink   : 0;
+  width         : 40px; height : 40px;
+  border-radius : 50%;
+  background    : var(--card);
+  border        : 1.5px solid var(--border);
+  display       : flex;
+  align-items   : center;
+  justify-content:center;
+  cursor        : pointer;
+  font-size     : 1.25rem;
+  color         : var(--muted);
+  box-shadow    : var(--shadow-sm);
+  transition    : all .15s ease;
+  user-select   : none;
+  position      : relative;
+}
+#somo-plus:hover { border-color:var(--amber); color:var(--amber); transform:scale(1.08); }
+#somo-file-inp   { display:none; }
+/* textarea wrap */
+#somo-ta-wrap {
+  flex          : 1;
+  background    : var(--card);
+  border        : 2px solid var(--border);
+  border-radius : 18px;
+  box-shadow    : var(--shadow-sm);
+  display       : flex;
+  align-items   : flex-end;
+  padding       : .45rem .55rem .45rem .85rem;
+  transition    : border-color .15s ease, box-shadow .15s ease;
+}
+#somo-ta-wrap:focus-within {
+  border-color  : var(--amber);
+  box-shadow    : 0 0 0 3px rgba(245,158,11,.12), var(--shadow-sm);
+}
+#somo-ta {
+  flex          : 1;
+  background    : transparent;
+  border        : none;
+  outline       : none;
+  resize        : none;
+  font-family   : var(--fb);
+  font-size     : .875rem;
+  color         : var(--text);
+  line-height   : 1.45;
+  max-height    : 120px;
+  overflow-y    : auto;
+  padding       : 0;
+  scrollbar-width: none;
+}
+#somo-ta::placeholder { color: var(--light); }
+/* send button */
+#somo-send {
+  flex-shrink   : 0;
+  width         : 36px; height: 36px;
+  border-radius : 11px;
+  background    : linear-gradient(135deg, var(--amber), var(--orange));
+  border        : none;
+  display       : flex;
+  align-items   : center;
+  justify-content:center;
+  cursor        : pointer;
+  box-shadow    : 0 3px 10px rgba(245,158,11,.35);
+  transition    : all .15s ease;
+  color         : #fff;
+  font-size     : 1rem;
+}
+#somo-send:hover { transform:scale(1.07); box-shadow:0 4px 16px rgba(245,158,11,.45); }
+#somo-send:disabled { opacity:.45; cursor:default; transform:none; }
+
+.somo-input-footer {
+  text-align     : center;
+  font-family    : var(--fb) !important;
+  font-size      : .55rem;
+  color          : var(--faint);
+  padding        : .3rem 0 .6rem;
+  letter-spacing : .4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   STREAMLIT BUTTONS (random + clear)
+   ═══════════════════════════════════════════════════════════════ */
+.stButton > button {
+  background    : var(--card) !important;
+  border        : 1.5px solid var(--border) !important;
+  border-radius : 12px !important;
+  color         : var(--muted) !important;
+  font-family   : var(--fb) !important;
+  font-size     : .78rem !important;
+  font-weight   : 500 !important;
+  padding       : .38rem 1rem !important;
+  transition    : all var(--dur-fast) ease !important;
+  box-shadow    : var(--shadow-xs) !important;
+}
+.stButton > button:hover {
+  border-color : var(--amber) !important;
+  color        : var(--orange) !important;
+  background   : rgba(245,158,11,.05) !important;
+  transform    : translateY(-1px) !important;
+  box-shadow   : 0 3px 12px rgba(0,0,0,.08) !important;
+}
+.stButton > button:active { transform: translateY(0) !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   KaTeX
+   ═══════════════════════════════════════════════════════════════ */
+.katex { font-size: 1em !important; color: var(--text) !important; }
+.katex-display {
+  overflow-x : auto;
+  padding    : .35rem 0;
+  margin     : .4rem 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+  .somo-header-inner { padding: .65rem 1rem; }
+  .somo-by           { display: none; }
+  .somo-name         { font-size: .95rem; }
+  .somo-logo         { width: 34px; height: 34px; font-size: 15px; }
+  .somo-wrap         { padding: 1.5rem 1rem 9rem; }
+  .somo-headline     { font-size: clamp(1.8rem, 9vw, 2.6rem); }
+  .somo-subtext      { font-size: .83rem; }
+  .somo-cards        { grid-template-columns: repeat(2, 1fr); max-width: 100%; }
+  .somo-msg-user .somo-body { max-width: 88%; }
+  .somo-msgs-wrap { padding-bottom: 9rem !important; }
+  .somo-bubble-user,
+  .somo-bubble-ai    { font-size: .845rem; }
+  .somo-cd-wrap      { padding: .5rem 1rem 0; }
+  #somo-bar-inner { padding: 0 .75rem; }
+}
+@media (max-width: 380px) {
+  .somo-cards { grid-template-columns: 1fr 1fr; }
+  .somo-chips { gap: .35rem; }
+}
+
+"""
+
+st.markdown(f"<style>{_CSS}</style>", unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  KaTeX re-render trigger
+# ═══════════════════════════════════════════════════════════════════
+KJ = ('<script>setTimeout(()=>{'
+      'if(typeof renderMathInElement!=="undefined")'
+      'renderMathInElement(document.body,{'
+      'delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}]'
+      '});},130);</script>')
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  SIDEBAR — Streamlit native
+# ═══════════════════════════════════════════════════════════════════
 with st.sidebar:
-    uname = st.session_state.username
-    avail_providers = [p for p in ["groq","gemini","cohere","mistral"] if p in ai_clients]
-
-    st.markdown(f"""
-    <div style="padding:22px 16px 18px;border-bottom:1px solid rgba(100,108,255,0.12);margin-bottom:6px;">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
-            <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed,#f472b6);width:44px;height:44px;border-radius:14px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:white;box-shadow:0 0 20px rgba(100,108,255,0.4);">
-                {uname[0].upper()}
-            </div>
-            <div>
-                <div style="font-size:14px;font-weight:700;color:#f0f0ff;font-family:'Syne',sans-serif;">{uname}</div>
-                <div style="font-size:10px;color:#34d399;font-weight:600;font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:4px;margin-top:2px;">
-                    <span style="background:#34d399;width:5px;height:5px;border-radius:50%;display:inline-block;animation:blink-dot 2s ease-in-out infinite;"></span>
-                    ONLINE
-                </div>
-            </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
-            <div style="background:rgba(100,108,255,0.07);border:1px solid rgba(100,108,255,0.12);border-radius:10px;padding:10px;text-align:center;">
-                <div style="font-size:17px;font-weight:900;color:#f0f0ff;font-family:'Syne',sans-serif;">{len(st.session_state.messages)}</div>
-                <div style="font-size:9px;color:#50506a;text-transform:uppercase;letter-spacing:1.5px;font-family:'JetBrains Mono',monospace;">Xabar</div>
-            </div>
-            <div style="background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.12);border-radius:10px;padding:10px;text-align:center;">
-                <div style="font-size:17px;font-weight:900;color:#f0f0ff;font-family:'Syne',sans-serif;">{st.session_state.files_cnt}</div>
-                <div style="font-size:9px;color:#50506a;text-transform:uppercase;letter-spacing:1.5px;font-family:'JetBrains Mono',monospace;">Fayl</div>
-            </div>
-        </div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            {''.join([f'<span class="api-badge {API_CONFIGS[p]["badge_class"]}" style="font-size:9px;padding:3px 8px;"><span class="api-dot"></span>{API_CONFIGS[p]["icon"]}</span>' for p in avail_providers])}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    nav = [
-        ("home","🏠","Bosh sahifa"), ("chat","💬","Chat AI"),
-        ("excel","📊","Excel Generator"), ("word","📝","Word Generator"),
-        ("code","💻","Kod Generator"), ("html","🌐","HTML Generator"),
-        ("csv","📋","CSV Generator"), ("templates","🎨","Shablonlar"),
-        ("analyze","🔍","Hujjat Tahlili"), ("history","📜","Chat Tarixi"),
-        ("feedback","💌","Fikr bildirish"), ("profile","👤","Profil"),
-    ]
-
-    st.markdown('<p class="section-label" style="padding:10px 14px 4px;font-size:9px;">Navigatsiya</p>', unsafe_allow_html=True)
-    for pid,icon,label in nav:
-        is_active = st.session_state.page == pid
-        if st.button(f"{icon}  {label}", key=f"nav_{pid}", use_container_width=True,
-                     type="primary" if is_active else "secondary"):
-            st.session_state.page = pid; st.rerun()
-
-    st.markdown('<hr class="somo-divider" style="margin:10px 0;">', unsafe_allow_html=True)
-
-    if st.session_state.page == "chat":
-        st.markdown('<p class="section-label" style="padding:0 14px 6px;font-size:9px;">Chat Sozlamalari</p>', unsafe_allow_html=True)
-        prov_opts = [(p, f"{API_CONFIGS[p]['icon']} {API_CONFIGS[p]['name']}") for p in avail_providers] if avail_providers else [("groq","⚡ Groq")]
-        prov_keys = [p[0] for p in prov_opts]; prov_labels = [p[1] for p in prov_opts]
-        curr_idx = prov_keys.index(st.session_state.chat_provider) if st.session_state.chat_provider in prov_keys else 0
-        sel = st.selectbox("🤖 AI Provider", prov_labels, index=curr_idx, key="chat_prov_sel")
-        st.session_state.chat_provider = prov_keys[prov_labels.index(sel)]
-        st.session_state.temp = st.slider("🌡  Ijodkorlik", 0.0, 1.0, st.session_state.temp, 0.05, key="temp_sl")
-        st.session_state.ai_style = st.selectbox("💬  Uslub", ["Aqlli yordamchi","Do'stona","Rasmiy ekspert","Ijodkor","Texnik"], key="ai_sl")
-        if st.button("🗑  Chatni tozalash", use_container_width=True, key="clr_chat"):
-            st.session_state.messages = []; st.rerun()
-        if st.session_state.messages:
-            chat_json = json.dumps(st.session_state.messages, ensure_ascii=False, indent=2)
-            st.download_button("📥  JSON Export", chat_json.encode(), f"chat_{datetime.now():%Y%m%d}.json", use_container_width=True)
-
-    st.markdown('<br>', unsafe_allow_html=True)
-    if st.button("🚪  Tizimdan chiqish", use_container_width=True, type="primary", key="logout"):
-        logout()
-
-    st.markdown(f"""
-    <div style="padding:14px 14px 8px;border-top:1px solid rgba(100,108,255,0.08);margin-top:6px;text-align:center;">
-        <p style="font-size:9px;color:#2a2a40;line-height:1.7;font-family:'JetBrains Mono',monospace;">
-            🌌 SOMO AI · v3.1<br>⚡ GROQ · ✨ GEMINI · 🔮 COHERE · 🌪 MISTRAL<br>© 2026
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# ══════════════════════════════════════════════════════════════════
-# PAGE: HOME
-# ══════════════════════════════════════════════════════════════════
-if st.session_state.page == "home":
-    uname = st.session_state.username
-    avail = [p for p in ["groq","gemini","cohere","mistral"] if p in ai_clients]
-    mins = (datetime.now()-st.session_state.login_time).seconds//60  # FIX 5: KeyError yo'q
-
-    st.markdown(f"""
-    <div class="somo-hero">
-        <div class="grid-dots"></div>
-        <div class="somo-hero-content">
-            <p style="font-size:11px;letter-spacing:3.5px;font-weight:700;color:#646cff;margin-bottom:12px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">✦ Somo AI Ultra Pro Max v3.1</p>
-            <h1>Salom, <span class="g-text">{uname}</span>! 👋</h1>
-            <p class="subtitle">Bugun nima yaratmoqchisiz? To'rt xil AI bilan — Excel, Word, Kod, HTML, CSV — hammasini bir joyda.</p>
-            <div class="hero-badges">
-                {''.join([f'<span class="api-badge {API_CONFIGS[p]["badge_class"]}"><span class="api-dot"></span>{API_CONFIGS[p]["icon"]} {API_CONFIGS[p]["name"]}</span>' for p in avail])}
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(f"""
-    <div class="stat-row">
-        <div class="stat-box"><div class="stat-icon">💬</div><div class="stat-val">{len(st.session_state.messages)}</div><div class="stat-lbl">Xabarlar</div></div>
-        <div class="stat-box"><div class="stat-icon">📁</div><div class="stat-val">{st.session_state.files_cnt}</div><div class="stat-lbl">Fayllar</div></div>
-        <div class="stat-box"><div class="stat-icon">⏱</div><div class="stat-val">{mins}</div><div class="stat-lbl">Daqiqa</div></div>
-        <div class="stat-box"><div class="stat-icon">🤖</div><div class="stat-val">{len(avail)}</div><div class="stat-lbl">AI aktiv</div></div>
-        <div class="stat-box"><div class="stat-icon">🔥</div><div class="stat-val">{max(1,len(st.session_state.messages)//5)}</div><div class="stat-lbl">Daraja</div></div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<p class="section-label">Funksiyalar</p><p class="section-title">Nima qilmoqchisiz?</p>', unsafe_allow_html=True)
+    # Logo
     st.markdown("""
-    <div class="cards-grid">
-        <div class="somo-card card-v6"><span class="card-icon">💬</span><div class="card-title">Chat AI</div><div class="card-desc">4 ta AI bilan aqlli suhbat va fayl yaratish</div></div>
-        <div class="somo-card card-v1"><span class="card-icon">📊</span><div class="card-title">Excel Generator</div><div class="card-desc">Formulalar, ranglar, bir necha varaqli jadvallar</div></div>
-        <div class="somo-card card-v2"><span class="card-icon">📝</span><div class="card-title">Word Generator</div><div class="card-desc">Rezyume, shartnoma, biznes reja, hisobot</div></div>
-        <div class="somo-card card-v3"><span class="card-icon">💻</span><div class="card-title">Kod Generator</div><div class="card-desc">Python bot, API, web scraper, ML model</div></div>
-        <div class="somo-card card-v4"><span class="card-icon">🌐</span><div class="card-title">HTML Generator</div><div class="card-desc">Portfolio, landing page, dashboard sahifasi</div></div>
-        <div class="somo-card card-v5"><span class="card-icon">📋</span><div class="card-title">CSV Generator</div><div class="card-desc">Katta ma'lumotlar to'plami — bir so'rovda</div></div>
-        <div class="somo-card card-v6"><span class="card-icon">🎨</span><div class="card-title">Shablonlar</div><div class="card-desc">16 ta tayyor shablon — biznes, kod, ta'lim</div></div>
-        <div class="somo-card card-v1"><span class="card-icon">🔍</span><div class="card-title">Hujjat Tahlili</div><div class="card-desc">PDF & DOCX fayllarni AI bilan tahlil qilish</div></div>
+    <div style="text-align:center;padding:8px 0 20px;">
+        <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,#f59e0b,#f97316);
+                    display:inline-flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;
+                    color:white;box-shadow:0 4px 20px rgba(245,158,11,0.4);font-family:'Fraunces',serif;margin-bottom:10px;">S</div>
+        <div style="font-size:18px;font-weight:900;color:#3d2c1e;font-family:'Fraunces',serif;">Somo <em style='color:#f97316;'>AI</em></div>
+        <div style="font-size:10px;color:#c4b49e;letter-spacing:2px;font-weight:700;margin-top:2px;">BY USMONOV SODIQ</div>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<hr class="somo-divider">', unsafe_allow_html=True)
-    st.markdown('<p class="section-label">Tezkor Harakatlar</p>', unsafe_allow_html=True)
-    q1,q2,q3,q4 = st.columns(4)
-    for col,icon,label,page in [(q1,"📊","Oylik Byudjet","excel"),(q2,"📄","Rezyume","word"),(q3,"🤖","Telegram Bot","code"),(q4,"🌐","Landing Page","html")]:
-        with col:
-            if st.button(f"{icon}  {label}", use_container_width=True, key=f"quick_{page}"):
-                st.session_state.page = page; st.rerun()
+    st.divider()
 
-# ══════════════════════════════════════════════════════════════════
-# PAGE: CHAT AI
-# ══════════════════════════════════════════════════════════════════
-elif st.session_state.page == "chat":
-    cur_prov = st.session_state.chat_provider
-    st.markdown(f"""
-    <div class="somo-hero">
-        <div class="grid-dots"></div>
-        <div class="somo-hero-content">
-            <p style="font-size:11px;letter-spacing:3.5px;font-weight:700;color:#646cff;margin-bottom:10px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">✦ Smart Chat · {api_status_html(cur_prov)}</p>
-            <h1>💬 Chat <span class="g-text">AI</span></h1>
-            <p class="subtitle">So'zingizni yozing — AI tushunadi va javob beradi. Excel, Word, Kod — hammasi avtomatik.</p>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Navigation
+    st.markdown('<p style="font-size:10px;font-weight:700;color:#c4b49e;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Navigatsiya</p>', unsafe_allow_html=True)
 
-    if not st.session_state.messages:
-        st.markdown("""
-        <div class="cards-grid" style="grid-template-columns:repeat(auto-fill,minmax(175px,1fr));">
-            <div class="somo-card card-v1" style="padding:18px 14px;"><span class="card-icon" style="font-size:26px;">📊</span><div class="card-title" style="font-size:12px;">"Oylik byudjet jadvali"</div><div class="card-desc">Excel avtomatik yaratiladi</div></div>
-            <div class="somo-card card-v2" style="padding:18px 14px;"><span class="card-icon" style="font-size:26px;">📝</span><div class="card-title" style="font-size:12px;">"Rezyume yozing"</div><div class="card-desc">Word fayl tayyorlanadi</div></div>
-            <div class="somo-card card-v3" style="padding:18px 14px;"><span class="card-icon" style="font-size:26px;">💻</span><div class="card-title" style="font-size:12px;">"Python kodi yozing"</div><div class="card-desc">.py fayl yuklab olish</div></div>
-            <div class="somo-card card-v4" style="padding:18px 14px;"><span class="card-icon" style="font-size:26px;">🌐</span><div class="card-title" style="font-size:12px;">"Landing page yarat"</div><div class="card-desc">HTML fayl tayyorlanadi</div></div>
+    _nav_pages = [
+        ("chat",      "💬", "Chat AI"),
+        ("excel",     "📊", "Excel Generator"),
+        ("word",      "📝", "Word Generator"),
+        ("code",      "💻", "Kod Generator"),
+        ("html",      "🌐", "HTML Generator"),
+        ("csv",       "📋", "CSV Generator"),
+        ("analyze",   "🔍", "Hujjat Tahlili"),
+    ]
+    for _pid, _picon, _plabel in _nav_pages:
+        _is_active = st.session_state.page == _pid
+        if st.button(
+            f"{_picon}  {_plabel}",
+            key=f"nav_{_pid}",
+            use_container_width=True,
+            type="primary" if _is_active else "secondary"
+        ):
+            st.session_state.page = _pid
+            st.session_state.messages = []
+            st.rerun()
+
+    st.divider()
+
+    # Chat settings (only on chat page)
+    if st.session_state.page == "chat":
+        st.markdown('<p style="font-size:10px;font-weight:700;color:#c4b49e;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;">Chat Sozlamalari</p>', unsafe_allow_html=True)
+        _prov_label = "Gemini 2.0 Flash" if st.session_state.use_gemini else "DeepSeek R1"
+        st.markdown(f'<div style="font-size:12px;color:#8a7968;margin-bottom:8px;">🤖 AI: <b style=\'color:#f59e0b;\'>{_prov_label}</b></div>', unsafe_allow_html=True)
+
+        if st.button("🔄  AI ni almashtirish", use_container_width=True, key="switch_ai"):
+            st.session_state.use_gemini = not st.session_state.use_gemini
+            st.rerun()
+
+        if st.button("🗑️  Chatni tozalash", use_container_width=True, key="clear_chat"):
+            st.session_state.messages = []
+            st.session_state.active_mode = "general"
+            st.rerun()
+
+        _msg_cnt = len(st.session_state.messages)
+        _ai_msgs = [m for m in st.session_state.messages if m["role"] == "assistant"]
+        _total_words = sum(wc(m["content"]) for m in _ai_msgs)
+
+        st.markdown(f"""
+        <div style="background:#fdf7ee;border:1px solid #e8dfd3;border-radius:12px;padding:12px;margin-top:8px;">
+            <div style="font-size:11px;color:#8a7968;margin-bottom:6px;font-weight:600;">📊 Sessiya</div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:#5a4a3a;margin:3px 0;">
+                <span>💬 Xabarlar</span><b>{_msg_cnt}</b>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:#5a4a3a;margin:3px 0;">
+                <span>✍️ So'zlar</span><b>{_total_words}</b>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            if msg["role"] == "assistant" and "provider" in msg:
-                st.markdown(f'<div style="margin-bottom:8px;">{api_status_html(msg.get("provider","groq"))}</div>', unsafe_allow_html=True)
-            st.markdown(msg["content"])
-            if "file_data" in msg:
-                fd = msg["file_data"]
-                download_block(fd["bytes"], fd["name"], fd["label"])
+    st.divider()
 
-    with st.expander("📂  Hujjat yuklash (PDF yoki DOCX)", expanded=False):
-        upl = st.file_uploader("Fayl tanlang", type=["pdf","docx"], key="chat_upload", label_visibility="collapsed")
-        if upl:
-            with st.spinner("📄 O'qilmoqda..."):
-                txt = process_doc(upl)
-                st.session_state.uploaded_text = txt
-            if txt: st.success(f"✅ {upl.name} — {len(txt):,} belgi")
-            else:   st.error("❌ O'qilmadi")
-
-    if prompt := st.chat_input("💭  Yozing... Excel, Word, Kod, HTML so'rang!", key="chat_in"):
-        st.session_state.messages.append({"role":"user","content":prompt})
-        with st.chat_message("user"): st.markdown(prompt)
-        db_log(st.session_state.username,"User",prompt,"input",cur_prov)
-        intent = detect_intent(prompt)
-
-        with st.chat_message("assistant"):
-            LANG_RULE = "CRITICAL: Always detect user's language and reply in EXACTLY that same language."
-            styles_map = {
-                "Aqlli yordamchi": f"You are Somo AI — intelligent, professional AI. {LANG_RULE}",
-                "Do'stona": f"You are Somo AI — friendly, warm assistant. {LANG_RULE}",
-                "Rasmiy ekspert": f"You are Somo AI — formal, precise expert. {LANG_RULE}",
-                "Ijodkor": f"You are Somo AI — creative thinker. {LANG_RULE}",
-                "Texnik": f"You are Somo AI — deep technical expert. {LANG_RULE}",
-            }
-            sys_base = styles_map.get(st.session_state.ai_style, styles_map["Aqlli yordamchi"])
-
-            if intent in ("excel","word","html","csv","code"):
-                GENERATORS = {
-                    "excel": (gen_excel,"📊 Excel fayl","xlsx",  st.session_state.excel_provider),
-                    "word":  (gen_word, "📝 Word hujjat","docx", st.session_state.word_provider),
-                    "code":  (gen_code, "💻 Python kodi","py",   st.session_state.code_provider),
-                    "html":  (gen_html, "🌐 HTML sahifa","html", st.session_state.html_provider),
-                    "csv":   (gen_csv,  "📋 CSV dataset","csv",  st.session_state.csv_provider),
-                }
-                gfunc, glabel, gext, gen_prov = GENERATORS[intent]
-                em = {"excel":"📊","word":"📝","code":"💻","html":"🌐","csv":"📋"}[intent]
-                st.markdown(f'<div class="somo-notify">{em} {glabel} yaratilmoqda... {api_status_html(gen_prov)}</div>', unsafe_allow_html=True)
-                prog = st.progress(0)
-                for i in range(0,70,14): time.sleep(0.25); prog.progress(i)
-                try:
-                    fb, fn = gfunc(prompt, provider=gen_prov)
-                    prog.progress(100); time.sleep(0.15); prog.empty()
-                    if fb and isinstance(fb, bytes):
-                        resp_txt = f"✅ **{glabel}** tayyor! — `{fn}`"
-                        file_info = {"bytes":fb,"name":fn,"label":glabel}
-                        st.markdown(f'<div style="margin-bottom:8px;">{api_status_html(gen_prov)}</div>', unsafe_allow_html=True)
-                        st.markdown(resp_txt)
-                        download_block(fb, fn, glabel)
-                        st.session_state.files_cnt += 1
-                        st.session_state.last_files.append(fn)
-                        db_log("Somo AI","Assistant",resp_txt,intent,gen_prov)
-                        msg_d = {"role":"assistant","content":resp_txt,"file_data":file_info,"provider":gen_prov}
-                    else:
-                        prog.empty(); resp_txt = f"❌ Xatolik: {fn}"; st.error(resp_txt)
-                        msg_d = {"role":"assistant","content":resp_txt,"provider":gen_prov}
-                except Exception as e:
-                    prog.empty(); resp_txt = f"❌ {e}"; st.error(resp_txt)
-                    msg_d = {"role":"assistant","content":resp_txt,"provider":cur_prov}
-                st.session_state.messages.append(msg_d)
-            else:
-                msgs_for_ai = [{"role":"system","content":sys_base}]
-                if st.session_state.uploaded_text:
-                    msgs_for_ai.append({"role":"system","content":f"Yuklangan hujjat:\n{st.session_state.uploaded_text[:4000]}"})
-                for m in st.session_state.messages[-22:]:
-                    msgs_for_ai.append({"role":m["role"],"content":m["content"]})
-                st.markdown(f'<div style="margin-bottom:10px;">{api_status_html(cur_prov)}</div>', unsafe_allow_html=True)
-                response_placeholder = st.empty(); full_response = ""; used_prov = cur_prov
-                try:
-                    for chunk, prov_name in call_ai_stream(msgs_for_ai, st.session_state.temp, provider=cur_prov):
-                        full_response += chunk; used_prov = prov_name
-                        response_placeholder.markdown(full_response + '<span class="typewriter-cursor"></span>', unsafe_allow_html=True)
-                    response_placeholder.markdown(full_response)
-                except Exception as e:
-                    with st.spinner("🤔 O'ylayapman..."):
-                        full_response, used_prov = call_ai(msgs_for_ai, st.session_state.temp, provider=cur_prov)
-                        response_placeholder.markdown(full_response)
-                db_log("Somo AI","Assistant",full_response,"chat",used_prov)
-                st.session_state.messages.append({"role":"assistant","content":full_response,"provider":used_prov})
-
-        st.session_state.total_msgs += 1
+    # Random prompt button
+    if st.button("🎲  Tasodifiy ilhom", use_container_width=True, key="rand_sb"):
+        st.session_state.rand_trigger = random.choice(RAND_PROMPTS)
+        st.session_state.page = "chat"
         st.rerun()
 
-# ══════════════════════════════════════════════════════════════════
-# PAGE: EXCEL
-# ══════════════════════════════════════════════════════════════════
-elif st.session_state.page == "excel":
-    avail_provs = [p for p in ["groq","gemini","cohere","mistral"] if p in ai_clients]
-    prov_labels = [f"{API_CONFIGS[p]['icon']} {API_CONFIGS[p]['name']}" for p in avail_provs]
-    st.markdown(f"""
-    <div class="somo-hero"><div class="grid-dots"></div><div class="somo-hero-content">
-        <p style="font-size:11px;letter-spacing:3.5px;font-weight:700;color:#34d399;margin-bottom:10px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">✦ File Generator · {api_status_html(st.session_state.excel_provider)}</p>
-        <h1>📊 Excel <span class="g-text">Generator</span></h1>
-        <p class="subtitle">Har qanday jadval, hisobot — AI bilan professional Excel faylga aylantiring.</p>
-    </div></div>
-    """, unsafe_allow_html=True)
-    xl_examples = [
-        ("💰","Oylik Byudjet","12 oylik moliyaviy byudjet: daromad manbalari, xarajatlar, foyda, formulalar"),
-        ("📦","Inventar","100 ta mahsulot: ID, nomi, kategoriya, miqdori, narxi, jami qiymat"),
-        ("👥","Xodimlar","Xodimlari ish haqi: ism, lavozim, maosh, bonus, soliq, sof maosh"),
-        ("📈","Savdo Hisoboti","Oylik savdo: mahsulot reja, haqiqat, farq, % bajarilish"),
-        ("🎓","Talabalar Bahosi","30 talaba 6 fandan baho: o'rtacha, reyting, davomat"),
-        ("📅","Loyiha Jadvali","IT loyiha: vazifalar, mas'ul, sana, holat, % bajarilish"),
-    ]
-    c1,c2,c3 = st.columns(3)
-    for i,(ico,title,fp) in enumerate(xl_examples):
-        with [c1,c2,c3][i%3]:
-            if st.button(f"{ico}  {title}", key=f"xlq_{i}", use_container_width=True):
-                st.session_state["xl_prompt"] = fp
-    st.markdown('<hr class="somo-divider">', unsafe_allow_html=True)
-    col_inp,col_opt = st.columns([3,1])
-    with col_inp:
-        xl_prompt = st.text_area("📝  Jadval tavsifi:", value=st.session_state.get("xl_prompt",""),
-            placeholder="Masalan: 6 xodimlik IT kompaniya uchun ish haqi jadvali...", height=140, key="xl_in")
-    with col_opt:
-        if avail_provs:
-            curr_xl_idx = avail_provs.index(st.session_state.excel_provider) if st.session_state.excel_provider in avail_provs else 0
-            xl_prov_sel = st.selectbox("🤖 AI", prov_labels, index=curr_xl_idx, key="xl_prov")
-            st.session_state.excel_provider = avail_provs[prov_labels.index(xl_prov_sel)]
-        xl_temp = st.slider("Aniqlik", 0.0, 0.6, 0.15, 0.05, key="xl_temp")
-        gen_xl = st.button("🚀  Excel Yaratish", use_container_width=True, type="primary", key="gen_xl")
-    if gen_xl:
-        if not xl_prompt.strip(): st.warning("⚠️  Jadval tavsifini kiriting!")
-        else:
-            xl_prov = st.session_state.excel_provider
-            st.markdown(f'<div class="somo-notify">📊 Excel yaratilmoqda... {api_status_html(xl_prov)}</div>', unsafe_allow_html=True)
-            prog = st.progress(0)
-            for pct in range(0,75,12): time.sleep(0.28); prog.progress(pct)
-            fb, fn = gen_excel(xl_prompt, xl_temp, provider=xl_prov)
-            prog.progress(100); time.sleep(0.15); prog.empty()
-            if fb and isinstance(fb,bytes): st.session_state.files_cnt += 1; download_block(fb,fn,"Excel")
-            else: st.error(f"❌  {fn}")
-
-# ══════════════════════════════════════════════════════════════════
-# PAGE: WORD
-# ══════════════════════════════════════════════════════════════════
-elif st.session_state.page == "word":
-    avail_provs = [p for p in ["groq","gemini","cohere","mistral"] if p in ai_clients]
-    prov_labels = [f"{API_CONFIGS[p]['icon']} {API_CONFIGS[p]['name']}" for p in avail_provs]
-    st.markdown(f"""
-    <div class="somo-hero"><div class="grid-dots"></div><div class="somo-hero-content">
-        <p style="font-size:11px;letter-spacing:3.5px;font-weight:700;color:#38bdf8;margin-bottom:10px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">✦ File Generator · {api_status_html(st.session_state.word_provider)}</p>
-        <h1>📝 Word <span class="g-text">Generator</span></h1>
-        <p class="subtitle">Professional hujjatlar — rezyume, shartnoma, biznes reja — AI bilan bir soniyada.</p>
-    </div></div>
-    """, unsafe_allow_html=True)
-    wd_examples = [
-        ("👤","Rezyume / CV","Python backend dasturchi rezyume: 4 yil tajriba, ko'nikmalar, ta'lim, sertifikatlar"),
-        ("🤝","Hamkorlik Xati","IT kompaniyalar hamkorlik taklifnomasi: taqdimot, taklif, foyda, shartlar"),
-        ("📋","Ijara Shartnomasi","Turar joy ijara shartnomasi: tomonlar, ob'ekt, muddat, to'lov, mas'uliyat"),
-        ("📖","Biznes Reja","Startap biznes reja: bozor tahlili, mahsulot, marketing, moliyaviy prognoz"),
-        ("🎓","Kurs Ishi","Sun'iy intellekt kurs ishi: 3 bob, xulosa, adabiyotlar, 15+ sahifa"),
-        ("📑","Buyruq","Kompaniya direktori buyrug'i: xodim qabul, lavozim, ish haqi"),
-    ]
-    c1,c2,c3 = st.columns(3)
-    for i,(ico,title,fp) in enumerate(wd_examples):
-        with [c1,c2,c3][i%3]:
-            if st.button(f"{ico}  {title}", key=f"wdq_{i}", use_container_width=True):
-                st.session_state["wd_prompt"] = fp
-    st.markdown('<hr class="somo-divider">', unsafe_allow_html=True)
-    col_wd,col_wopt = st.columns([3,1])
-    with col_wd:
-        wd_prompt = st.text_area("📝  Hujjat tavsifi:", value=st.session_state.get("wd_prompt",""),
-            placeholder="Masalan: IT kompaniya uchun dasturchi mehnat shartnomasi...", height=140, key="wd_in")
-    with col_wopt:
-        if avail_provs:
-            curr_wd_idx = avail_provs.index(st.session_state.word_provider) if st.session_state.word_provider in avail_provs else 0
-            wd_prov_sel = st.selectbox("🤖 AI", prov_labels, index=curr_wd_idx, key="wd_prov")
-            st.session_state.word_provider = avail_provs[prov_labels.index(wd_prov_sel)]
-        gen_wd = st.button("🚀  Word Yaratish", use_container_width=True, type="primary", key="gen_wd")
-    if gen_wd:
-        if not wd_prompt.strip(): st.warning("⚠️  Hujjat tavsifini kiriting!")
-        else:
-            wd_prov = st.session_state.word_provider
-            st.markdown(f'<div class="somo-notify">📝 Word yaratilmoqda... {api_status_html(wd_prov)}</div>', unsafe_allow_html=True)
-            prog = st.progress(0)
-            for pct in range(0,75,15): time.sleep(0.28); prog.progress(pct)
-            fb, fn = gen_word(wd_prompt, provider=wd_prov)
-            prog.progress(100); time.sleep(0.15); prog.empty()
-            if fb and isinstance(fb,bytes): st.session_state.files_cnt += 1; download_block(fb,fn,"Word")
-            else: st.error(f"❌  {fn}")
-
-# ══════════════════════════════════════════════════════════════════
-# PAGE: CODE
-# ══════════════════════════════════════════════════════════════════
-elif st.session_state.page == "code":
-    avail_provs = [p for p in ["groq","gemini","cohere","mistral"] if p in ai_clients]
-    prov_labels = [f"{API_CONFIGS[p]['icon']} {API_CONFIGS[p]['name']}" for p in avail_provs]
-    st.markdown(f"""
-    <div class="somo-hero"><div class="grid-dots"></div><div class="somo-hero-content">
-        <p style="font-size:11px;letter-spacing:3.5px;font-weight:700;color:#fbbf24;margin-bottom:10px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">✦ Code Generator · {api_status_html(st.session_state.code_provider)}</p>
-        <h1>💻 Kod <span class="g-text">Generator</span></h1>
-        <p class="subtitle">Professional Python kodi — error handling, izohlar va best practices bilan.</p>
-    </div></div>
-    """, unsafe_allow_html=True)
-    code_examples = [
-        ("🤖","Telegram Bot","Aiogram v3 Telegram bot: /start, /help, inline keyboard, FSM, SQLite"),
-        ("🌐","FastAPI CRUD","FastAPI CRUD API: PostgreSQL, SQLAlchemy, Pydantic, JWT, Swagger"),
-        ("📊","Dashboard","Streamlit dashboard: CSV yuklash, pandas, plotly grafiklar, filter"),
-        ("🔍","Web Scraper","BeautifulSoup4 scraper: sahifa tahlili, CSV saqlash, delay"),
-        ("🤖","ML Model","Scikit-learn classification: data, train, hyperparameter, hisobot"),
-        ("📧","Email Sender","smtplib email: HTML template, attachment, bulk send"),
-    ]
-    c1,c2,c3 = st.columns(3)
-    for i,(ico,title,fp) in enumerate(code_examples):
-        with [c1,c2,c3][i%3]:
-            if st.button(f"{ico}  {title}", key=f"cq_{i}", use_container_width=True):
-                st.session_state["cd_prompt"] = fp
-    st.markdown('<hr class="somo-divider">', unsafe_allow_html=True)
-    col_cd,col_co = st.columns([3,1])
-    with col_cd:
-        cd_prompt = st.text_area("📝  Kod tavsifi:", value=st.session_state.get("cd_prompt",""),
-            placeholder="Masalan: Telegram bot — narx so'raganda Olx.uz dan avtomatik qidirsin...", height=140, key="cd_in")
-    with col_co:
-        if avail_provs:
-            curr_cd_idx = avail_provs.index(st.session_state.code_provider) if st.session_state.code_provider in avail_provs else 0
-            cd_prov_sel = st.selectbox("🤖 AI", prov_labels, index=curr_cd_idx, key="cd_prov")
-            st.session_state.code_provider = avail_provs[prov_labels.index(cd_prov_sel)]
-        cd_temp = st.slider("Ijodkorlik", 0.0, 0.5, 0.1, 0.05, key="cd_temp")
-        gen_cd = st.button("🚀  Kod Yaratish", use_container_width=True, type="primary", key="gen_cd")
-    if gen_cd:
-        if not cd_prompt.strip(): st.warning("⚠️  Kod tavsifini kiriting!")
-        else:
-            cd_prov = st.session_state.code_provider
-            st.markdown(f'<div class="somo-notify">💻 Kod yozilmoqda... {api_status_html(cd_prov)}</div>', unsafe_allow_html=True)
-            prog = st.progress(0)
-            for pct in range(0,65,15): time.sleep(0.22); prog.progress(pct)
-            fb, fn = gen_code(cd_prompt, cd_temp, provider=cd_prov)
-            prog.progress(100); prog.empty()
-            st.session_state.files_cnt += 1
-            st.markdown('<div class="somo-success">✅  Kod tayyor!</div>', unsafe_allow_html=True)
-            with st.expander("👁  Kod Preview", expanded=True):
-                st.code(fb.decode('utf-8'), language="python")
-            st.download_button("⬇️  .py Fayl", fb, fn, "text/x-python", use_container_width=True, type="primary", key=f"dl_py_{time.time()}")
-
-# ══════════════════════════════════════════════════════════════════
-# PAGE: HTML
-# ══════════════════════════════════════════════════════════════════
-elif st.session_state.page == "html":
-    avail_provs = [p for p in ["groq","gemini","cohere","mistral"] if p in ai_clients]
-    prov_labels = [f"{API_CONFIGS[p]['icon']} {API_CONFIGS[p]['name']}" for p in avail_provs]
-    st.markdown(f"""
-    <div class="somo-hero"><div class="grid-dots"></div><div class="somo-hero-content">
-        <p style="font-size:11px;letter-spacing:3.5px;font-weight:700;color:#f472b6;margin-bottom:10px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">✦ HTML Generator · {api_status_html(st.session_state.html_provider)}</p>
-        <h1>🌐 HTML <span class="g-text">Generator</span></h1>
-        <p class="subtitle">Zamonaviy, animatsiyali veb sahifalar — bitta .html faylda hamma narsa.</p>
-    </div></div>
-    """, unsafe_allow_html=True)
-    html_examples = [
-        ("🎨","Portfolio","Web developer portfolio: hero typewriter, skills, projects, dark theme"),
-        ("🛒","Mahsulot Sahifasi","E-commerce mahsulot: gallery, narx, cart, reviews"),
-        ("📊","Dashboard","Analytics dashboard: sidebar, stat cards, charts, dark glassmorphism"),
-        ("🎪","Event Landing","Konferensiya: hero countdown, speakers, schedule, tickets"),
-        ("🔐","Login Sahifa","Zamonaviy login: glassmorphism, validation, particles"),
-        ("📰","Blog Post","Blog: hero image, typography, TOC, code blocks"),
-    ]
-    c1,c2,c3 = st.columns(3)
-    for i,(ico,title,fp) in enumerate(html_examples):
-        with [c1,c2,c3][i%3]:
-            if st.button(f"{ico}  {title}", key=f"hq_{i}", use_container_width=True):
-                st.session_state["ht_prompt"] = fp
-    st.markdown('<hr class="somo-divider">', unsafe_allow_html=True)
-    col_ht,col_hopt = st.columns([3,1])
-    with col_ht:
-        ht_prompt = st.text_area("📝  Sahifa tavsifi:", value=st.session_state.get("ht_prompt",""),
-            placeholder="Masalan: AI kompaniyasi uchun landing page — dark neon dizayn...", height=140, key="ht_in")
-    with col_hopt:
-        if avail_provs:
-            curr_ht_idx = avail_provs.index(st.session_state.html_provider) if st.session_state.html_provider in avail_provs else 0
-            ht_prov_sel = st.selectbox("🤖 AI", prov_labels, index=curr_ht_idx, key="ht_prov")
-            st.session_state.html_provider = avail_provs[prov_labels.index(ht_prov_sel)]
-        gen_ht = st.button("🚀  HTML Yaratish", use_container_width=True, type="primary", key="gen_ht")
-    if gen_ht:
-        if not ht_prompt.strip(): st.warning("⚠️  Sahifa tavsifini kiriting!")
-        else:
-            ht_prov = st.session_state.html_provider
-            st.markdown(f'<div class="somo-notify">🌐 HTML yaratilmoqda... {api_status_html(ht_prov)}</div>', unsafe_allow_html=True)
-            prog = st.progress(0)
-            for pct in range(0,70,14): time.sleep(0.28); prog.progress(pct)
-            fb, fn = gen_html(ht_prompt, 0.5, provider=ht_prov)
-            prog.progress(100); prog.empty()
-            st.session_state.files_cnt += 1
-            st.markdown('<div class="somo-success">✅ HTML tayyor! Yuklab, brauzerda oching.</div>', unsafe_allow_html=True)
-            with st.expander("👁  HTML Preview"):
-                st.code(fb.decode('utf-8')[:3000], language="html")
-            st.download_button("⬇️  HTML Fayl", fb, fn, "text/html", use_container_width=True, type="primary", key=f"dl_html_{time.time()}")
-
-# ══════════════════════════════════════════════════════════════════
-# PAGE: CSV
-# ══════════════════════════════════════════════════════════════════
-elif st.session_state.page == "csv":
-    avail_provs = [p for p in ["groq","gemini","cohere","mistral"] if p in ai_clients]
-    prov_labels = [f"{API_CONFIGS[p]['icon']} {API_CONFIGS[p]['name']}" for p in avail_provs]
-    st.markdown(f"""
-    <div class="somo-hero"><div class="grid-dots"></div><div class="somo-hero-content">
-        <p style="font-size:11px;letter-spacing:3.5px;font-weight:700;color:#a78bfa;margin-bottom:10px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">✦ Data Generator · {api_status_html(st.session_state.csv_provider)}</p>
-        <h1>📋 CSV <span class="g-text">Generator</span></h1>
-        <p class="subtitle">Katta ma'lumotlar to'plamini bir so'rovda yarating.</p>
-    </div></div>
-    """, unsafe_allow_html=True)
-    csv_examples = [
-        ("📦","Mahsulotlar","100 ta mahsulot: ID, nomi, kategoriya, narxi, miqdori, brend, reyting"),
-        ("👥","Foydalanuvchilar","50 ta user: ID, ism, email, telefon, shahar, sana, holat"),
-        ("🌍","Mamlakatlar","Dunyo mamlakatlari: nomi, poytaxti, aholisi, maydoni, YIM"),
-        ("📱","Ilovalar","Top 100 mobil ilova: nomi, kategoriya, reyting, yuklamalar"),
-        ("🎬","Filmlar","Top 100 film: nomi, rejissor, yili, janri, reyting, byudjet"),
-        ("💼","Kompaniyalar","50 kompaniya: nomi, sektori, xodimlar, daromad, asos yili"),
-    ]
-    c1,c2,c3 = st.columns(3)
-    for i,(ico,title,fp) in enumerate(csv_examples):
-        with [c1,c2,c3][i%3]:
-            if st.button(f"{ico}  {title}", key=f"cvq_{i}", use_container_width=True):
-                st.session_state["cv_prompt"] = fp
-    st.markdown('<hr class="somo-divider">', unsafe_allow_html=True)
-    col_cv,col_copt = st.columns([3,1])
-    with col_cv:
-        cv_prompt = st.text_area("📝  Dataset tavsifi:", value=st.session_state.get("cv_prompt",""),
-            placeholder="Masalan: 80 ta O'zbekiston shahri: viloyati, aholisi, maydoni...", height=130, key="cv_in")
-    with col_copt:
-        if avail_provs:
-            curr_cv_idx = avail_provs.index(st.session_state.csv_provider) if st.session_state.csv_provider in avail_provs else 0
-            cv_prov_sel = st.selectbox("🤖 AI", prov_labels, index=curr_cv_idx, key="cv_prov")
-            st.session_state.csv_provider = avail_provs[prov_labels.index(cv_prov_sel)]
-        gen_cv = st.button("🚀  CSV Yaratish", use_container_width=True, type="primary", key="gen_cv")
-    if gen_cv:
-        if not cv_prompt.strip(): st.warning("⚠️  Dataset tavsifini kiriting!")
-        else:
-            cv_prov = st.session_state.csv_provider
-            st.markdown(f'<div class="somo-notify">📋 Dataset yaratilmoqda... {api_status_html(cv_prov)}</div>', unsafe_allow_html=True)
-            prog = st.progress(0)
-            for pct in range(0,65,15): time.sleep(0.22); prog.progress(pct)
-            fb, fn = gen_csv(cv_prompt, provider=cv_prov)
-            prog.progress(100); prog.empty()
-            st.session_state.files_cnt += 1
-            try:
-                df = pd.read_csv(io.BytesIO(fb))
-                st.markdown(f'<div class="somo-success">✅  CSV tayyor — {len(df)} satr, {len(df.columns)} ustun</div>', unsafe_allow_html=True)
-                st.dataframe(df.head(10), use_container_width=True)
-                if len(df) > 10: st.caption(f"↑ Birinchi 10 ta (jami {len(df)} ta)")
-            except: st.markdown('<div class="somo-success">✅  CSV tayyor!</div>', unsafe_allow_html=True)
-            st.download_button("⬇️  CSV Yuklab Olish", fb, fn, "text/csv", use_container_width=True, type="primary", key=f"dl_csv_{time.time()}")
-
-# ══════════════════════════════════════════════════════════════════
-# PAGE: TEMPLATES
-# ══════════════════════════════════════════════════════════════════
-elif st.session_state.page == "templates":
+    # Footer
     st.markdown("""
-    <div class="somo-hero"><div class="grid-dots"></div><div class="somo-hero-content">
-        <p style="font-size:11px;letter-spacing:3.5px;font-weight:700;color:#646cff;margin-bottom:10px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">✦ Template Library</p>
-        <h1>🎨 Shablonlar <span class="g-text">Markazi</span></h1>
-        <p class="subtitle">16 ta professional shablon — bitta bosish bilan yarating.</p>
-    </div></div>
-    """, unsafe_allow_html=True)
-    TEMPLATES = {
-        "📊 Biznes": [
-            {"ico":"💰","title":"Oylik Byudjet","tag":"excel","tag_cls":"tag-excel","desc":"12 oylik moliyaviy byudjet","prompt":"12 oylik moliyaviy byudjet Excel: daromad, xarajatlar 8 kategoriya, sof foyda, jamg'arma, formulalar"},
-            {"ico":"📈","title":"KPI Dashboard","tag":"excel","tag_cls":"tag-excel","desc":"Kompaniya KPI ko'rsatkichlari","prompt":"Kompaniya KPI Excel: 15 ko'rsatkich, maqsad va haqiqat, farq foizi, RAG ranglash"},
-            {"ico":"📋","title":"Biznes Reja","tag":"word","tag_cls":"tag-word","desc":"To'liq startap biznes reja","prompt":"IT startap biznes reja Word: ijroiya xulosa, bozor tahlili, mahsulot, marketing, moliyaviy prognoz 3 yil"},
-            {"ico":"🤝","title":"Hamkorlik Xati","tag":"word","tag_cls":"tag-word","desc":"Professional hamkorlik taklifnomasi","prompt":"Hamkorlik taklifnomasi Word: kompaniya taqdimoti, taklif, o'zaro foyda, shartlar"},
-        ],
-        "💻 Dasturlash": [
-            {"ico":"🤖","title":"Telegram Bot","tag":"code","tag_cls":"tag-code","desc":"Aiogram v3, FSM, SQLite","prompt":"Aiogram v3 Telegram bot: /start, /help, InlineKeyboard, FSM, SQLite, admin panel, .env"},
-            {"ico":"🌐","title":"FastAPI REST","tag":"code","tag_cls":"tag-code","desc":"CRUD, JWT, PostgreSQL","prompt":"FastAPI REST API: User, Post, Comment, SQLAlchemy+PostgreSQL, Pydantic, JWT, CRUD, CORS"},
-            {"ico":"🎨","title":"Portfolio Sayt","tag":"html","tag_cls":"tag-html","desc":"Dark theme, glassmorphism","prompt":"Web developer portfolio HTML: typewriter hero, skills bars, projects glassmorphism, dark theme, responsive"},
-            {"ico":"📊","title":"Streamlit App","tag":"code","tag_cls":"tag-code","desc":"Data dashboard, grafik","prompt":"Streamlit data app: CSV yuklab, pandas, Plotly grafiklar, filterlar, dark theme"},
-        ],
-        "📚 Ta'lim": [
-            {"ico":"📖","title":"Dars Rejasi","tag":"word","tag_cls":"tag-word","desc":"45 daqiqalik dars konspekti","prompt":"Python asoslari 45 daqiqalik dars Word: maqsadlar, bosqichlar, savol-javob, baholash"},
-            {"ico":"📝","title":"Test Savollari","tag":"excel","tag_cls":"tag-excel","desc":"25 ta test, 4 variant","prompt":"Python 25 test Excel: savol, A-B-C-D variant, to'g'ri javob, mavzu, qiyinchilik"},
-            {"ico":"🎓","title":"Baholash Jadvali","tag":"excel","tag_cls":"tag-excel","desc":"30 talaba, 6 fan","prompt":"Guruh baholash Excel: 30 talaba, 6 fan, o'rtacha, GPA, reyting, davomat, formulalar"},
-            {"ico":"📚","title":"Kurs Ishi","tag":"word","tag_cls":"tag-word","desc":"15+ sahifa, 3 bob","prompt":"Sun'iy intellekt kurs ishi Word: titul, mundarija, kirish, 3 bob, xulosa, 15 adabiyot"},
-        ],
-        "👤 Shaxsiy": [
-            {"ico":"📄","title":"Rezyume","tag":"word","tag_cls":"tag-word","desc":"Professional CV","prompt":"Python/Django dasturchi rezyume Word: ism, kontakt, xulosa, ko'nikmalar, 2 ish joyi, ta'lim, sertifikatlar"},
-            {"ico":"📅","title":"Haftalik Reja","tag":"excel","tag_cls":"tag-excel","desc":"7 kun, vazifalar, holat","prompt":"Haftalik vazifalar Excel: 7 kun, vaqt slotlari, vazifa, ustuvorlik, holat, statistika"},
-            {"ico":"💰","title":"Shaxsiy Byudjet","tag":"excel","tag_cls":"tag-excel","desc":"Daromad, xarajat, jamg'arma","prompt":"Shaxsiy moliya Excel: daromad, xarajatlar kategoriyalar, jamg'arma, oylik trend"},
-            {"ico":"💪","title":"Sport Rejasi","tag":"excel","tag_cls":"tag-excel","desc":"3 oylik trening, progres","prompt":"3 oylik sport Excel: haftalik trening, mashqlar, to'plamlar, ozish maqsad, kaloriya, progres"},
-        ]
-    }
-    sel = st.selectbox("📁  Kategoriya:", list(TEMPLATES.keys()), key="tmpl_sel")
-    st.markdown('<hr class="somo-divider">', unsafe_allow_html=True)
-    items = TEMPLATES[sel]; c1,c2 = st.columns(2)
-    tag_to_prov = {"excel":st.session_state.excel_provider,"word":st.session_state.word_provider,"code":st.session_state.code_provider,"html":st.session_state.html_provider,"csv":st.session_state.csv_provider}
-    for i,tmpl in enumerate(items):
-        with [c1,c2][i%2]:
-            t_prov = tag_to_prov.get(tmpl["tag"],"groq")
-            st.markdown(f"""
-            <div class="tmpl-card">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-                    <span class="tmpl-tag {tmpl['tag_cls']}">{tmpl['tag'].upper()}</span>
-                    {api_status_html(t_prov)}
-                </div>
-                <div class="tmpl-title">{tmpl['ico']}  {tmpl['title']}</div>
-                <div class="tmpl-desc">{tmpl['desc']}</div>
-            </div>
-            """, unsafe_allow_html=True)
-            bc1,bc2 = st.columns(2)
-            with bc1:
-                if st.button("🚀  Yaratish", key=f"tgen_{sel}_{i}", use_container_width=True, type="primary"):
-                    with st.spinner("⏳  Tayyorlanmoqda..."):
-                        tag = tmpl["tag"]
-                        if tag=="excel":
-                            fb,fn = gen_excel(tmpl["prompt"],provider=st.session_state.excel_provider)
-                            if fb and isinstance(fb,bytes): st.session_state.files_cnt+=1; st.download_button("⬇️  Excel",fb,fn,MIME["xlsx"],key=f"tdl_{sel}_{i}",type="primary")
-                        elif tag=="word":
-                            fb,fn = gen_word(tmpl["prompt"],provider=st.session_state.word_provider)
-                            if fb and isinstance(fb,bytes): st.session_state.files_cnt+=1; st.download_button("⬇️  Word",fb,fn,MIME["docx"],key=f"tdl_{sel}_{i}",type="primary")
-                        elif tag=="code":
-                            fb,fn = gen_code(tmpl["prompt"],provider=st.session_state.code_provider)
-                            st.session_state.files_cnt+=1; st.download_button("⬇️  .py",fb,fn,MIME["py"],key=f"tdl_{sel}_{i}",type="primary")
-                        elif tag=="html":
-                            fb,fn = gen_html(tmpl["prompt"],provider=st.session_state.html_provider)
-                            st.session_state.files_cnt+=1; st.download_button("⬇️  HTML",fb,fn,MIME["html"],key=f"tdl_{sel}_{i}",type="primary")
-            with bc2:
-                if st.button("💬  Chat AI", key=f"tchat_{sel}_{i}", use_container_width=True):
-                    st.session_state.messages.append({"role":"user","content":tmpl["prompt"]})
-                    st.session_state.page = "chat"; st.rerun()
-
-# ══════════════════════════════════════════════════════════════════
-# PAGE: ANALYZE
-# ══════════════════════════════════════════════════════════════════
-elif st.session_state.page == "analyze":
-    avail_provs = [p for p in ["groq","gemini","cohere","mistral"] if p in ai_clients]
-    prov_labels = [f"{API_CONFIGS[p]['icon']} {API_CONFIGS[p]['name']}" for p in avail_provs]
-    st.markdown(f"""
-    <div class="somo-hero"><div class="grid-dots"></div><div class="somo-hero-content">
-        <p style="font-size:11px;letter-spacing:3.5px;font-weight:700;color:#22d3ee;margin-bottom:10px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">✦ Document Analysis · {api_status_html(st.session_state.analyze_provider)}</p>
-        <h1>🔍 Hujjat <span class="g-text">Tahlili</span></h1>
-        <p class="subtitle">PDF yoki Word faylni yuklang — AI xulosa, g'oyalar, savol-javob.</p>
-    </div></div>
-    """, unsafe_allow_html=True)
-    col_up,col_act = st.columns([1,1])
-    with col_up:
-        st.markdown('<p class="section-label">Fayl Yuklash</p>', unsafe_allow_html=True)
-        if avail_provs:
-            curr_az_idx = avail_provs.index(st.session_state.analyze_provider) if st.session_state.analyze_provider in avail_provs else 0
-            az_prov_sel = st.selectbox("🤖 AI Provider", prov_labels, index=curr_az_idx, key="az_prov")
-            st.session_state.analyze_provider = avail_provs[prov_labels.index(az_prov_sel)]
-        upl = st.file_uploader("PDF yoki DOCX", type=["pdf","docx"], key="az_up", label_visibility="collapsed")
-        if upl:
-            with st.spinner("📄 O'qilmoqda..."):
-                txt = process_doc(upl)
-                st.session_state.uploaded_text = txt
-            if txt:
-                st.markdown(f'<div class="somo-success">✅  {upl.name} — {len(txt):,} belgi</div>', unsafe_allow_html=True)
-                with st.expander("👁  Matnni ko'rish"):
-                    st.text(txt[:2000]+("..." if len(txt)>2000 else ""))
-            else: st.error("❌ Fayl o'qilmadi")
-    with col_act:
-        st.markdown('<p class="section-label">Tahlil Amaliyotlari</p>', unsafe_allow_html=True)
-        if st.session_state.uploaded_text:
-            az_prov = st.session_state.analyze_provider
-            actions = {
-                "📝  Qisqa Xulosa":   "Hujjatni 5-7 asosiy band bilan xulosasin yoz. Har bandni ★ bilan boshlat.",
-                "🔑  Kalit G'oyalar": "Hujjatdagi 8-10 muhim g'oya va faktlarni ro'yxat shaklida ajrat.",
-                "❓  Savol-Javob":    "Hujjat bo'yicha 10 muhim savol tuz va har biriga javob ber.",
-                "🌐  Inglizcha":      "Hujjat mazmunini professional ingliz tiliga tarjima qil.",
-                "📊  Statistika":     "Hujjatdagi barcha raqamlar va statistikani jadval ko'rinishida tizimlashtir.",
-                "✅  Action Items":   "Hujjatdan aniq amaliy vazifalar va keyingi qadamlarni ustuvorlik bo'yicha tartibla.",
-            }
-            for act_lbl,act_prompt in actions.items():
-                if st.button(act_lbl, key=f"az_{act_lbl}", use_container_width=True):
-                    az_msgs = [
-                        {"role":"system","content":"Sen professional hujjat tahlilchisan."},
-                        {"role":"user","content":f"Hujjat:\n{st.session_state.uploaded_text[:4500]}\n\nVazifa: {act_prompt}"}
-                    ]
-                    result_placeholder = st.empty(); full_az = ""
-                    st.markdown(f'<div style="margin-bottom:6px;">{api_status_html(az_prov)}</div>', unsafe_allow_html=True)
-                    for chunk,_ in call_ai_stream(az_msgs, temperature=0.4, provider=az_prov):
-                        full_az += chunk
-                        result_placeholder.markdown(f"**{act_lbl}**\n\n"+full_az+'<span class="typewriter-cursor"></span>', unsafe_allow_html=True)
-                    result_placeholder.markdown(f"**{act_lbl}**\n\n{full_az}")
-        else:
-            st.markdown("""<div style="background:rgba(100,108,255,0.04);border:1px solid rgba(100,108,255,0.12);border-radius:14px;padding:28px;text-align:center;margin-top:8px;">
-                <p style="font-size:36px;margin-bottom:12px;">📂</p><p style="color:#50506a;font-size:14px;">Chap tomonda fayl yuklang</p></div>""", unsafe_allow_html=True)
-    if st.session_state.uploaded_text:
-        st.markdown('<hr class="somo-divider">', unsafe_allow_html=True)
-        st.markdown('<p class="section-label">O\'z Savolingiz</p>', unsafe_allow_html=True)
-        cq,cb = st.columns([4,1])
-        with cq: custom_q = st.text_input("", placeholder="🔍 Hujjat haqida savolingiz...", label_visibility="collapsed", key="az_q")
-        with cb:
-            if st.button("🔍  Qidirish", use_container_width=True, type="primary", key="az_ask"):
-                if custom_q:
-                    az_prov = st.session_state.analyze_provider
-                    az_msgs = [{"role":"system","content":"Hujjat asosida aniq javob ber."},{"role":"user","content":f"Hujjat:\n{st.session_state.uploaded_text[:4500]}\n\nSavol: {custom_q}"}]
-                    ans_pl = st.empty(); full_ans = ""
-                    for chunk,_ in call_ai_stream(az_msgs, temperature=0.3, provider=az_prov):
-                        full_ans += chunk
-                        ans_pl.markdown("**💬 Javob:**\n\n"+full_ans+'<span class="typewriter-cursor"></span>', unsafe_allow_html=True)
-                    ans_pl.markdown(f"**💬 Javob:**\n\n{full_ans}")
-
-# ══════════════════════════════════════════════════════════════════
-# PAGE: HISTORY
-# ══════════════════════════════════════════════════════════════════
-elif st.session_state.page == "history":
-    st.markdown("""<div class="somo-hero"><div class="grid-dots"></div><div class="somo-hero-content">
-        <p style="font-size:11px;letter-spacing:3.5px;font-weight:700;color:#646cff;margin-bottom:10px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">✦ History</p>
-        <h1>📜 Chat <span class="g-text">Tarixi</span></h1>
-        <p class="subtitle">Barcha suhbatlaringiz, qidirish va eksport bilan.</p>
-    </div></div>""", unsafe_allow_html=True)
-    msgs = st.session_state.messages
-    if msgs:
-        u_cnt = sum(1 for m in msgs if m["role"]=="user"); a_cnt = len(msgs)-u_cnt
-        st.markdown(f"""<div class="stat-row" style="grid-template-columns:repeat(4,1fr);">
-            <div class="stat-box"><div class="stat-icon">💬</div><div class="stat-val">{len(msgs)}</div><div class="stat-lbl">Jami</div></div>
-            <div class="stat-box"><div class="stat-icon">👤</div><div class="stat-val">{u_cnt}</div><div class="stat-lbl">Sizdan</div></div>
-            <div class="stat-box"><div class="stat-icon">🤖</div><div class="stat-val">{a_cnt}</div><div class="stat-lbl">AI dan</div></div>
-            <div class="stat-box"><div class="stat-icon">📁</div><div class="stat-val">{st.session_state.files_cnt}</div><div class="stat-lbl">Fayllar</div></div>
-        </div>""", unsafe_allow_html=True)
-        col_s,col_e1,col_e2 = st.columns([3,1,1])
-        with col_s: search = st.text_input("", placeholder="🔍  Xabarlarda qidirish...", label_visibility="collapsed", key="hist_s")
-        with col_e1: st.download_button("📥  JSON", json.dumps(msgs,ensure_ascii=False,indent=2).encode(), f"somo_{datetime.now():%Y%m%d}.json", use_container_width=True)
-        with col_e2:
-            txt_exp = "\n\n".join([f"[{m['role'].upper()}]\n{m['content']}" for m in msgs])
-            st.download_button("📄  TXT", txt_exp.encode(), f"somo_{datetime.now():%Y%m%d}.txt", use_container_width=True)
-        show = [m for m in msgs if search.lower() in m.get("content","").lower()] if search else msgs
-        if search: st.markdown(f'<div class="somo-notify">🔍  "{search}" — {len(show)} ta natija</div>', unsafe_allow_html=True)
-        st.markdown('<hr class="somo-divider">', unsafe_allow_html=True)
-        for msg in reversed(show[-50:]):
-            is_user = msg["role"]=="user"
-            prov_used = msg.get("provider","groq")
-            role_lbl = "👤  Siz" if is_user else f"🤖  Somo AI · {API_CONFIGS.get(prov_used,API_CONFIGS['groq'])['icon']}"
-            body = msg.get("content","")[:350]+("..." if len(msg.get("content",""))>350 else "")
-            st.markdown(f"""<div class="hist-msg {'hist-user' if is_user else 'hist-ai'}">
-                <div class="hist-role">{role_lbl}</div>
-                <div class="hist-body">{body}</div></div>""", unsafe_allow_html=True)
-    else:
-        st.markdown("""<div style="text-align:center;padding:60px 20px;">
-            <div style="font-size:56px;margin-bottom:20px;">💬</div>
-            <p style="color:#50506a;font-size:18px;font-weight:700;">Chat tarixi yo'q</p></div>""", unsafe_allow_html=True)
-        if st.button("💬  Chat AI ga o'tish", type="primary"):
-            st.session_state.page = "chat"; st.rerun()
-
-# ══════════════════════════════════════════════════════════════════
-# PAGE: FEEDBACK
-# ══════════════════════════════════════════════════════════════════
-elif st.session_state.page == "feedback":
-    st.markdown("""<div class="somo-hero"><div class="grid-dots"></div><div class="somo-hero-content">
-        <p style="font-size:11px;letter-spacing:3.5px;font-weight:700;color:#f472b6;margin-bottom:10px;text-transform:uppercase;font-family:'JetBrains Mono',monospace;">✦ Feedback</p>
-        <h1>💌 Fikr <span class="g-text">Bildirish</span></h1>
-        <p class="subtitle">Sizning fikringiz Somo AI ni yaxshiroq qilishga yordam beradi.</p>
-    </div></div>""", unsafe_allow_html=True)
-    col_f,col_s = st.columns([3,2])
-    with col_f:
-        with st.form("fb_form", clear_on_submit=True):
-            rating = st.select_slider("⭐  Baho:", options=[1,2,3,4,5], value=5, format_func=lambda x: "⭐"*x+f"  ({x}/5)")
-            category = st.selectbox("📂  Kategoriya:", ["Umumiy fikr","Xato haqida","Yangi funksiya taklifi","Dizayn taklifi","Tezlik muammosi","Boshqa"])
-            message = st.text_area("✍️  Xabar:", height=140, placeholder="Fikrlaringizni yozing (kamida 10 belgi)...")
-            email = st.text_input("📧  Email (ixtiyoriy):", placeholder="javob olish uchun")
-            sub_fb = st.form_submit_button("📤  Yuborish", use_container_width=True, type="primary")
-            if sub_fb:
-                if not message or len(message)<10: st.error("❌  Kamida 10 belgidan iborat xabar!")
-                elif fb_db:
-                    try:
-                        fb_db.append_row([datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            st.session_state.username, rating, category, message, email or "N/A", "Yangi", st.session_state.files_cnt])
-                        st.balloons(); st.markdown('<div class="somo-success">✅  Rahmat! Fikringiz yuborildi 🙏</div>', unsafe_allow_html=True)
-                    except Exception as e: st.error(f"❌  {e}")
-                else: st.error("❌  Baza ulanmagan")
-
-# ══════════════════════════════════════════════════════════════════
-# PAGE: PROFILE
-# ══════════════════════════════════════════════════════════════════
-elif st.session_state.page == "profile":
-    uname = st.session_state.username
-    mins = (datetime.now()-st.session_state.login_time).seconds//60  # FIX 5
-    avail_provs = [p for p in ["groq","gemini","cohere","mistral"] if p in ai_clients]
-    st.markdown(f"""
-    <div class="somo-hero" style="text-align:center;"><div class="grid-dots"></div><div class="somo-hero-content">
-        <div style="width:88px;height:88px;background:linear-gradient(135deg,#4f46e5,#7c3aed,#f472b6);border-radius:24px;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:40px;font-weight:900;color:white;box-shadow:0 0 40px rgba(100,108,255,0.5);">
-            {uname[0].upper()}
+    <div style="text-align:center;padding:16px 0 4px;">
+        <div style="font-size:10px;color:#d4c4b0;line-height:1.8;">
+            Somo AI · DeepSeek R1 + Gemini<br>
+            Usmonov Sodiq (@Somo_AI)<br>
+            <span style="color:#e8dfd3;">v4.1 · 2026</span>
         </div>
-        <h1 style="font-size:32px;">{uname}</h1>
-        <p style="color:rgba(255,255,255,0.55);font-size:14px;margin-top:8px;font-family:'JetBrains Mono',monospace;">🟢 ONLINE · Somo AI v3.1 · {len(avail_provs)} API aktiv</p>
-    </div></div>
-    """, unsafe_allow_html=True)
-    p_stats = [("💬",len(st.session_state.messages),"Xabarlar"),("📁",st.session_state.files_cnt,"Fayllar"),("⏱",mins,"Daqiqa"),("🤖",len(avail_provs),"API")]
-    cols_ps = st.columns(4)
-    for col,(icon,val,lbl) in zip(cols_ps,p_stats):
-        with col:
-            st.markdown(f"""<div class="profile-stat"><div class="p-stat-icon">{icon}</div><div class="p-stat-val">{val}</div><div class="p-stat-lbl">{lbl}</div></div>""", unsafe_allow_html=True)
-    st.markdown('<hr class="somo-divider">', unsafe_allow_html=True)
-    col_pw,col_info = st.columns(2)
-    with col_pw:
-        st.markdown('<p class="section-label">Xavfsizlik</p><p class="section-title" style="font-size:18px;">🔑 Parolni O\'zgartirish</p>', unsafe_allow_html=True)
-        with st.form("pw_form"):
-            old_pw = st.text_input("Joriy parol", type="password", key="pw_old")
-            new_pw = st.text_input("Yangi parol (min 6)", type="password", key="pw_new")
-            conf_pw = st.text_input("Tasdiqlash", type="password", key="pw_conf")
-            if st.form_submit_button("🔄  Yangilash", type="primary", use_container_width=True):
-                if len(new_pw)<6:     st.error("❌ Yangi parol kamida 6 belgi!")
-                elif new_pw!=conf_pw: st.error("❌ Parollar mos emas!")
-                elif user_db:
-                    try:
-                        recs = get_all_users()
-                        idx = next((i for i,r in enumerate(recs) if str(r['username'])==uname and check_pw(old_pw,str(r['password']))), None)
-                        if idx is not None:
-                            user_db.update_cell(idx+2,2,hash_pw(new_pw))
-                            get_all_users.clear()  # cache tozalash
-                            st.success("✅ Parol yangilandi!")
-                        else: st.error("❌ Joriy parol noto'g'ri!")
-                    except Exception as e: st.error(f"❌ {e}")
-    with col_info:
-        st.markdown('<p class="section-label">API Sozlamalari</p><p class="section-title" style="font-size:18px;">🤖 Har Format uchun AI</p>', unsafe_allow_html=True)
-        prov_labels_all = [f"{API_CONFIGS[p]['icon']} {API_CONFIGS[p]['name']}" for p in avail_provs]
-        format_provs = [("chat_provider","💬 Chat"),("excel_provider","📊 Excel"),("word_provider","📝 Word"),("code_provider","💻 Kod"),("html_provider","🌐 HTML"),("csv_provider","📋 CSV"),("analyze_provider","🔍 Tahlil")]
-        for sess_key,label in format_provs:
-            curr_val = st.session_state.get(sess_key,"groq")
-            curr_idx = avail_provs.index(curr_val) if curr_val in avail_provs else 0
-            sel = st.selectbox(label, prov_labels_all, index=curr_idx, key=f"prof_{sess_key}")
-            st.session_state[sess_key] = avail_provs[prov_labels_all.index(sel)]
-        if st.button("💾  Saqlash", type="primary", key="save_style", use_container_width=True):
-            st.success("✅ Sozlamalar saqlandi!")
-
-# ══════════════════════════════════════════════════════════════════
-# FOOTER — FIX 8: "Mavlonov Saloxiddin" olib tashlandi
-# ══════════════════════════════════════════════════════════════════
-st.markdown("""
-<div class="somo-footer">
-    <div class="f-title">🌌 Somo AI <span class="g-text">Ultra Pro Max</span></div>
-    <div class="f-sub" style="margin-bottom:12px;">
-        <span class="api-badge api-groq" style="display:inline-flex;"><span class="api-dot"></span>⚡ Groq</span>&nbsp;
-        <span class="api-badge api-gemini" style="display:inline-flex;"><span class="api-dot"></span>✨ Gemini</span>&nbsp;
-        <span class="api-badge api-cohere" style="display:inline-flex;"><span class="api-dot"></span>🔮 Cohere</span>&nbsp;
-        <span class="api-badge api-mistral" style="display:inline-flex;"><span class="api-dot"></span>🌪 Mistral</span>
     </div>
-    <div class="f-sub">📊 Excel · 📝 Word · 💻 Kod · 🌐 HTML · 📋 CSV · 🧠 Chat AI</div>
-    <div class="f-sub" style="margin-top:10px;">👨‍💻 <strong style="color:#e2e8f0;">Usmonov Sodiq</strong> · Somo AI</div>
-    <div class="f-copy">© 2026 Somo AI Ultra Pro Max v3.1 — Python · Streamlit</div>
+    """, unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  HEADER
+# ═══════════════════════════════════════════════════════════════════
+_am = st.session_state.active_mode
+_mm = MODE_META.get(_am, MODE_META["general"])
+_badge = "Gemini 2.0 ✦" if st.session_state.use_gemini else "DeepSeek R1 ✦"
+
+_chip_cls = "on" if _am != "general" else "off"
+_chip_html = (
+    '<div class="somo-mode-chip ' + _chip_cls + '">' +
+    _mm["icon"] + " " + _mm["label"] +
+    '</div>'
+)
+
+st.markdown(
+    '<div class="somo-header">' +
+    '<div class="somo-header-inner">' +
+    '<div class="somo-brand">' +
+    '<div class="somo-logo">S</div>' +
+    '<div>' +
+    '<div class="somo-name">Somo <em>AI</em></div>' +
+    '<div class="somo-by">BY USMONOV SODIQ</div>' +
+    '</div></div>' +
+    '<div class="somo-hdr-right">' +
+    _chip_html +
+    '<div class="somo-online"><div class="somo-dot"></div>Online</div>' +
+    '<div class="somo-model-pill">' + _badge + '</div>' +
+    '</div></div></div>',
+    unsafe_allow_html=True
+)
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  MAIN CONTENT AREA
+# ═══════════════════════════════════════════════════════════════════
+st.markdown('<div class="somo-wrap">', unsafe_allow_html=True)
+
+msgs = st.session_state.messages
+
+if not msgs:
+    # ── WELCOME SCREEN ──────────────────────────────────────────────
+    gi, gt = get_greeting()
+    st.markdown(
+        '<div class="somo-welcome">' +
+        '<div class="somo-eyebrow">✦ ' + gi + ' ' + gt + '</div>' +
+        '<div class="somo-headline">Ijodingizni<br><em>kuchlaytiring</em></div>' +
+        '<div class="somo-subtext">'
+        'Shunchaki xabar yozing — esse, she\'r, nutq, tarjima yoki istalgan savol.<br>'
+        'Somo AI mavzudan rejimni o\'zi aniqlaydi. 🚀' +
+        '</div>' +
+        '<div class="somo-cards">' +
+        '<div class="somo-card"><span class="somo-card-icon">✍️</span>' +
+        '<div class="somo-card-name">Esse / Referat</div>' +
+        '<div class="somo-card-hint">"Vatan haqida esse yoz"</div></div>' +
+        '<div class="somo-card"><span class="somo-card-icon">📖</span>' +
+        '<div class="somo-card-name">Hikoya / She\'r</div>' +
+        '<div class="somo-card-hint">"Bahor haqida she\'r"</div></div>' +
+        '<div class="somo-card"><span class="somo-card-icon">🎤</span>' +
+        '<div class="somo-card-name">Nutq</div>' +
+        '<div class="somo-card-hint">"Yoshlar haqida nutq"</div></div>' +
+        '<div class="somo-card"><span class="somo-card-icon">💡</span>' +
+        '<div class="somo-card-name">G\'oyalar</div>' +
+        '<div class="somo-card-hint">"Startup g\'oyalari ber"</div></div>' +
+        '<div class="somo-card"><span class="somo-card-icon">🌍</span>' +
+        '<div class="somo-card-name">Tarjima</div>' +
+        '<div class="somo-card-hint">"Translate to English"</div></div>' +
+        '<div class="somo-card"><span class="somo-card-icon">📋</span>' +
+        '<div class="somo-card-name">Xulosa / Tahlil</div>' +
+        '<div class="somo-card-hint">"Ushbu matnni tahlil qil"</div></div>' +
+        '</div>' +
+        '<div class="somo-chips">' +
+        '<div class="somo-chip">📝 "Ekologiya esse"</div>' +
+        '<div class="somo-chip">🌸 "Bahor haqida she\'r"</div>' +
+        '<div class="somo-chip">🎤 "Maktab nutqi"</div>' +
+        '<div class="somo-chip">💡 "10 ta biznes g\'oya"</div>' +
+        '<div class="somo-chip">🌍 "Hello — o\'zbekcha"</div>' +
+        '</div></div>',
+        unsafe_allow_html=True
+    )
+
+    # random button
+    c1, c2, c3 = st.columns([1.4, 2, 1.4])
+    with c2:
+        if st.button("🎲  Tasodifiy ilhom", use_container_width=True, key="rand"):
+            st.session_state.rand_trigger = random.choice(RAND_PROMPTS)
+            st.rerun()
+
+else:
+    # ── CHAT VIEW ──────────────────────────────────────────────────
+    # stats bar
+    _ai_msgs  = [m for m in msgs if m["role"] == "assistant"]
+    _usr_msgs = [m for m in msgs if m["role"] == "user"]
+    _total_w  = sum(wc(m["content"]) for m in _ai_msgs)
+    gi2, gt2  = get_greeting()
+    st.markdown(
+        '<div class="somo-stats">' +
+        '<span class="somo-stat">' + gi2 + ' &nbsp;' + gt2 + '</span>' +
+        '<span class="somo-stat">💬 <b>' + str(len(_usr_msgs)) + '</b> savol</span>' +
+        '<span class="somo-stat">✍️ <b>' + str(_total_w) + '</b> so\'z</span>' +
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    # clear button
+    cc1, cc2, cc3 = st.columns([3, 1.4, 3])
+    with cc2:
+        if st.button("🗑️  Tozalash", use_container_width=True, key="clr"):
+            st.session_state.messages    = []
+            st.session_state.active_mode = "general"
+            st.session_state.use_gemini  = False
+            st.rerun()
+
+    st.markdown('<div class="somo-divider">Suhbat</div>', unsafe_allow_html=True)
+
+    # render messages
+    for i, msg in enumerate(msgs):
+        role    = msg["role"]
+        content = msg["content"]
+        ts      = msg.get("time", "")
+        m_mode  = msg.get("mode", "general")
+        mm      = MODE_META.get(m_mode, MODE_META["general"])
+
+        if role == "user":
+            st.markdown(
+                '<div class="somo-msg-user">' +
+                '<div class="somo-body">' +
+                '<div class="somo-bubble-user">' + content + '</div>' +
+                '<div class="somo-ts">' + ts + '</div>' +
+                '</div></div>',
+                unsafe_allow_html=True
+            )
+        else:
+            _wc_val = wc(content)
+            label   = ""
+            if m_mode != "general":
+                label = (
+                    '<div class="somo-mode-label">' +
+                    mm["icon"] + " " + mm["label"] +
+                    '</div><br>'
+                )
+            _cid = "scp" + str(i)
+            _fid = "scf" + str(i)
+            _cjs = (
+                '<script>function ' + _fid + '(){' +
+                'navigator.clipboard.writeText(' + repr(content) + ');' +
+                'var b=document.getElementById("' + _cid + '"  );' +
+                'b.innerText="✅  Nusxalandi";' +
+                'setTimeout(()=>{b.innerText="📋  Nusxa"},2400);}' +
+                '</script>'
+            )
+            st.markdown(
+                '<div class="somo-msg-ai">' +
+                '<div class="somo-av">S</div>' +
+                '<div class="somo-body">' +
+                '<div class="somo-sender">Somo AI</div>' +
+                '<div class="somo-bubble-ai">' + label + md_to_html(content) + '</div>' +
+                '<div class="somo-meta-row">' +
+                '<span class="somo-ts">' + ts + '</span>' +
+                '<span class="somo-wc">📝 ' + str(_wc_val) + ' so\'z</span>' +
+                '<button class="somo-copy" id="' + _cid + '" onclick="' + _fid + '()">📋&nbsp;Nusxa</button>' +
+                '</div></div></div>' + _cjs + KJ,
+                unsafe_allow_html=True
+            )
+
+st.markdown('</div>', unsafe_allow_html=True)   # close somo-wrap
+
+# ═══════════════════════════════════════════════════════════════════
+#  COOLDOWN CHECK
+# ═══════════════════════════════════════════════════════════════════
+#  COOLDOWN CHECK
+# ═══════════════════════════════════════════════════════════════════
+_rem = int(st.session_state.cooldown_end - time.time())
+_cooldown_active = _rem > 0
+if _cooldown_active:
+    time.sleep(1)
+    st.rerun()
+
+# ═══════════════════════════════════════════════════════════════════
+#  CUSTOM FIXED INPUT BAR
+# ═══════════════════════════════════════════════════════════════════
+_cd_msg = f"""
+<div id="somo-cd-notice" style="display:{'block' if _cooldown_active else 'none'};
+  text-align:center;padding:.35rem;font-size:.78rem;color:#b45309;font-family:var(--fb)">
+  ⏳ <strong>API limiti.</strong> Kuting — <span id="somo-cd-s">{_rem}</span> soniya
 </div>
-""", unsafe_allow_html=True)
+"""
+
+
+# ── Native chat input ──────────────────────────────────────────
+prompt = st.chat_input("Xabar yozing… (esse, she'r, nutq…)", disabled=_cooldown_active)
+
+if not prompt and st.session_state.rand_trigger:
+    prompt = st.session_state.rand_trigger
+    st.session_state.rand_trigger = None
+
+# ═══════════════════════════════════════════════════════════════════
+#  PROCESS MESSAGE
+# ═══════════════════════════════════════════════════════════════════
+#
+#  Jarayon:
+#  1. detect_mode()  — rejimni aniqlash
+#  2. build_system_prompt()  — rejimga mos system prompt
+#  3. User bubbleni ko'rsatish
+#  4. Typing placeholder (miltillovchi kursor)
+#  5. Groq stream — birinchi urinish
+#     429/rate_limit → Gemini ga o'tish
+#     Ikkalasi ham 429 → 90s cooldown timer
+#  6. Streaming render (real-time)
+#  7. Javobni session tarixiga saqlash
+#
+# ═══════════════════════════════════════════════════════════════════
+if prompt and prompt.strip():
+    utxt   = prompt.strip()
+    now    = get_time()
+    mode   = detect_mode(utxt)
+    mm     = MODE_META.get(mode, MODE_META["general"])
+    syspmt = build_system_prompt(mode)
+
+    # ── check if image attached (set by JS paste or file pick) ──
+    _img_data = st.session_state.get("uploaded_img", None)
+
+    st.session_state.active_mode = mode
+    st.session_state.messages.append(
+        {"role": "user", "content": utxt, "time": now, "mode": mode}
+    )
+
+    # user bubble (show image thumbnail if attached)
+    _img_preview = ""
+    if _img_data:
+        _img_preview = (
+            '<img src="data:' + _img_data["mime"] + ';base64,' + _img_data["b64"] +
+            '" style="max-width:160px;border-radius:10px;margin-bottom:6px;display:block">' +
+            '<span style="font-size:.7rem;color:#888">📎 ' + _img_data["name"] + '</span>'
+        )
+    st.markdown(
+        '<div class="somo-msg-user">' +
+        '<div class="somo-body">' +
+        '<div class="somo-bubble-user">' + _img_preview + utxt + '</div>' +
+        '<div class="somo-ts">' + now + '</div>' +
+        '</div></div>',
+        unsafe_allow_html=True
+    )
+
+    # typing indicator placeholder
+    ph = st.empty()
+    ph.markdown(
+        '<div class="somo-msg-ai">' +
+        '<div class="somo-av">S</div>' +
+        '<div class="somo-body">' +
+        '<div class="somo-sender">Somo AI</div>' +
+        '<div class="somo-bubble-ai"><span class="somo-cur"></span></div>' +
+        '</div></div>',
+        unsafe_allow_html=True
+    )
+
+    # mode label for streaming
+    _lbl = ""
+    if mode != "general":
+        _lbl = (
+            '<div class="somo-mode-label">' +
+            mm["icon"] + " " + mm["label"] +
+            '</div><br>'
+        )
+
+    def render(text: str, cursor: bool = False, ts: str = "") -> None:
+        _cur = '<span class="somo-cur"></span>' if cursor else ""
+        _td  = '<div class="somo-ts">' + ts + '</div>' if ts else ""
+        ph.markdown(
+            '<div class="somo-msg-ai">' +
+            '<div class="somo-av">S</div>' +
+            '<div class="somo-body">' +
+            '<div class="somo-sender">Somo AI</div>' +
+            '<div class="somo-bubble-ai">' + _lbl + md_to_html(text) + _cur + '</div>' +
+            _td +
+            '</div></div>' + KJ,
+            unsafe_allow_html=True
+        )
+
+    # ── Groq streaming ────────────────────────────────────────────
+    def strip_think(text: str) -> str:
+        """DeepSeek R1 <think>...</think> ichki fikrlarini yashiradi."""
+        return re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+
+    def stream_groq() -> str:
+        if not groq_client: raise Exception("no groq client")
+        api_msgs = [{"role": "system", "content": syspmt}]
+        for m in st.session_state.messages:
+            api_msgs.append({"role": m["role"], "content": m["content"]})
+        stream = groq_client.chat.completions.create(
+            model       = GROQ_MODEL,
+            messages    = api_msgs,
+            stream      = True,
+            max_tokens  = GROQ_MAX_TOK,
+            temperature = GROQ_TEMP,
+        )
+        out = ""
+        for chunk in stream:
+            out += chunk.choices[0].delta.content or ""
+            visible = strip_think(out)
+            if visible:
+                render(visible, cursor=True)
+            else:
+                render("💭 O'ylamoqda…", cursor=True)
+        return strip_think(out)
+
+    # ── Gemini streaming ──────────────────────────────────────────
+    def stream_gemini(img_data=None) -> str:
+        if not gemini_client: raise Exception("no gemini client")
+        import google.generativeai as _genai
+        import base64 as _b64
+
+        # ── image mode: use vision model directly ─────────────────
+        if img_data:
+            vision_model = _genai.GenerativeModel("gemini-2.0-flash")
+            img_part = {
+                "mime_type": img_data["mime"],
+                "data"     : _b64.b64decode(img_data["b64"])
+            }
+            full_prompt = (
+                syspmt + "\n\n---\n\n"
+                "Foydalanuvchi quyidagi rasm/faylni yubordi va shunday dedi:\n"
+                + utxt + "\n\nRasmni diqqat bilan tahlil qilib, ijodiy va chuqur javob ber."
+            )
+            resp = vision_model.generate_content(
+                [full_prompt, img_part],
+                generation_config={
+                    "temperature": GEMINI_TEMP,
+                    "max_output_tokens": GEMINI_MAX_TOK,
+                },
+                stream=True,
+            )
+            out = ""
+            for chunk in resp:
+                try:    out += chunk.text or ""
+                except: pass
+                if out: render(out, cursor=True)
+            return out
+
+        # ── text mode ─────────────────────────────────────────────
+        hist = []
+        for m in st.session_state.messages[:-1]:
+            hist.append({
+                "role"  : "user" if m["role"] == "user" else "model",
+                "parts" : [m["content"]]
+            })
+        chat = gemini_client.start_chat(history=hist)
+        resp = chat.send_message(
+            syspmt + "\n\n---\n\n" + utxt,
+            generation_config = {
+                "temperature"     : GEMINI_TEMP,
+                "max_output_tokens": GEMINI_MAX_TOK,
+            },
+            stream=True,
+        )
+        out = ""
+        for chunk in resp:
+            try:    out += chunk.text or ""
+            except: pass
+            if out: render(out, cursor=True)
+        return out
+
+    # ── Dual-API fallback logic ───────────────────────────────────
+    full    = ""
+    is_rate = lambda e: is_rate_err(str(e))
+
+    # image attached → always use Gemini Vision
+    if _img_data:
+        render("🔍 Rasm tahlil qilinmoqda…", cursor=True)
+        try:
+            full = stream_gemini(img_data=_img_data)
+        except Exception as _ve:
+            full = "❌ Rasm tahlil xatolik: " + str(_ve)
+        # clear image after use
+        st.session_state.uploaded_img = None
+        st.session_state.show_upload  = False
+    else:
+        try:
+            if st.session_state.use_gemini:
+                full = stream_gemini()
+            else:
+                full = stream_groq()
+                st.session_state.use_gemini = False
+
+        except Exception as e1:
+            if is_rate(e1) and not st.session_state.use_gemini:
+                # Groq rate-limited → try Gemini
+                st.session_state.use_gemini = True
+                render("⚡ Groq limiti tugadi, Gemini ga o'tmoqda…", cursor=True)
+                try:
+                    full = stream_gemini()
+                except Exception as e2:
+                    if is_rate(e2):
+                        st.session_state.cooldown_end = time.time() + COOLDOWN_LONG
+                        full = "⏳ Ikkala API limiti tugadi. " + str(COOLDOWN_LONG) + " soniya kuting."
+                    else:
+                        full = "❌ Gemini xatolik: " + str(e2)
+            elif is_rate(e1) and st.session_state.use_gemini:
+                # Gemini rate-limited → try Groq
+                st.session_state.use_gemini = False
+                render("⚡ Gemini limiti tugadi, Groq ga qaytmoqda…", cursor=True)
+                try:
+                    full = stream_groq()
+                except Exception as e3:
+                    if is_rate(e3):
+                        st.session_state.cooldown_end = time.time() + COOLDOWN_LONG
+                        full = "⏳ Ikkala API limiti tugadi. " + str(COOLDOWN_LONG) + " soniya kuting."
+                    else:
+                        full = "❌ Xatolik: " + str(e3)
+            elif "api_key" in str(e1).lower() or "auth" in str(e1).lower():
+                full = "❌ API kalit xato. Secrets faylini tekshiring."
+            else:
+                full = "❌ Xatolik: " + str(e1)
+
+    # final render (no cursor, with timestamp)
+    if full:
+        render(full, cursor=False, ts=get_time())
+
+    # save to history
+    st.session_state.messages.append({
+        "role"    : "assistant",
+        "content" : full,
+        "time"    : get_time(),
+        "mode"    : mode,
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  DEPLOYMENT & VERSION HISTORY
+# ═══════════════════════════════════════════════════════════════════
+#
+#  SECRETS  (.streamlit/secrets.toml):
+#    GROQ_API_KEY   = "gsk_..."     groq.com
+#    GEMINI_API_KEY = "AIza..."     aistudio.google.com
+#
+#  REQUIREMENTS (requirements.txt):
+#    streamlit>=1.32.0
+#    groq>=0.8.0
+#    google-generativeai>=0.8.0
+#
+#  ISHGA TUSHIRISH:
+#    streamlit run app.py
+#
+# ─────────────────────────────────────────────────────────────────
+#  VERSIYA TARIXI
+# ─────────────────────────────────────────────────────────────────
+#  v1.0  Boshlang'ich (Groq + qorong'i tema)
+#  v2.0  Cream dizayn, auto rejim aniqlash
+#  v2.1  Sidebar o'chirildi, layout=wide
+#  v2.2  Dual-API: Groq + Gemini fallback
+#  v2.3  Cooldown timer + input qulflash
+#  v2.4  System prompt kuchaytirildi (Navoiy, Neruda, MLK...)
+#  v2.5  AI bubble ramkasiz (Claude/ChatGPT uslubi)
+#  v3.0  Copy, so'z soni, statistika, random, tozalash, salomlash
+#  v4.0  Premium dizayn qayta yozildi:
+#        • Glass morphism header
+#        • Gradient mesh tokens
+#        • Ripple pulse online dot
+#        • Spring animation kartalar
+#        • Gradient text headline
+#        • Refined typography (Fraunces + DM Sans)
+#        • 2-layered shadows
+#        • Smooth input focus ring
+#        • Rich bubble content CSS
+#        • Strikethrough, h4, del support
+#        • Improved mobile breakpoints
+#        • All class names namespaced (somo-*)
+#
+# ═══════════════════════════════════════════════════════════════════
+#  ADABIY MA'LUMOTNOMA
+# ═══════════════════════════════════════════════════════════════════
+#
+#  O'ZBEK ADABIYOTI:
+#  📜 Alisher Navoiy (1441–1501) — ilohiy metafora, g'azal nafosi
+#  📜 Abdulla Oripov (1941–2016) — oddiy so'z, cheksiz og'irlik
+#  📜 Erkin Vohidov (1936–2016)  — falsafiy hazil, aforizm
+#  📜 Cho'lpon (1897–1938)       — impressionist detal, erkinlik
+#  📜 Abdulla Qahhor (1907–1968) — keskin realizm, portret detal
+#  📜 Hamid Olimjon (1909–1944)  — romantik idealizm
+#
+#  JAHON ADABIYOTI:
+#  🌍 Pablo Neruda (1904–1973)   — hissiy metafora, kosmik romantika
+#  🌍 Jaloliddin Rumi (1207–1273)— mistik paradoks, sevgi koinot
+#  🌍 Anton Chekhov (1860–1904)  — ko'rsatish, tushuntirmaslik
+#  🌍 O. Henry (1862–1910)       — kutilmagan burilish = haqiqat
+#  🌍 García Márquez (1927–2014) — sehrli realizm, vaqt mif
+#  🌍 Jorge Luis Borges (1899–1986)— borliq = matn
+#
+#  NOTIQLIK:
+#  🎤 MLK (1929–1968)    — anafora, axloqiy yoy, vizyon
+#  🎤 Churchill (1874–1965)— kulminatsiyada qisqa jumlalar
+#  🎤 Obama (1961–)      — shaxsiy hikoya → universal haqiqat
+#
+# ═══════════════════════════════════════════════════════════════════
+#  © 2026  Usmonov Sodiq  |  @Somo_AI  |  Barcha huquqlar himoyalangan
+# ═══════════════════════════════════════════════════════════════════
