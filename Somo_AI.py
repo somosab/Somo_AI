@@ -1236,7 +1236,17 @@ with st.sidebar:
         if st.button("🗑  Chatni tozalash", use_container_width=True, key="clr_chat"):
             st.session_state.messages = []; st.rerun()
         if st.session_state.messages:
-            chat_json = json.dumps(st.session_state.messages, ensure_ascii=False, indent=2)
+            # Serialize qilish — bytes va serialize bo'lmaydigan ob'ektlarni olib tashlash
+            def _safe_msgs(msgs):
+                safe = []
+                for m in msgs:
+                    safe.append({
+                        "role": m.get("role",""),
+                        "content": m.get("content",""),
+                        "provider": m.get("provider",""),
+                    })
+                return safe
+            chat_json = json.dumps(_safe_msgs(st.session_state.messages), ensure_ascii=False, indent=2)
             st.download_button("📥  JSON Export", chat_json.encode(), f"chat_{datetime.now():%Y%m%d}.json", use_container_width=True)
 
     st.markdown('<br>', unsafe_allow_html=True)
@@ -1338,7 +1348,10 @@ elif st.session_state.page == "chat":
             st.markdown(msg["content"])
             if "file_data" in msg:
                 fd = msg["file_data"]
-                download_block(fd["bytes"], fd["name"], fd["label"])
+                if fd.get("bytes"):
+                    download_block(fd["bytes"], fd["name"], fd["label"])
+                else:
+                    st.markdown(f'<div class="somo-success">✅ {fd["label"]} fayl yaratildi: <code>{fd["name"]}</code></div>', unsafe_allow_html=True)
 
     with st.expander("📂  Hujjat yuklash (PDF yoki DOCX)", expanded=False):
         upl = st.file_uploader("Fayl tanlang", type=["pdf","docx"], key="chat_upload", label_visibility="collapsed")
@@ -1391,7 +1404,10 @@ elif st.session_state.page == "chat":
                         st.session_state.files_cnt += 1
                         st.session_state.last_files.append(fn)
                         db_log("Somo AI","Assistant",resp_txt,intent,gen_prov)
-                        msg_d = {"role":"assistant","content":resp_txt,"file_data":file_info,"provider":gen_prov}
+                        # bytes ni session_state da saqlamaymiz — faqat meta
+                        msg_d = {"role":"assistant","content":resp_txt,
+                                 "file_data":{"name":fn,"label":glabel,"bytes":None},
+                                 "provider":gen_prov}
                     else:
                         prog.empty(); resp_txt = f"❌ Xatolik: {fn}"; st.error(resp_txt)
                         msg_d = {"role":"assistant","content":resp_txt,"provider":gen_prov}
@@ -1850,7 +1866,8 @@ elif st.session_state.page == "history":
         </div>""", unsafe_allow_html=True)
         col_s,col_e1,col_e2 = st.columns([3,1,1])
         with col_s: search = st.text_input("", placeholder="🔍  Xabarlarda qidirish...", label_visibility="collapsed", key="hist_s")
-        with col_e1: st.download_button("📥  JSON", json.dumps(msgs,ensure_ascii=False,indent=2).encode(), f"somo_{datetime.now():%Y%m%d}.json", use_container_width=True)
+        _safe = [{"role":m.get("role",""),"content":m.get("content",""),"provider":m.get("provider","")} for m in msgs]
+        with col_e1: st.download_button("📥  JSON", json.dumps(_safe,ensure_ascii=False,indent=2).encode(), f"somo_{datetime.now():%Y%m%d}.json", use_container_width=True)
         with col_e2:
             txt_exp = "\n\n".join([f"[{m['role'].upper()}]\n{m['content']}" for m in msgs])
             st.download_button("📄  TXT", txt_exp.encode(), f"somo_{datetime.now():%Y%m%d}.txt", use_container_width=True)
