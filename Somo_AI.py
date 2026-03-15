@@ -76,7 +76,7 @@ st.set_page_config(
     page_title="Somo AI | Ultra Pro Max",
     page_icon="🌌",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 # ══════════════════════════════════════════════════════════════════
@@ -679,45 +679,15 @@ div[data-baseweb="popover"] li:hover { background: rgba(100,108,255,0.1) !import
   .somo-card { padding:16px 10px !important; }
   .stat-row { grid-template-columns: repeat(2,1fr) !important; }
 
-  /* Mobilda sidebar — kichik, overlay shaklida */
+  /* Mobilda sidebar */
   [data-testid="stSidebar"] {
-    width: 75vw !important;
+    width: 80vw !important;
     max-width: 260px !important;
     min-width: 0 !important;
-    position: fixed !important;
-    top: 0 !important; left: 0 !important;
-    height: 100vh !important;
-    z-index: 9999 !important;
-    box-shadow: 4px 0 20px rgba(0,0,0,0.6) !important;
   }
-  /* Sidebar yopilganda main content to'liq ko'rinsin */
-  [data-testid="stSidebar"][aria-expanded="false"] {
-    transform: translateX(-100%) !important;
-    box-shadow: none !important;
-  }
-  [data-testid="stSidebar"][aria-expanded="true"] {
-    transform: translateX(0) !important;
-  }
-  /* Main content sidebar yopilganda to'liq kenglik */
-  [data-testid="stMain"],
-  section[data-testid="stMainBlockContainer"] {
-    margin-left: 0 !important;
-    width: 100% !important;
-  }
-  /* Sidebar toggle tugmasi mobilda ko'rinsin */
+  /* Sidebar toggle ko'rinsin */
   [data-testid="collapsedControl"] {
     display: flex !important;
-    position: fixed !important;
-    top: 8px !important;
-    left: 8px !important;
-    z-index: 10000 !important;
-    background: rgba(15,15,34,0.95) !important;
-    border: 1px solid rgba(100,108,255,0.35) !important;
-    border-radius: 10px !important;
-    width: 38px !important;
-    height: 38px !important;
-    align-items: center !important;
-    justify-content: center !important;
   }
 }
 @media(max-width:480px) {
@@ -1558,8 +1528,11 @@ elif st.session_state.page == "chat":
                 msgs_for_ai = [{"role":"system","content":sys_base}]
                 if st.session_state.uploaded_text:
                     msgs_for_ai.append({"role":"system","content":f"Yuklangan hujjat:\n{st.session_state.uploaded_text[:4000]}"})
-                for m in st.session_state.messages[-22:]:
+                # Oxirgi user xabarini ALOHIDA qo'shamiz (takrorlanmasin)
+                history = st.session_state.messages[:-1]  # Oxirgi (hozirgi user) xabarsiz
+                for m in history[-20:]:
                     msgs_for_ai.append({"role":m["role"],"content":m["content"]})
+                msgs_for_ai.append({"role":"user","content":prompt})
                 st.markdown(f'<div style="margin-bottom:10px;">{api_status_html(cur_prov)}</div>', unsafe_allow_html=True)
                 response_placeholder = st.empty(); full_response = ""; used_prov = cur_prov
                 try:
