@@ -586,7 +586,7 @@ MIME_TYPES: Dict[str, str] = {
     "csv":  "text/csv",
 }
 
-PROVIDER_ORDER = ["groq", "gemini", "cohere", "mistral"]
+PROVIDER_ORDER = ["groq", "cohere", "mistral", "gemini"]  # gemini oxirida — quota muammosi
 
 JSON_RE   = re.compile(r'\{.*\}', re.DOTALL)
 CODE_KW   = re.compile(r'(python|kod|script|bot|function|dastur)', re.IGNORECASE)
@@ -903,23 +903,51 @@ def call_ai(
                 return chat.send_message(last).text, "gemini"
 
             elif prov == "cohere":
-                sys_msg  = next((m["content"] for m in messages if m["role"] == "system"), "")
+                sys_msg   = next((m["content"] for m in messages if m["role"] == "system"), "")
                 user_msgs = [m for m in messages if m["role"] != "system"]
-                chat_hist = [
-                    {"role": "USER" if m["role"] == "user" else "CHATBOT",
-                     "message": m["content"]}
-                    for m in user_msgs[:-1]
-                ]
-                last = user_msgs[-1]["content"] if user_msgs else ""
-                resp = ai_clients["cohere"].chat(
-                    model=API_CONFIGS["cohere"]["model"],
-                    message=last,
-                    chat_history=chat_hist,
-                    preamble=sys_msg or None,
-                    temperature=min(temperature, 1.0),
-                    max_tokens=max_tokens,
-                )
-                return resp.text, "cohere"
+                last      = user_msgs[-1]["content"] if user_msgs else ""
+                co_client = ai_clients["cohere"]
+                result    = None
+
+                # Avval v1 uslubi (message=, chat_history=)
+                try:
+                    chat_hist = [
+                        {"role": "USER" if m["role"] == "user" else "CHATBOT",
+                         "message": m["content"]}
+                        for m in user_msgs[:-1]
+                    ]
+                    resp = co_client.chat(
+                        model=API_CONFIGS["cohere"]["model"],
+                        message=last,
+                        chat_history=chat_hist,
+                        preamble=sys_msg or None,
+                        temperature=min(temperature, 1.0),
+                        max_tokens=max_tokens,
+                    )
+                    result = resp.text if hasattr(resp, "text") else str(resp)
+                except Exception:
+                    pass
+
+                # v2 uslubi (messages=[])
+                if result is None:
+                    msgs_v2 = []
+                    if sys_msg:
+                        msgs_v2.append({"role": "system", "content": sys_msg})
+                    for m in user_msgs[:-1]:
+                        msgs_v2.append({"role": m["role"], "content": m["content"]})
+                    msgs_v2.append({"role": "user", "content": last})
+                    resp = co_client.chat(
+                        model=API_CONFIGS["cohere"]["model"],
+                        messages=msgs_v2,
+                    )
+                    if hasattr(resp, "message") and hasattr(resp.message, "content"):
+                        result = resp.message.content[0].text
+                    elif hasattr(resp, "text"):
+                        result = resp.text
+
+                if result:
+                    return result, "cohere"
+                continue
 
             elif prov == "mistral":
                 resp = ai_clients["mistral"].chat.complete(
@@ -994,29 +1022,85 @@ def call_ai_stream(
                 continue
 
             elif prov == "cohere":
+                # Cohere: streaming yo'q bo'lsa — non-stream bilan fallback
                 sys_msg   = next((m["content"] for m in messages if m["role"] == "system"), "")
                 user_msgs = [m for m in messages if m["role"] != "system"]
-                chat_hist = [
-                    {"role": "USER" if m["role"] == "user" else "CHATBOT",
-                     "message": m["content"]}
-                    for m in user_msgs[:-1]
-                ]
-                last    = user_msgs[-1]["content"] if user_msgs else ""
-                yielded = False
-                for event in ai_clients["cohere"].chat_stream(
-                    model=API_CONFIGS["cohere"]["model"],
-                    message=last,
-                    chat_history=chat_hist,
-                    preamble=sys_msg or None,
-                    temperature=min(temperature, 1.0),
-                    max_tokens=max_tokens,
-                ):
-                    if hasattr(event, "text") and event.text:
-                        yielded = True
-                        yield event.text, "cohere"
-                if yielded:
+                last      = user_msgs[-1]["content"] if user_msgs else ""
+                co_client = ai_clients["cohere"]
+                result    = None
+
+                # 1. chat_stream urinib ko'rish (v1 SDK)
+                try:
+                    chat_hist = [
+                        {"role": "USER" if m["role"] == "user" else "CHATBOT",
+                         "message": m["content"]}
+                        for m in user_msgs[:-1]
+                    ]
+                    yielded = False
+                    for event in co_client.chat_stream(
+                        model=API_CONFIGS["cohere"]["model"],
+                        message=last,
+                        chat_history=chat_hist,
+                        preamble=sys_msg or None,
+                        temperature=min(temperature, 1.0),
+                        max_tokens=max_tokens,
+                    ):
+                        txt = None
+                        if hasattr(event, "text") and event.text:
+                            txt = event.text
+                        elif hasattr(event, "event_type") and event.event_type == "text-generation":
+                            txt = getattr(event, "text", None)
+                        if txt:
+                            yielded = True
+                            yield txt, "cohere"
+                    if yielded:
+                        return
+                except Exception as ce:
+                    errors["cohere_stream"] = str(ce)[:80]
+
+                # 2. Non-stream fallback (butun javobni birdan qaytarish)
+                try:
+                    chat_hist = [
+                        {"role": "USER" if m["role"] == "user" else "CHATBOT",
+                         "message": m["content"]}
+                        for m in user_msgs[:-1]
+                    ]
+                    resp = co_client.chat(
+                        model=API_CONFIGS["cohere"]["model"],
+                        message=last,
+                        chat_history=chat_hist,
+                        preamble=sys_msg or None,
+                        temperature=min(temperature, 1.0),
+                        max_tokens=max_tokens,
+                    )
+                    result = resp.text if hasattr(resp, "text") else None
+                except Exception:
+                    pass
+
+                # 3. v2 SDK uslubi (messages=[])
+                if result is None:
+                    try:
+                        msgs_v2 = []
+                        if sys_msg:
+                            msgs_v2.append({"role": "system", "content": sys_msg})
+                        for m in user_msgs[:-1]:
+                            msgs_v2.append({"role": m["role"], "content": m["content"]})
+                        msgs_v2.append({"role": "user", "content": last})
+                        resp = co_client.chat(
+                            model=API_CONFIGS["cohere"]["model"],
+                            messages=msgs_v2,
+                        )
+                        if hasattr(resp, "message") and hasattr(resp.message, "content"):
+                            result = resp.message.content[0].text
+                        elif hasattr(resp, "text"):
+                            result = resp.text
+                    except Exception as e3:
+                        errors["cohere"] = str(e3)[:80]
+
+                if result:
+                    yield result, "cohere"
                     return
-                errors["cohere"] = "bo'sh javob"
+                errors["cohere"] = errors.get("cohere", "barcha urinishlar muvaffaqiyatsiz")
                 continue
 
             elif prov == "mistral":
@@ -1693,6 +1777,34 @@ with st.sidebar:
                 f"chat_{datetime.now():%Y%m%d}.json",
                 use_container_width=True
             )
+
+    # ── API Diagnostics ──
+    st.markdown('<hr class="somo-divider" style="margin:8px 0;">',
+                unsafe_allow_html=True)
+    st.markdown('<p class="section-label" style="padding:0 14px 4px;font-size:9px;">API Holati</p>',
+                unsafe_allow_html=True)
+
+    _all_provs = {"groq": "⚡", "cohere": "🔮", "mistral": "🌪", "gemini": "✨"}
+    for _p, _ico in _all_provs.items():
+        _ok = _p in ai_clients
+        _dot_color = "#34d399" if _ok else "#ef4444"
+        _status    = "TAYYOR" if _ok else "YO'Q"
+        st.markdown(f"""
+        <div style="display:flex;align-items:center;justify-content:space-between;
+                    padding:5px 14px;font-size:11px;font-family:'JetBrains Mono',monospace;">
+            <span style="color:#a0a0c0;">{_ico} {_p.capitalize()}</span>
+            <span style="color:{_dot_color};font-weight:700;font-size:10px;">{_status}</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    if not ai_clients:
+        st.markdown("""
+        <div style="margin:8px 14px;padding:10px;background:rgba(239,68,68,0.1);
+                    border:1px solid rgba(239,68,68,0.3);border-radius:8px;
+                    font-size:11px;color:#fca5a5;font-family:'JetBrains Mono',monospace;">
+            ⚠️ Hech bir API kalit<br>topilmadi! secrets.toml<br>ni tekshiring.
+        </div>
+        """, unsafe_allow_html=True)
 
     st.markdown('<br>', unsafe_allow_html=True)
     if st.button("🚪  Tizimdan chiqish", use_container_width=True,
