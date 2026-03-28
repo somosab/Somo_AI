@@ -662,41 +662,62 @@ def get_secret(key: str) -> str:
 def init_ai_clients() -> Dict[str, Any]:
     """Barcha AI clientlarni initialize qilish."""
     clients: Dict[str, Any] = {}
+    init_errors: List[str]  = []
 
     if HAS_GROQ:
         try:
             key = get_secret("GROQ_API_KEY")
             if key:
                 clients["groq"] = Groq(api_key=key)
-        except Exception:
-            pass
+            else:
+                init_errors.append("GROQ_API_KEY topilmadi")
+        except Exception as e:
+            init_errors.append(f"Groq: {e}")
 
     if HAS_GEMINI:
-        for model_name in ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-pro"]:
-            try:
-                key = get_secret("GEMINI_API_KEY")
-                if key:
-                    genai.configure(api_key=key)
-                    clients["gemini"] = genai.GenerativeModel(model_name)
-                    break
-            except Exception as e:
-                if "not found" in str(e).lower() or "404" in str(e):
-                    continue
-                break
+        try:
+            key = get_secret("GEMINI_API_KEY")
+            if key:
+                genai.configure(api_key=key)
+                for model_name in ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-pro"]:
+                    try:
+                        clients["gemini"] = genai.GenerativeModel(model_name)
+                        break
+                    except Exception as me:
+                        if "not found" in str(me).lower() or "404" in str(me):
+                            continue
+                        raise
+            else:
+                init_errors.append("GEMINI_API_KEY topilmadi")
+        except Exception as e:
+            init_errors.append(f"Gemini: {e}")
 
     if HAS_COHERE:
         try:
             key = get_secret("COHERE_API_KEY")
             if key:
                 clients["cohere"] = cohere.Client(api_key=key)
-        except Exception:
-            pass
+            else:
+                init_errors.append("COHERE_API_KEY topilmadi")
+        except Exception as e:
+            init_errors.append(f"Cohere: {e}")
 
     if HAS_MISTRAL:
         try:
             key = get_secret("MISTRAL_API_KEY")
             if key:
                 clients["mistral"] = Mistral(api_key=key)
+            else:
+                init_errors.append("MISTRAL_API_KEY topilmadi")
+        except Exception as e:
+            init_errors.append(f"Mistral: {e}")
+
+    # Hech bir client yo'q — xatolarni saqlash (keyinroq ko'rsatiladi)
+    if not clients:
+        import json as _json
+        try:
+            with open("/tmp/somo_init_errors.json", "w") as f:
+                _json.dump(init_errors, f)
         except Exception:
             pass
 
@@ -704,6 +725,20 @@ def init_ai_clients() -> Dict[str, Any]:
 
 
 ai_clients = init_ai_clients()
+
+# Agar hech bir client yo'q bo'lsa — init xatolarini ko'rsatish
+if not ai_clients:
+    try:
+        import json as _j
+        _errs = _j.load(open("/tmp/somo_init_errors.json"))
+        st.error(
+            "⚠️ **Hech bir AI client ishga tushmadi!**\n\n"
+            + "\n".join(f"• {e}" for e in _errs)
+            + "\n\nStreamlit `secrets.toml` da API kalitlarni tekshiring:\n"
+            "```toml\nGROQ_API_KEY = \"gsk_...\"\nGEMINI_API_KEY = \"AIza...\"\n```"
+        )
+    except Exception:
+        st.error("⚠️ Hech bir AI client ishga tushmadi! API kalitlarni tekshiring.")
 
 # ════════════════════════════════════════════════════════════════════════════════
 # DATABASE
@@ -907,11 +942,13 @@ def call_ai_stream(
     max_tokens: int = 3000,
     provider: str = "groq"
 ):
-    """Streaming AI so'rovi."""
-    order = [provider] + [p for p in PROVIDER_ORDER if p != provider]
+    """Streaming AI so'rovi — har bir provider uchun to'liq fallback va xato log."""
+    order  = [provider] + [p for p in PROVIDER_ORDER if p != provider]
+    errors: Dict[str, str] = {}
 
     for prov in order:
         if prov not in ai_clients:
+            errors[prov] = "client yo'q"
             continue
         try:
             if prov == "groq":
@@ -922,16 +959,22 @@ def call_ai_stream(
                     max_tokens=max_tokens,
                     stream=True,
                 )
+                yielded = False
                 for chunk in stream:
                     delta = chunk.choices[0].delta.content
                     if delta:
+                        yielded = True
                         yield delta, "groq"
-                return
+                if yielded:
+                    return
+                # Bo'sh javob — fallback
+                errors["groq"] = "bo'sh javob"
+                continue
 
             elif prov == "gemini":
-                sys_msg  = next((m["content"] for m in messages if m["role"] == "system"), "")
+                sys_msg   = next((m["content"] for m in messages if m["role"] == "system"), "")
                 user_msgs = [m for m in messages if m["role"] != "system"]
-                hist     = [
+                hist      = [
                     {"role": "user" if m["role"] == "user" else "model",
                      "parts": [m["content"]]}
                     for m in user_msgs[:-1]
@@ -939,21 +982,27 @@ def call_ai_stream(
                 last = user_msgs[-1]["content"] if user_msgs else ""
                 if sys_msg:
                     last = f"[System: {sys_msg}]\n\n{last}"
-                chat = ai_clients["gemini"].start_chat(history=hist)
-                for chunk in chat.send_message(last, stream=True):
+                chat_obj = ai_clients["gemini"].start_chat(history=hist)
+                yielded  = False
+                for chunk in chat_obj.send_message(last, stream=True):
                     if chunk.text:
+                        yielded = True
                         yield chunk.text, "gemini"
-                return
+                if yielded:
+                    return
+                errors["gemini"] = "bo'sh javob"
+                continue
 
             elif prov == "cohere":
-                sys_msg  = next((m["content"] for m in messages if m["role"] == "system"), "")
+                sys_msg   = next((m["content"] for m in messages if m["role"] == "system"), "")
                 user_msgs = [m for m in messages if m["role"] != "system"]
                 chat_hist = [
                     {"role": "USER" if m["role"] == "user" else "CHATBOT",
                      "message": m["content"]}
                     for m in user_msgs[:-1]
                 ]
-                last = user_msgs[-1]["content"] if user_msgs else ""
+                last    = user_msgs[-1]["content"] if user_msgs else ""
+                yielded = False
                 for event in ai_clients["cohere"].chat_stream(
                     model=API_CONFIGS["cohere"]["model"],
                     message=last,
@@ -963,10 +1012,15 @@ def call_ai_stream(
                     max_tokens=max_tokens,
                 ):
                     if hasattr(event, "text") and event.text:
+                        yielded = True
                         yield event.text, "cohere"
-                return
+                if yielded:
+                    return
+                errors["cohere"] = "bo'sh javob"
+                continue
 
             elif prov == "mistral":
+                yielded = False
                 for chunk in ai_clients["mistral"].chat.stream(
                     model=API_CONFIGS["mistral"]["model"],
                     messages=messages,
@@ -975,13 +1029,31 @@ def call_ai_stream(
                 ):
                     delta = chunk.data.choices[0].delta.content
                     if delta:
+                        yielded = True
                         yield delta, "mistral"
-                return
+                if yielded:
+                    return
+                errors["mistral"] = "bo'sh javob"
+                continue
 
-        except Exception:
+        except Exception as e:
+            errors[prov] = str(e)[:120]
             continue
 
-    yield "❌ Xatolik yuz berdi.", "none"
+    # Barcha providerlar muvaffaqiyatsiz — non-stream fallback sinab ko'rish
+    fallback_resp, fallback_prov = call_ai(messages, temperature, max_tokens, provider)
+    if fallback_prov != "none":
+        yield fallback_resp, fallback_prov
+        return
+
+    # Hech narsa ishlamadi — xato detallarini ko'rsatish
+    err_lines = "\n".join([f"• **{p}**: {e}" for p, e in errors.items()])
+    yield (
+        f"❌ **Hech bir AI javob bermadi.**\n\n"
+        f"**Xatolar:**\n{err_lines}\n\n"
+        f"💡 *Tekshiring: API kalitlar to'g'ri sozlanganmi? "
+        f"Rate limit bo'lishi mumkin — bir daqiqa kuting.*"
+    ), "none"
 
 # ════════════════════════════════════════════════════════════════════════════════
 # FILE GENERATORS
