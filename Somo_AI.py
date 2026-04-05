@@ -911,32 +911,35 @@ def call_ai(
 
             elif prov == "cohere":
                 # Cohere v2 SDK (cohere>=5.0): ClientV2 + messages=[] format
-                sys_msg   = next((m["content"] for m in messages if m["role"] == "system"), "")
-                user_msgs = [m for m in messages if m["role"] != "system"]
-                co_client = ai_clients["cohere"]
+                try:
+                    sys_msg   = next((m["content"] for m in messages if m["role"] == "system"), "")
+                    user_msgs = [m for m in messages if m["role"] != "system"]
+                    co_client = ai_clients["cohere"]
 
-                # v2 format: messages=[{"role":..., "content":...}]
-                msgs_v2 = []
-                if sys_msg:
-                    msgs_v2.append({"role": "system", "content": sys_msg})
-                for m in user_msgs[:-1]:
-                    msgs_v2.append({"role": m["role"], "content": m["content"]})
-                if user_msgs:
-                    msgs_v2.append({"role": "user", "content": user_msgs[-1]["content"]})
+                    msgs_v2 = []
+                    if sys_msg:
+                        msgs_v2.append({"role": "system", "content": sys_msg})
+                    for m in user_msgs[:-1]:
+                        msgs_v2.append({"role": m["role"], "content": m["content"]})
+                    if user_msgs:
+                        msgs_v2.append({"role": "user", "content": user_msgs[-1]["content"]})
 
-                resp   = co_client.chat(
-                    model=API_CONFIGS["cohere"]["model"],
-                    messages=msgs_v2,
-                )
-                # v2 javob strukturasi: resp.message.content[0].text
-                if hasattr(resp, "message") and resp.message:
-                    content_list = getattr(resp.message, "content", [])
-                    if content_list:
-                        txt = content_list[0].text if hasattr(content_list[0], "text") else str(content_list[0])
-                        return txt, "cohere"
-                # Fallback: resp.text (v1 eski struktura)
-                if hasattr(resp, "text") and resp.text:
-                    return resp.text, "cohere"
+                    resp = co_client.chat(
+                        model=API_CONFIGS["cohere"]["model"],
+                        messages=msgs_v2,
+                    )
+                    # v2 javob: resp.message.content[0].text
+                    if hasattr(resp, "message") and resp.message:
+                        content_list = getattr(resp.message, "content", [])
+                        if content_list:
+                            txt = content_list[0].text if hasattr(content_list[0], "text") else str(content_list[0])
+                            if txt:
+                                return txt, "cohere"
+                    # v1 fallback
+                    if hasattr(resp, "text") and resp.text:
+                        return resp.text, "cohere"
+                except Exception:
+                    pass
                 continue
 
             elif prov == "mistral":
@@ -1025,25 +1028,31 @@ def call_ai_stream(
                 if user_msgs:
                     msgs_v2.append({"role": "user", "content": user_msgs[-1]["content"]})
 
-                # 1. stream_chat (v2 SDK metodi)
+                # 1. Cohere v2 streaming (stream=True parametri bilan)
                 yielded = False
                 try:
-                    stream_resp = co_client.chat_stream(
+                    for event in co_client.chat(
                         model=API_CONFIGS["cohere"]["model"],
                         messages=msgs_v2,
-                    )
-                    for event in stream_resp:
-                        if hasattr(event, "type"):
-                            if event.type == "content-delta":
-                                txt = getattr(getattr(event, "delta", None), "message", None)
-                                if txt and hasattr(txt, "content"):
-                                    t = getattr(txt.content, "text", "") or ""
-                                    if t:
-                                        yielded = True
-                                        yield t, "cohere"
-                        elif hasattr(event, "text") and event.text:
+                        stream=True,
+                    ):
+                        # v2 stream event turlari
+                        evt_type = getattr(event, "type", None)
+                        if evt_type == "content-delta":
+                            # event.delta.message.content.text
+                            try:
+                                txt = event.delta.message.content.text
+                                if txt:
+                                    yielded = True
+                                    yield txt, "cohere"
+                                    continue
+                            except Exception:
+                                pass
+                        # fallback: to'g'ridan-to'g'ri .text atributi
+                        raw_txt = getattr(event, "text", None)
+                        if raw_txt:
                             yielded = True
-                            yield event.text, "cohere"
+                            yield raw_txt, "cohere"
                     if yielded:
                         return
                 except Exception:
@@ -1433,11 +1442,16 @@ def download_btn(file_bytes: bytes, filename: str, label: str) -> None:
 
 def provider_selector(session_key: str, widget_key: str,
                       label: str = "🤖 AI") -> str:
-    """Provider tanlash selectbox."""
+    """Provider tanlash selectbox — xavfsiz."""
     avail  = [p for p in PROVIDER_ORDER if p in ai_clients]
+    if not avail:
+        st.warning("⚠️ Hech bir AI provider aktiv emas!")
+        return "groq"
     labels = [f"{API_CONFIGS[p]['icon']} {API_CONFIGS[p]['name']}" for p in avail]
-    curr   = st.session_state.get(session_key, "groq")
-    idx    = avail.index(curr) if curr in avail else 0
+    curr   = st.session_state.get(session_key, avail[0])
+    if curr not in avail:
+        curr = avail[0]
+    idx    = avail.index(curr)
     sel    = st.selectbox(label, labels, index=idx, key=widget_key)
     chosen = avail[labels.index(sel)]
     st.session_state[session_key] = chosen
@@ -2038,7 +2052,7 @@ elif st.session_state.page == "excel":
     with col_i:
         xl_prompt = st.text_area(
             "📝  Jadval tavsifi:",
-            value=st.session_state.pop("xl_prompt", st.session_state.get("excel_prompt", "")),
+            value=st.session_state.get("xl_prompt", st.session_state.get("excel_prompt", "")),
             placeholder="Masalan: 6 xodimlik IT kompaniya uchun ish haqi jadvali...",
             height=140, key="xl_in"
         )
@@ -2053,6 +2067,9 @@ elif st.session_state.page == "excel":
         if not xl_prompt.strip():
             st.warning("⚠️ Jadval tavsifini kiriting!")
         else:
+            # Promptni tozalash (keyingi yuklaganda qolmasin)
+            if "xl_prompt" in st.session_state: del st.session_state["xl_prompt"]
+            if "excel_prompt" in st.session_state: del st.session_state["excel_prompt"]
             xl_prov = st.session_state.excel_provider
             st.markdown(
                 f'<div class="somo-notify">📊 Excel yaratilmoqda... {api_badge(xl_prov)}</div>',
@@ -2106,7 +2123,7 @@ elif st.session_state.page == "word":
     with col_i:
         wd_prompt = st.text_area(
             "📝  Hujjat tavsifi:",
-            value=st.session_state.pop("wd_prompt", st.session_state.get("word_prompt", "")),
+            value=st.session_state.get("wd_prompt", st.session_state.get("word_prompt", "")),
             placeholder="Masalan: IT kompaniya uchun dasturchi mehnat shartnomasi...",
             height=140, key="wd_in"
         )
@@ -2120,6 +2137,8 @@ elif st.session_state.page == "word":
         if not wd_prompt.strip():
             st.warning("⚠️ Hujjat tavsifini kiriting!")
         else:
+            if "wd_prompt" in st.session_state: del st.session_state["wd_prompt"]
+            if "word_prompt" in st.session_state: del st.session_state["word_prompt"]
             wd_prov = st.session_state.word_provider
             st.markdown(
                 f'<div class="somo-notify">📝 Word yaratilmoqda... {api_badge(wd_prov)}</div>',
@@ -2173,7 +2192,7 @@ elif st.session_state.page == "code":
     with col_i:
         cd_prompt = st.text_area(
             "📝  Kod tavsifi:",
-            value=st.session_state.pop("cd_prompt", st.session_state.get("code_prompt", "")),
+            value=st.session_state.get("cd_prompt", st.session_state.get("code_prompt", "")),
             placeholder="Masalan: Telegram bot — narx so'raganda Olx.uz dan avtomatik qidirsin...",
             height=140, key="cd_in"
         )
@@ -2188,6 +2207,8 @@ elif st.session_state.page == "code":
         if not cd_prompt.strip():
             st.warning("⚠️ Kod tavsifini kiriting!")
         else:
+            if "cd_prompt" in st.session_state: del st.session_state["cd_prompt"]
+            if "code_prompt" in st.session_state: del st.session_state["code_prompt"]
             cd_prov = st.session_state.code_provider
             st.markdown(
                 f'<div class="somo-notify">💻 Kod yozilmoqda... {api_badge(cd_prov)}</div>',
@@ -2245,7 +2266,7 @@ elif st.session_state.page == "html":
     with col_i:
         ht_prompt = st.text_area(
             "📝  Sahifa tavsifi:",
-            value=st.session_state.pop("ht_prompt", st.session_state.get("html_prompt", "")),
+            value=st.session_state.get("ht_prompt", st.session_state.get("html_prompt", "")),
             placeholder="Masalan: AI kompaniyasi uchun landing page — dark neon dizayn...",
             height=140, key="ht_in"
         )
@@ -2259,6 +2280,8 @@ elif st.session_state.page == "html":
         if not ht_prompt.strip():
             st.warning("⚠️ Sahifa tavsifini kiriting!")
         else:
+            if "ht_prompt" in st.session_state: del st.session_state["ht_prompt"]
+            if "html_prompt" in st.session_state: del st.session_state["html_prompt"]
             ht_prov = st.session_state.html_provider
             st.markdown(
                 f'<div class="somo-notify">🌐 HTML yaratilmoqda... {api_badge(ht_prov)}</div>',
@@ -2317,7 +2340,7 @@ elif st.session_state.page == "csv":
     with col_i:
         cv_prompt = st.text_area(
             "📝  Dataset tavsifi:",
-            value=st.session_state.pop("cv_prompt", ""),
+            value=st.session_state.get("cv_prompt", ""),
             placeholder="Masalan: 80 ta O'zbekiston shahri: viloyati, aholisi, maydoni...",
             height=130, key="cv_in"
         )
@@ -2331,6 +2354,7 @@ elif st.session_state.page == "csv":
         if not cv_prompt.strip():
             st.warning("⚠️ Dataset tavsifini kiriting!")
         else:
+            if "cv_prompt" in st.session_state: del st.session_state["cv_prompt"]
             cv_prov = st.session_state.csv_provider
             st.markdown(
                 f'<div class="somo-notify">📋 Dataset yaratilmoqda... {api_badge(cv_prov)}</div>',
