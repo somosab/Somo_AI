@@ -1,6 +1,7 @@
 # ═══════════════════════════════════════════════════════════
-# SOMO AI  v7.0  —  "Obsidian & Ember" Premium Design
+# SOMO AI  v7.1  —  "Obsidian & Ember" Premium Design
 # Stack : Streamlit · Groq · Google Sheets · bcrypt
+# Fixes : suggestion→AI, cache UI calls, None guard, UnboundLocal
 # ═══════════════════════════════════════════════════════════
 
 import streamlit as st
@@ -41,8 +42,6 @@ st.set_page_config(
 
 # ═══════════════════════════════════════════════════════════
 # CSS — "Obsidian & Ember"
-# Fonts  : Cormorant Garamond (brand) + Outfit (UI) + Fira Code (mono)
-# Colors : Deep obsidian bg · warm amber accent · cream text
 # ═══════════════════════════════════════════════════════════
 st.markdown("""
 <style>
@@ -88,7 +87,6 @@ html, body, .stApp {
   font-family: var(--font-ui) !important;
 }
 
-/* Hide Streamlit chrome */
 header[data-testid="stHeader"],
 [data-testid="stSidebarNav"],
 #MainMenu, footer { display: none !important; }
@@ -99,7 +97,6 @@ header[data-testid="stHeader"],
   max-width: 100% !important;
 }
 
-/* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
@@ -109,9 +106,6 @@ header[data-testid="stHeader"],
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
 
-/* ══════════════════════════════════════
-   SIDEBAR
-══════════════════════════════════════ */
 [data-testid="stSidebar"] {
   background: var(--surface) !important;
   border-right: 1px solid var(--border) !important;
@@ -141,18 +135,11 @@ header[data-testid="stHeader"],
   transform: none !important;
 }
 
-/* ── SLIDER ── */
 [data-testid="stSidebar"] [data-baseweb="slider"] [role="slider"] {
   background: var(--accent) !important;
   box-shadow: 0 0 8px rgba(240,169,78,0.5) !important;
 }
-[data-testid="stSidebar"] [data-baseweb="slider"] [data-testid="stSlider"] div[data-baseweb="slider"] > div:last-child {
-  background: var(--accent) !important;
-}
 
-/* ══════════════════════════════════════
-   INPUTS
-══════════════════════════════════════ */
 .stTextInput input,
 .stTextArea textarea {
   background: var(--surface2) !important;
@@ -172,9 +159,7 @@ header[data-testid="stHeader"],
   outline: none !important;
 }
 .stTextInput input::placeholder,
-.stTextArea textarea::placeholder {
-  color: var(--muted) !important;
-}
+.stTextArea textarea::placeholder { color: var(--muted) !important; }
 .stTextInput label,
 .stTextArea label,
 [data-testid="stWidgetLabel"] {
@@ -186,9 +171,6 @@ header[data-testid="stHeader"],
   text-transform: uppercase !important;
 }
 
-/* ══════════════════════════════════════
-   BUTTONS
-══════════════════════════════════════ */
 .stButton > button {
   background: var(--surface2) !important;
   color: var(--text-dim) !important;
@@ -211,9 +193,7 @@ header[data-testid="stHeader"],
   transform: translateY(-1px) !important;
   box-shadow: var(--shadow-sm) !important;
 }
-.stButton > button:active {
-  transform: translateY(0) !important;
-}
+.stButton > button:active { transform: translateY(0) !important; }
 .stButton > button[kind="primary"] {
   background: linear-gradient(135deg, #e07f3a 0%, #f0a94e 50%, #e8c473 100%) !important;
   color: #1a0f02 !important;
@@ -229,9 +209,6 @@ header[data-testid="stHeader"],
   color: #0f0802 !important;
 }
 
-/* ══════════════════════════════════════
-   FORM
-══════════════════════════════════════ */
 [data-testid="stForm"] {
   background: var(--surface) !important;
   border: 1px solid var(--border) !important;
@@ -255,9 +232,6 @@ header[data-testid="stHeader"],
   transform: translateY(-1px) !important;
 }
 
-/* ══════════════════════════════════════
-   ALERTS
-══════════════════════════════════════ */
 .stSuccess > div {
   background: rgba(74,222,128,0.06) !important;
   border: 1px solid rgba(74,222,128,0.2) !important;
@@ -280,9 +254,6 @@ header[data-testid="stHeader"],
   font-family: var(--font-ui) !important;
 }
 
-/* ══════════════════════════════════════
-   TABS
-══════════════════════════════════════ */
 .stTabs [data-baseweb="tab-list"] {
   background: transparent !important;
   border-bottom: 1px solid var(--border) !important;
@@ -310,9 +281,6 @@ header[data-testid="stHeader"],
   padding: 20px 0 !important;
 }
 
-/* ══════════════════════════════════════
-   CHAT MESSAGES
-══════════════════════════════════════ */
 .stChatMessage {
   background: var(--surface) !important;
   border: 1px solid var(--border) !important;
@@ -322,10 +290,7 @@ header[data-testid="stHeader"],
   transition: border-color 0.2s !important;
   position: relative !important;
 }
-.stChatMessage:hover {
-  border-color: rgba(240,169,78,0.2) !important;
-}
-/* User messages — subtle left accent */
+.stChatMessage:hover { border-color: rgba(240,169,78,0.2) !important; }
 [data-testid="stChatMessage"][data-testid*="user"],
 .stChatMessage:has([data-testid="chatAvatarIcon-user"]) {
   border-left: 3px solid var(--accent) !important;
@@ -358,7 +323,6 @@ header[data-testid="stHeader"],
   color: #e2c08d !important;
 }
 
-/* ── CHAT INPUT ── */
 [data-testid="stChatInputContainer"] > div {
   background: var(--surface) !important;
   border: 1px solid var(--border) !important;
@@ -376,9 +340,7 @@ header[data-testid="stHeader"],
   font-size: 14px !important;
   caret-color: var(--accent) !important;
 }
-[data-testid="stChatInputContainer"] textarea::placeholder {
-  color: var(--muted) !important;
-}
+[data-testid="stChatInputContainer"] textarea::placeholder { color: var(--muted) !important; }
 [data-testid="stChatInputContainer"] button {
   background: linear-gradient(135deg, #e07f3a, #f0a94e) !important;
   border: none !important;
@@ -399,7 +361,6 @@ div[data-testid="stBottom"] > div {
   padding: 10px 20px 14px !important;
 }
 
-/* ── SELECT ── */
 div[data-baseweb="select"] > div {
   background: var(--surface2) !important;
   border-color: var(--border) !important;
@@ -416,7 +377,6 @@ div[data-baseweb="popover"] {
 div[data-baseweb="popover"] li { color: var(--text) !important; }
 div[data-baseweb="popover"] li:hover { background: var(--accent-glow) !important; }
 
-/* ── EXPANDER ── */
 [data-testid="stExpander"] {
   background: transparent !important;
   border: 1px solid var(--border) !important;
@@ -428,14 +388,10 @@ div[data-baseweb="popover"] li:hover { background: var(--accent-glow) !important
   border-radius: var(--radius-md) !important;
 }
 
-/* ── MISC ── */
 hr { border-color: var(--border) !important; }
 p, span, li { color: var(--text) !important; font-family: var(--font-ui) !important; }
 h1, h2, h3 { font-family: var(--font-brand) !important; }
 
-/* ══════════════════════════════════════
-   LOGIN PAGE — Animated background
-══════════════════════════════════════ */
 @keyframes ember-drift {
   0%   { background-position: 0% 50%; }
   50%  { background-position: 100% 50%; }
@@ -451,20 +407,14 @@ h1, h2, h3 { font-family: var(--font-brand) !important; }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.login-wrapper {
-  animation: fade-up 0.6s ease both;
-}
-.login-logo-ring {
-  animation: pulse-ring 3s ease-in-out infinite;
-}
+.login-wrapper { animation: fade-up 0.6s ease both; }
+.login-logo-ring { animation: pulse-ring 3s ease-in-out infinite; }
 
-/* Suggestion chips */
 .sug-chip-hover:hover {
   border-color: rgba(240,169,78,0.4) !important;
   background: rgba(240,169,78,0.06) !important;
 }
 
-/* ── MOBILE ── */
 @media (max-width: 768px) {
   [data-testid="stSidebar"] { width: 85vw !important; }
   .stChatMessage { padding: 12px 14px !important; }
@@ -510,13 +460,15 @@ def get_secret(key: str) -> str:
 
 # ═══════════════════════════════════════════════════════════
 # DATABASE — Google Sheets
+# FIX: st.warning/st.error moved outside @st.cache_resource
+#      so UI calls don't fire inside a cached context
 # ═══════════════════════════════════════════════════════════
 
 @st.cache_resource
-def get_db():
+def _connect_db():
+    """Pure connection — no Streamlit UI calls inside cache."""
     if not HAS_OAUTH:
-        st.warning("⚠️ `oauth2client` o'rnatilmagan.")
-        return None
+        return None, "oauth2client o'rnatilmagan"
     try:
         creds = ServiceAccountCredentials.from_json_keyfile_dict(
             st.secrets.get("gcp_service_account", {}),
@@ -531,15 +483,22 @@ def get_db():
                 ws.insert_row(["username", "password", "status", "created_at"], 1)
         except Exception:
             pass
-        return ws
+        return ws, None
     except Exception as e:
-        st.error(f"❌ Google Sheets: {str(e)[:100]}")
-        return None
+        return None, str(e)[:120]
+
+
+def get_db():
+    """Wrapper that shows UI alerts outside the cached function."""
+    ws, err = _connect_db()
+    if err:
+        st.warning(f"⚠️ Google Sheets: {err}")
+    return ws
 
 
 @st.cache_data(ttl=300)
 def _load_all_users() -> list:
-    ws = get_db()
+    ws, _ = _connect_db()
     if ws:
         try:
             return ws.get_all_records()
@@ -549,7 +508,9 @@ def _load_all_users() -> list:
 
 
 def find_user(username: str) -> Optional[dict]:
-    return next((u for u in _load_all_users() if u.get("username") == username), None)
+    return next(
+        (u for u in _load_all_users() if u.get("username") == username), None
+    )
 
 
 def user_exists(username: str) -> bool:
@@ -561,8 +522,10 @@ def save_user(username: str, password: str) -> bool:
     if not ws:
         return False
     try:
-        ws.append_row([username, hash_pw(password), "active",
-                       datetime.now().strftime("%Y-%m-%d %H:%M")])
+        ws.append_row(
+            [username, hash_pw(password), "active",
+             datetime.now().strftime("%Y-%m-%d %H:%M")]
+        )
         _load_all_users.clear()
         return True
     except Exception:
@@ -619,18 +582,20 @@ def stream_groq(messages: list, temperature: float = 0.7):
 
 # ═══════════════════════════════════════════════════════════
 # SESSION STATE
+# FIX: added "pending_prompt" for suggestion chip → AI flow
 # ═══════════════════════════════════════════════════════════
 
 _defaults = {
-    "logged_in":   False,
-    "username":    "",
-    "login_time":  None,
-    "messages":    [],
-    "temperature": 0.7,
-    "sys_prompt":  (
+    "logged_in":      False,
+    "username":       "",
+    "login_time":     None,
+    "messages":       [],
+    "temperature":    0.7,
+    "sys_prompt":     (
         "Sen Somo AI — aqlli, professional yordamchi. "
         "Foydalanuvchi qaysi tilda yozsa, o'sha tilda javob ber."
     ),
+    "pending_prompt": None,   # ← NEW: suggestion chip pending message
 }
 for _k, _v in _defaults.items():
     st.session_state.setdefault(_k, _v)
@@ -665,24 +630,23 @@ def do_register(username: str, password: str) -> tuple[bool, str]:
 
 
 def logout():
-    for key in ("logged_in", "username", "login_time", "messages"):
+    for key in ("logged_in", "username", "login_time", "messages", "pending_prompt"):
         st.session_state[key] = _defaults[key]
     st.rerun()
 
 
 # ═══════════════════════════════════════════════════════════
-# LOGIN PAGE  — "Obsidian & Ember" premium design
+# LOGIN PAGE
+# FIX: submitted/submitted2 initialised before form so no
+#      UnboundLocalError if form hasn't rendered yet
 # ═══════════════════════════════════════════════════════════
 
 def render_login():
     _, col, _ = st.columns([1, 1.1, 1])
 
     with col:
-        # ── Brand header ──────────────────────────────────
         st.markdown("""
         <div class="login-wrapper" style="text-align:center; padding: 52px 0 36px;">
-
-          <!-- Animated logo mark -->
           <div style="position:relative; width:72px; height:72px; margin:0 auto 20px;">
             <div class="login-logo-ring" style="
               position:absolute; inset:-6px;
@@ -697,40 +661,23 @@ def render_login():
               border: 1px solid rgba(240,169,78,0.3);
               display:flex; align-items:center; justify-content:center;
               font-size:28px;
-              box-shadow:
-                0 8px 32px rgba(0,0,0,0.5),
-                0 0 0 1px rgba(240,169,78,0.1),
-                inset 0 1px 0 rgba(240,169,78,0.15);
+              box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(240,169,78,0.1),
+                          inset 0 1px 0 rgba(240,169,78,0.15);
               position:relative;
             ">◈</div>
           </div>
-
-          <!-- Brand name — Cormorant Garamond serif -->
           <div style="
             font-family: 'Cormorant Garamond', Georgia, serif;
-            font-size: 38px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            line-height: 1;
-            margin-bottom: 8px;
+            font-size: 38px; font-weight: 700; letter-spacing: -0.5px;
+            line-height: 1; margin-bottom: 8px;
             background: linear-gradient(135deg, #f0ece4 0%, #f0a94e 60%, #e8c473 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             background-clip: text;
           ">Somo AI</div>
-
-          <!-- Tagline -->
           <div style="
-            font-family: 'Outfit', sans-serif;
-            font-size: 12px;
-            font-weight: 500;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            color: #5a5468;
-            margin-bottom: 4px;
+            font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 500;
+            letter-spacing: 3px; text-transform: uppercase; color: #5a5468; margin-bottom: 4px;
           ">Llama 3.3 · 70B · Groq</div>
-
-          <!-- Decorative line -->
           <div style="
             width: 40px; height: 1px;
             background: linear-gradient(90deg, transparent, rgba(240,169,78,0.4), transparent);
@@ -739,18 +686,27 @@ def render_login():
         </div>
         """, unsafe_allow_html=True)
 
-        # ── Tabs ──────────────────────────────────────────
         tab_in, tab_reg = st.tabs(["  Kirish  ", "  Ro'yxat  "])
 
+        # ── Login tab ─────────────────────────────────────
         with tab_in:
+            # FIX: initialise before form to avoid UnboundLocalError
+            login_submitted = False
+            login_username = ""
+            login_password = ""
+
             with st.form("login_form", clear_on_submit=False):
-                username = st.text_input("Username", placeholder="username")
-                password = st.text_input("Parol", type="password", placeholder="••••••••")
-                submitted = st.form_submit_button(
+                login_username = st.text_input("Username", placeholder="username")
+                login_password = st.text_input(
+                    "Parol", type="password", placeholder="••••••••"
+                )
+                login_submitted = st.form_submit_button(
                     "Kirish  →", use_container_width=True, type="primary"
                 )
-            if submitted:
-                u, p = username.strip(), password
+
+            if login_submitted:
+                u = login_username.strip()
+                p = login_password
                 if not u or not p:
                     st.error("Username va parolni kiriting.")
                 else:
@@ -763,26 +719,40 @@ def render_login():
                     else:
                         st.error(msg)
 
+        # ── Register tab ──────────────────────────────────
         with tab_reg:
+            # FIX: initialise before form to avoid UnboundLocalError
+            reg_submitted = False
+            reg_username  = ""
+            reg_password  = ""
+            reg_confirm   = ""
+
             with st.form("reg_form", clear_on_submit=True):
-                nu = st.text_input("Username", placeholder="kamida 3 belgi", key="r_u")
-                np = st.text_input("Parol", type="password", placeholder="kamida 6 belgi", key="r_p")
-                nc = st.text_input("Parolni tasdiqlang", type="password", key="r_c")
-                submitted2 = st.form_submit_button(
+                reg_username = st.text_input(
+                    "Username", placeholder="kamida 3 belgi", key="r_u"
+                )
+                reg_password = st.text_input(
+                    "Parol", type="password", placeholder="kamida 6 belgi", key="r_p"
+                )
+                reg_confirm = st.text_input(
+                    "Parolni tasdiqlang", type="password", key="r_c"
+                )
+                reg_submitted = st.form_submit_button(
                     "Hisob yaratish  →", use_container_width=True, type="primary"
                 )
-            if submitted2:
-                if np != nc:
+
+            if reg_submitted:
+                if reg_password != reg_confirm:
                     st.error("Parollar mos emas.")
                 else:
-                    ok, msg = do_register(nu, np)
+                    ok, msg = do_register(reg_username, reg_password)
                     if ok:
                         st.success("✅ Hisob yaratildi! Kirish bo'limiga o'ting.")
                     else:
                         st.error(msg)
 
         # ── Status dots ───────────────────────────────────
-        db_ok   = get_db() is not None
+        db_ok   = _connect_db()[0] is not None
         groq_ok = get_groq() is not None
         st.markdown(f"""
         <div style="
@@ -799,10 +769,7 @@ def render_login():
             "></span>
             <span style="color:{'#86efac' if db_ok else '#fca5a5'};">Sheets</span>
           </div>
-          <div style="
-            width:1px;height:12px;
-            background:rgba(90,84,104,0.4);
-          "></div>
+          <div style="width:1px;height:12px;background:rgba(90,84,104,0.4);"></div>
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="
               width:6px;height:6px;border-radius:50%;
@@ -822,8 +789,8 @@ def render_login():
 
 def render_sidebar():
     with st.sidebar:
-        uname        = st.session_state.username
-        msgs         = st.session_state.messages
+        uname         = st.session_state.username
+        msgs          = st.session_state.messages
         avatar_letter = (uname[:1] or "?").upper()
         mins = 0
         if st.session_state.login_time:
@@ -832,15 +799,9 @@ def render_sidebar():
             )
         user_msg_count = sum(1 for m in msgs if m["role"] == "user")
 
-        # ── User card ──────────────────────────────────
         st.markdown(f"""
         <div style="padding: 24px 16px 16px;">
-
-          <!-- Avatar + name -->
-          <div style="
-            display:flex; align-items:center; gap:12px;
-            margin-bottom:20px;
-          ">
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
             <div style="
               width:40px; height:40px;
               background: linear-gradient(145deg, #1a1208, #2d1e08);
@@ -864,12 +825,7 @@ def render_sidebar():
               ">● aktiv</div>
             </div>
           </div>
-
-          <!-- Stats row -->
-          <div style="
-            display:grid; grid-template-columns:1fr 1fr;
-            gap:8px; margin-bottom:4px;
-          ">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:4px;">
             <div style="
               background: linear-gradient(145deg, #0f0e1a, #15132a);
               border: 1px solid rgba(240,169,78,0.1);
@@ -877,8 +833,7 @@ def render_sidebar():
             ">
               <div style="
                 font-family:'Cormorant Garamond',serif;
-                font-size:22px; font-weight:700; color:#f0a94e;
-                line-height:1;
+                font-size:22px; font-weight:700; color:#f0a94e; line-height:1;
               ">{user_msg_count}</div>
               <div style="
                 font-size:9px; font-family:'Fira Code',monospace;
@@ -892,8 +847,7 @@ def render_sidebar():
             ">
               <div style="
                 font-family:'Cormorant Garamond',serif;
-                font-size:22px; font-weight:700; color:#f0a94e;
-                line-height:1;
+                font-size:22px; font-weight:700; color:#f0a94e; line-height:1;
               ">{mins}</div>
               <div style="
                 font-size:9px; font-family:'Fira Code',monospace;
@@ -902,14 +856,10 @@ def render_sidebar():
             </div>
           </div>
         </div>
-
-        <!-- Divider -->
         <div style="
           height:1px; margin:0 16px 16px;
           background: linear-gradient(90deg, transparent, rgba(240,169,78,0.15), transparent);
         "></div>
-
-        <!-- Section label -->
         <p style="
           font-size:9px; font-family:'Fira Code',monospace;
           color:#5a5468; text-transform:uppercase;
@@ -940,7 +890,9 @@ def render_sidebar():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🗑 Tozala", use_container_width=True, key="clr_btn"):
-                st.session_state.messages = []
+                st.session_state.messages       = []
+                st.session_state.pending_prompt = None
+                st.rerun()
         with col2:
             if st.button("→ Chiq", use_container_width=True, key="logout_btn"):
                 logout()
@@ -976,6 +928,28 @@ def build_api_messages() -> list:
         for m in st.session_state.messages[-20:]
     )
     return api_msgs
+
+
+def _generate_response(prompt: str) -> None:
+    """
+    Append user message, stream AI reply, append assistant message.
+    Shared by both chat_input and suggestion-chip flows.
+    """
+    st.session_state.messages.append({"role": "user", "content": prompt})
+
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    with st.chat_message("assistant"):
+        # FIX: guard against None from st.write_stream
+        full_resp = st.write_stream(
+            stream_groq(build_api_messages(), st.session_state.temperature)
+        )
+
+    if full_resp:
+        st.session_state.messages.append(
+            {"role": "assistant", "content": full_resp}
+        )
 
 
 def render_chat():
@@ -1015,7 +989,6 @@ def render_chat():
           ">llama-3.3-70b · groq</div>
         </div>
       </div>
-      <!-- Subtle decorative accent -->
       <div style="
         width:80px; height:1px;
         background: linear-gradient(90deg, rgba(240,169,78,0.3), transparent);
@@ -1025,37 +998,28 @@ def render_chat():
     """, unsafe_allow_html=True)
 
     # ── Welcome / empty state ─────────────────────────────
-    if not st.session_state.messages:
+    if not st.session_state.messages and not st.session_state.pending_prompt:
         st.markdown(f"""
         <div style="
           text-align:center;
           padding: 64px 24px 40px;
           animation: fade-up 0.5s ease both;
         ">
-          <!-- Large greeting -->
           <div style="
             font-family: 'Cormorant Garamond', Georgia, serif;
             font-size: clamp(32px, 5vw, 52px);
-            font-weight: 700;
-            letter-spacing: -1px;
-            line-height: 1.1;
+            font-weight: 700; letter-spacing: -1px; line-height: 1.1;
             margin-bottom: 14px;
             background: linear-gradient(135deg, #f0ece4 0%, #f0a94e 55%, #e8c473 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             background-clip: text;
           ">Salom, {uname}.</div>
-
           <p style="
             font-family:'Outfit',sans-serif;
             font-size:15px; color:#5a5468;
             max-width:360px; margin:0 auto 40px;
             line-height:1.65; font-weight:400;
-          ">
-            Savolingizni yozing yoki quyidagi mavzulardan birini tanlang
-          </p>
-
-          <!-- Decorative divider -->
+          ">Savolingizni yozing yoki quyidagi mavzulardan birini tanlang</p>
           <div style="
             width:48px; height:1px;
             background: linear-gradient(90deg, transparent, rgba(240,169,78,0.4), transparent);
@@ -1064,7 +1028,8 @@ def render_chat():
         </div>
         """, unsafe_allow_html=True)
 
-        # Suggestion chips
+        # FIX: suggestion chips now set pending_prompt + rerun
+        # so the AI response is properly generated on next render
         suggestions = [
             "🐍  Python da Telegram bot",
             "📖  Ingliz tilini o'rgatish",
@@ -1076,25 +1041,24 @@ def render_chat():
             with cols[i % 2]:
                 if st.button(sug, key=f"sug_{i}", use_container_width=True):
                     clean = sug.split("  ", 1)[-1]
-                    st.session_state.messages.append({"role": "user", "content": clean})
+                    st.session_state.pending_prompt = clean
+                    st.rerun()
 
     # ── Message history ───────────────────────────────────
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
+    # FIX: handle pending_prompt from suggestion chips
+    # This runs after existing messages are rendered, generating AI reply
+    if st.session_state.pending_prompt:
+        pending = st.session_state.pending_prompt
+        st.session_state.pending_prompt = None   # clear before generating
+        _generate_response(pending)
+
     # ── Chat input ────────────────────────────────────────
     if prompt := st.chat_input("Savolingizni yozing...", key="chat_input"):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
-        with st.chat_message("assistant"):
-            full_resp = st.write_stream(
-                stream_groq(build_api_messages(), st.session_state.temperature)
-            )
-
-        st.session_state.messages.append({"role": "assistant", "content": full_resp})
+        _generate_response(prompt)
 
 
 # ═══════════════════════════════════════════════════════════
